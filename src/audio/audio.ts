@@ -123,6 +123,11 @@ export class AudioEngine {
     src.stop(t + dur + 0.02);
   }
 
+  /** ボタンを押した瞬間の「カチッ」 */
+  sfxClick(): void {
+    this.blip(900, "square", 0.025, 0.35, 1400);
+    this.noise(0.018, 0.18, 3500);
+  }
   sfxAttack(): void {
     this.blip(330, "square", 0.09, 0.4, 180);
     this.noise(0.05, 0.25, 2200);

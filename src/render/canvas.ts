@@ -1,5 +1,8 @@
 import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
-import { KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN } from "../game/data.ts";
+import {
+  KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN,
+  RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS,
+} from "../game/data.ts";
 import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
 
@@ -144,6 +147,11 @@ export function render(
 
   drawWarningBanner(ctx, b, imminent);
   drawTargetArrows(ctx, b);
+  // パーフェクト時の画面ホワイトアウト（バッジより奥に出す）
+  if (b.whiteFlashT > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${Math.min(1, b.whiteFlashT / WHITE_FLASH_MS) * 0.92})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   drawGuardBadge(ctx, b);
   if (b.phase !== "fighting") drawResult(ctx, b);
 }
@@ -200,9 +208,10 @@ function drawEnemyCard(
   const sprite = e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
   const scale = e.def.boss ? 5 : 4;
 
-  // 撃破演出：カード枠は出さず、ノックバック→フェードのみ
+  // 撃破演出：カード枠は出さず、ノックバック→フェード→宝箱（ドロップ）
   if (!e.alive) {
     if (e.deathT > 0) drawDeath(ctx, e, L.cx, L.footY, sprite, scale);
+    if (e.drop) drawChest(ctx, e, L);
     return;
   }
 
@@ -342,6 +351,65 @@ function drawWarningBanner(ctx: CanvasRenderingContext2D, b: Battle, imminent: n
   ctx.fillStyle = tele ? "#ff4040" : "#ffb347";
   const text = tele ? "⚠ 今だ！ ガード！" : "⚠ 敵が次に攻撃！";
   ctx.fillText(text, W / 2, 50);
+  ctx.globalAlpha = 1;
+}
+
+/** 時間で巡回する虹色（アストラル用） */
+function rainbowColor(off = 0): string {
+  const h = (Date.now() / 8 + off) % 360;
+  return `hsl(${h}, 90%, 62%)`;
+}
+
+/** 撃破ドロップの宝箱。レアリティ色で塗り、ポップ＆きらめき演出 */
+function drawChest(ctx: CanvasRenderingContext2D, e: EnemyState, L: EnemyLayout): void {
+  const elapsed = DEATH_ANIM_MS - e.deathT; // 0→ 撃破からの経過
+  const t = Math.min(1, elapsed / 300);
+  if (t <= 0) return;
+  const pop = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.3 : 1; // 出現バウンド
+  const bob = Math.sin(Date.now() / 320) * 1.5;            // 浮遊
+  const rarity = e.drop!.rarity;
+  const rainbow = isRainbowRarity(rarity);
+  const col = rainbow ? rainbowColor() : RARITY_COLOR[rarity];
+
+  const w = 36, h = 28;
+  ctx.save();
+  ctx.translate(L.cx, L.footY + 4 + bob);
+  ctx.scale(pop, pop);
+  const x = -w / 2, y = -h;
+  // 本体（グロー付き）
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 16;
+  roundRect(ctx, x, y, w, h, 4);
+  ctx.fillStyle = col;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // 下半分を暗く（立体感）
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillRect(x, y + h * 0.46, w, h * 0.54);
+  // 蓋の境界
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + h * 0.44); ctx.lineTo(x + w, y + h * 0.44); ctx.stroke();
+  // 外枠
+  roundRect(ctx, x, y, w, h, 4);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#1a0f08";
+  ctx.stroke();
+  // 金の留め金
+  ctx.fillStyle = "#ffd35f";
+  ctx.fillRect(-5, y + h * 0.34, 10, 11);
+  ctx.fillStyle = "#1a0f08";
+  ctx.fillRect(-1.5, y + h * 0.44, 3, 4);
+  ctx.restore();
+
+  // 上に舞うきらめき
+  ctx.globalAlpha = 0.55 + 0.45 * Math.sin(Date.now() / 200);
+  ctx.fillStyle = rainbow ? rainbowColor(140) : col;
+  ctx.textAlign = "center";
+  ctx.font = "bold 13px monospace";
+  ctx.fillText("✦", L.cx + 15, L.footY - h - 2);
+  ctx.fillText("✦", L.cx - 16, L.footY - h + 6);
   ctx.globalAlpha = 1;
 }
 
@@ -491,30 +559,46 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (b.lastGuardTtl <= 0 || b.lastGuard === "none") return;
   // PERFECT だけ明確に大きく・派手に。通常ガードは控えめ。
   const map: Record<string, { text: string; color: string; size: number; perfect?: boolean }> = {
-    guard: { text: "GUARD", color: "#cccccc", size: 18 },
-    perfect: { text: "PERFECT", color: "#7dffd0", size: 30, perfect: true },
+    guard: { text: "GUARD", color: "#dfe6ff", size: 26 },
+    perfect: { text: "PERFECT!", color: "#8effe0", size: 44, perfect: true },
   };
   const entry = map[b.lastGuard];
   if (!entry) return;
   const age = 700 - b.lastGuardTtl;
-  const pop = age < 130 ? 1.7 - 0.7 * (age / 130) : 1;
+  // 大きく飛び出して手前に来る → 弾むように定位置へ
+  const pop = age < 170 ? 2.7 - 1.7 * (age / 170) : 1 + 0.12 * Math.max(0, Math.sin((age - 170) / 60));
   ctx.textAlign = "center";
   const baseAlpha = Math.min(1, b.lastGuardTtl / 700);
   ctx.save();
-  ctx.translate(W / 2, 128);
+  ctx.translate(W / 2, 150);
   ctx.scale(pop, pop);
-  // PERFECT は虹色グロー風に縁取り
+
   if (entry.perfect) {
-    ctx.shadowColor = "#7dffd0";
-    ctx.shadowBlur = 16;
+    // 虹色グロー＋複数アウトラインで「手前に押し出す」厚み
+    ctx.shadowColor = rainbowColor();
+    ctx.shadowBlur = 26;
+    ctx.font = `900 ${entry.size}px monospace`;
+    ctx.lineJoin = "round";
+    ctx.globalAlpha = baseAlpha;
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#06281f";
+    ctx.strokeText(entry.text, 0, 0);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = rainbowColor(180);
+    ctx.strokeText(entry.text, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#eafff8";
+    ctx.fillText(entry.text, 0, 0);
+  } else {
+    ctx.font = `bold ${entry.size}px monospace`;
+    ctx.lineJoin = "round";
+    ctx.globalAlpha = baseAlpha;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#11132a";
+    ctx.strokeText(entry.text, 0, 0);
+    ctx.fillStyle = entry.color;
+    ctx.fillText(entry.text, 0, 0);
   }
-  ctx.font = `bold ${entry.size}px monospace`;
-  ctx.globalAlpha = baseAlpha * 0.4;
-  ctx.fillStyle = "#000000";
-  ctx.fillText(entry.text, 2, 2);
-  ctx.globalAlpha = baseAlpha;
-  ctx.fillStyle = entry.color;
-  ctx.fillText(entry.text, 0, 0);
   ctx.restore();
   ctx.globalAlpha = 1;
 }

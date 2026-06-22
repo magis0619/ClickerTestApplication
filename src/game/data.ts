@@ -9,14 +9,16 @@ export const WEAKNESS: Record<EnemyKind, WeaponClass> = { carapace: "crush", pha
 export const WEAKNESS_MULTIPLIER = 1.8;
 
 // ===== レアリティ =====
-export const RARITY_ORDER: Rarity[] = ["normal", "uncommon", "rare", "superrare", "ultrarare"];
+export const RARITY_ORDER: Rarity[] = ["common", "uncommon", "rare", "epic", "legend", "astral"];
 export const RARITY_LABEL: Record<Rarity, string> = {
-  normal: "ノーマル", uncommon: "アンコモン", rare: "レア", superrare: "スーパーレア", ultrarare: "ウルトラレア",
+  common: "コモン", uncommon: "アンコモン", rare: "レア", epic: "エピック", legend: "レジェンド", astral: "アストラル",
 };
-/** レアリティによる出現しにくさ（攻略に役立つ追加スキルが付く。性能倍率はかけない） */
+/** レアリティ色。common=グレー / uncommon=エメラルド / rare=ブルー / epic=パープル / legend=ゴールド / astral=虹色 */
 export const RARITY_COLOR: Record<Rarity, string> = {
-  normal: "#b8b8c8", uncommon: "#6fd07f", rare: "#5fa8ff", superrare: "#c98aff", ultrarare: "#ffcf3f",
+  common: "#b8b8c8", uncommon: "#2ecc71", rare: "#4aa3ff", epic: "#b96bff", legend: "#ffcf3f", astral: "#ff7de9",
 };
+/** アストラルは単色でなく虹色で表現する */
+export function isRainbowRarity(r: Rarity): boolean { return r === "astral"; }
 
 // ===== スキル =====
 function skill(s: Partial<Skill> & Pick<Skill, "id" | "name" | "weapon" | "kind" | "enCost">): Skill {
@@ -73,11 +75,12 @@ export function isBonusSkill(id: string): boolean { return id.startsWith("b_"); 
 
 /** レアリティごとの追加スキル候補 */
 const BONUS_BY_RARITY: Record<Rarity, string[]> = {
-  normal: [],
+  common: [],
   uncommon: ["b_recover", "b_quick_focus"],
   rare: ["b_wide_blow", "b_power_smash"],
-  superrare: ["b_mega_heal", "b_tempest"],
-  ultrarare: ["b_catastrophe", "b_resurrection"],
+  epic: ["b_mega_heal", "b_tempest"],
+  legend: ["b_catastrophe", "b_resurrection"],
+  astral: ["b_catastrophe", "b_resurrection"],
 };
 export function rollBonusSkill(rarity: Rarity): string | undefined {
   const pool = BONUS_BY_RARITY[rarity];
@@ -137,16 +140,19 @@ function weightedRarity(weights: number[]): Rarity {
     r -= weights[i] ?? 0;
     if (r < 0) return RARITY_ORDER[i];
   }
-  return "normal";
+  return "common";
+}
+
+/** 1体ぶんのドロップを抽選（武器はランダム、レアリティはステージ重みで） */
+export function rollDrop(weights: number[]): WeaponInstance {
+  const base = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
+  return makeInstance(base.id, weightedRarity(weights));
 }
 
 /** ステージのドロップを抽選（武器はランダム、レアリティはステージ重みで） */
 export function rollDrops(stage: StageDef): WeaponInstance[] {
   const out: WeaponInstance[] = [];
-  for (let i = 0; i < stage.drops; i++) {
-    const base = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
-    out.push(makeInstance(base.id, weightedRarity(stage.rarityWeights)));
-  }
+  for (let i = 0; i < stage.drops; i++) out.push(rollDrop(stage.rarityWeights));
   return out;
 }
 
@@ -166,21 +172,21 @@ export const STAGES: StageDef[] = [
     name: "練習の間",
     desc: "チュートリアル。弱い敵1体。攻撃・ガード・休憩を試そう",
     enemies: [E.straw_golem],
-    rarityWeights: [82, 16, 2, 0, 0],
+    rarityWeights: [82, 16, 2, 0, 0, 0],
     drops: 1,
   },
   {
     name: "双影の回廊",
     desc: "弱点の異なる敵が2体。武器の使い分けを意識",
     enemies: [E.wraith_feather, E.gloom_shade],
-    rarityWeights: [45, 32, 17, 5, 1],
+    rarityWeights: [45, 32, 17, 5, 1, 0],
     drops: 2,
   },
   {
     name: "獣王の広間",
     desc: "ボスを含む強敵3体。総力戦",
     enemies: [E.carapace_tyrant, E.wraith_feather, E.gloom_shade],
-    rarityWeights: [22, 30, 28, 15, 5],
+    rarityWeights: [20, 28, 27, 15, 8, 2],
     drops: 3,
   },
 ];
@@ -209,8 +215,14 @@ export const GUARD_DAMAGE_MULT = 0.55;
 export const PERFECT_HP_RECOVER = 18;
 
 // ===== パーフェクトガードの演出・怯ませ =====
-/** パーフェクト成功時のヒットストップ（一瞬の静止）時間。長めにして弾きの手応えを強調 */
-export const HITSTOP_MS = 520;
+/** パーフェクト成功時のヒットストップ（完全静止）時間 */
+export const HITSTOP_MS = 150;
+/** ヒットストップ後のスローモーション時間 */
+export const SLOWMO_MS = 520;
+/** スローモーション中の時間倍率（小さいほど遅い） */
+export const SLOWMO_SCALE = 0.3;
+/** パーフェクト時の画面ホワイトアウト時間 */
+export const WHITE_FLASH_MS = 240;
 /** パーフェクトで敵に与える怯み（次の攻撃を遅らせる）時間 */
 export const PERFECT_FLINCH_MS = 650;
 /** パーフェクトで敵のブレイクゲージに加算する蓄積量 */
@@ -223,8 +235,8 @@ export const BREAK_CRIT_MULT = 1.6;
 /** 初期インベントリ（系統ごとの標準武器をノーマルで1本ずつ） */
 export function starterInventory(): WeaponInstance[] {
   return [
-    makeInstance("w_iron_edge", "normal"),
-    makeInstance("w_steel_lance", "normal"),
-    makeInstance("w_war_mallet", "normal"),
+    makeInstance("w_iron_edge", "common"),
+    makeInstance("w_steel_lance", "common"),
+    makeInstance("w_war_mallet", "common"),
   ];
 }

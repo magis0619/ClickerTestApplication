@@ -47,7 +47,7 @@ export interface Weapon {
 }
 
 /** レアリティ（高いほど強く、出にくい） */
-export type Rarity = "normal" | "uncommon" | "rare" | "superrare" | "ultrarare";
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astral";
 
 /** 所持している武器1本（テンプレ＋レアリティ＋固有ID） */
 export interface WeaponInstance {
@@ -63,7 +63,7 @@ export interface StageDef {
   name: string;
   desc: string;
   enemies: EnemyDef[];
-  /** ドロップ時のレアリティ抽選の重み [normal, uncommon, rare, superrare, ultrarare] */
+  /** ドロップ時のレアリティ抽選の重み [common, uncommon, rare, epic, legend, astral] */
   rarityWeights: number[];
   /** クリア時のドロップ本数 */
   drops: number;

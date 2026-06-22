@@ -267,6 +267,30 @@ button {
 .rest-act { background: linear-gradient(180deg, #2f9d78, #237a5e); box-shadow: 0 3px 0 #19564180; }
 .rest-act:hover { background: linear-gradient(180deg, #38b489, #2a8c6c); }
 
+/* 押した瞬間に縮み、離すと弾んで戻る（バネ的イージング） */
+.weapon-card, .act-btn {
+  transition: transform 0.16s cubic-bezier(0.34, 1.7, 0.5, 1), filter 0.1s, background 0.12s, box-shadow 0.12s;
+}
+.weapon-card.btn-press, .act-btn.btn-press {
+  transform: scale(0.9);
+  filter: brightness(1.25);
+}
+
+/* 虹色テキスト（アストラル） */
+.rainbow-text {
+  background: linear-gradient(90deg, #ff5d5d, #ffcf3f, #5fe06a, #4aa3ff, #b96bff, #ff5d5d);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow-shift 2.4s linear infinite;
+  font-weight: 800;
+}
+@keyframes rainbow-shift {
+  to { background-position: 200% center; }
+}
+
 /* ===== 結果画面 / 育成パネル ===== */
 .result-panel {
   background: var(--panel);

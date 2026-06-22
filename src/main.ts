@@ -3,7 +3,7 @@ import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, skillDescription, isBonusSkill, REST_EN_RECOVER,
+  getWeapon, getSkill, skillDescription, isBonusSkill, isRainbowRarity, REST_EN_RECOVER,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type { SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
@@ -22,7 +22,7 @@ const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡",
 const CIRCLE = ["①", "②", "③", "④", "⑤", "⑥"];
 
 const RARITY_STAR: Record<string, number> = {
-  normal: 1, uncommon: 2, rare: 3, superrare: 4, ultrarare: 5,
+  common: 1, uncommon: 2, rare: 3, epic: 4, legend: 5, astral: 6,
 };
 function rarityStars(r: string): string { return "★".repeat(RARITY_STAR[r] ?? 1); }
 
@@ -36,6 +36,22 @@ function playSfx(ev: SfxEvent): void {
     case "break": audio.sfxBreak(); break;
     case "die": audio.sfxEnemyDie(); break;
   }
+}
+
+/** ボタンに「押した瞬間カチッ＋少し縮んで戻る」手応えを付ける */
+function pressFx(btn: HTMLElement): void {
+  const down = () => { audio.init(); audio.sfxClick(); btn.classList.add("btn-press"); };
+  const up = () => btn.classList.remove("btn-press");
+  btn.addEventListener("pointerdown", down);
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointerleave", up);
+  btn.addEventListener("pointercancel", up);
+}
+
+/** レアリティ色を span に適用する class/style 属性（アストラルは虹色クラス） */
+function rarityAttr(r: string, baseClass: string): string {
+  if (isRainbowRarity(r as never)) return `class="${baseClass} rainbow-text"`;
+  return `class="${baseClass}" style="color:${RARITY_COLOR[r as never]}"`;
 }
 
 /** 攻撃入力（武器使用）。即座に攻撃SEを鳴らして手応えを出す */
@@ -190,7 +206,7 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
     `<span class="wpn-icon wclass-${w.weapon}">${WEAPON_ICON[w.weapon]}</span>` +
     `<span class="wpn-main">` +
     `<span class="wpn-name">${w.name}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
-    `<span class="wpn-stars" style="color:${RARITY_COLOR[inst.rarity]}">${rarityStars(inst.rarity)} ` +
+    `<span ${rarityAttr(inst.rarity, "wpn-stars")}>${rarityStars(inst.rarity)} ` +
     `<span class="wpn-rlabel">${RARITY_LABEL[inst.rarity]}</span></span>` +
     `<span class="wpn-sub">コンボ${ids.length}段：${skills}</span></span>`;
   card.appendChild(head);
@@ -230,7 +246,7 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
   const meta = document.createElement("div");
   meta.className = "wd-meta";
   meta.innerHTML =
-    `<div class="wd-stars" style="color:${RARITY_COLOR[inst.rarity]}">${rarityStars(inst.rarity)} ` +
+    `<div ${rarityAttr(inst.rarity, "wd-stars")}>${rarityStars(inst.rarity)} ` +
     `<span class="wd-rlabel">${RARITY_LABEL[inst.rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
     `<div>${w.desc}</div>` +
     `<div class="wd-note">武器を押すたびに ①→②→… の順でコンボが発動します</div>`;
@@ -253,7 +269,7 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
 }
 
 function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
-  const order = ["ultrarare", "superrare", "rare", "uncommon", "normal"];
+  const order = ["astral", "legend", "epic", "rare", "uncommon", "common"];
   return order.indexOf(a.rarity) - order.indexOf(b.rarity);
 }
 
@@ -265,6 +281,7 @@ function buildBattle(): void {
     const card = document.createElement("button");
     card.className = `weapon-card wclass-${cls}`;
     card.addEventListener("click", () => attackWith(cls));
+    pressFx(card);
 
     // ヘッダー：系統を主役に、武器名を併記
     const head = document.createElement("div");
@@ -304,6 +321,7 @@ function buildBattle(): void {
     `<span class="act-title">🛡 ガード</span><span class="act-key">(Space)</span>` +
     `<span class="act-sub">タイミングでEN大回復！</span>`;
   guardBtn.addEventListener("click", doGuard);
+  pressFx(guardBtn);
 
   const restBtn = document.createElement("button");
   restBtn.className = "act-btn rest-act";
@@ -311,6 +329,7 @@ function buildBattle(): void {
     `<span class="act-title">🧘 休憩</span><span class="act-key">(R)</span>` +
     `<span class="act-sub">EN +${REST_EN_RECOVER} 回復</span>`;
   restBtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
+  pressFx(restBtn);
 
   actions.appendChild(guardBtn);
   actions.appendChild(restBtn);

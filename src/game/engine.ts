@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance } from "./types.ts";
 import {
   WEAKNESS,
   WEAKNESS_MULTIPLIER,
@@ -13,10 +13,14 @@ import {
   GUARD_DAMAGE_MULT,
   PERFECT_HP_RECOVER,
   HITSTOP_MS,
+  SLOWMO_MS,
+  SLOWMO_SCALE,
+  WHITE_FLASH_MS,
   PERFECT_FLINCH_MS,
   PERFECT_BREAK_BONUS,
   BREAK_DURATION_MS,
   BREAK_CRIT_MULT,
+  rollDrop,
 } from "./data.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
@@ -52,6 +56,8 @@ export class EnemyState {
   flinchT = 0;
   /** 予兆SEを既に鳴らしたか（1回だけ鳴らすためのフラグ） */
   warned = false;
+  /** 撃破時に確定したドロップ（宝箱の色＝レアリティ表示に使う） */
+  drop?: WeaponInstance;
 
   constructor(def: EnemyDef) {
     this.def = def;
@@ -115,19 +121,36 @@ export class Battle {
   lungeT = 0;
   /** ヒットストップ（一瞬の静止）残り時間(ms)。>0 の間ゲーム進行を凍結 */
   hitstopT = 0;
+  /** スローモーション残り時間(ms)。>0 の間ゲーム進行を遅くする */
+  slowT = 0;
+  /** 画面ホワイトアウト残り時間(ms) */
+  whiteFlashT = 0;
   /** パーフェクト弾きエフェクトの残り時間(ms) */
   perfectFxT = 0;
   /** パーフェクト弾きエフェクトを出す敵インデックス */
   perfectFxIndex = -1;
   /** 効果音イベントのキュー（mainが毎フレーム回収して鳴らす） */
   sfx: SfxEvent[] = [];
+  /** ドロップ抽選用のステージ別レアリティ重み */
+  rarityWeights: number[];
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
   private winPending = false;
 
-  constructor(defs: EnemyDef[], startHp: number = PLAYER_MAX_HP, startEn: number = PLAYER_MAX_EN) {
+  constructor(
+    defs: EnemyDef[],
+    rarityWeights: number[] = [],
+    startHp: number = PLAYER_MAX_HP,
+    startEn: number = PLAYER_MAX_EN,
+  ) {
     this.enemies = defs.map((d) => new EnemyState(d));
+    this.rarityWeights = rarityWeights;
     this.playerHp = Math.max(1, Math.min(PLAYER_MAX_HP, startHp));
     this.playerEn = Math.max(0, Math.min(PLAYER_MAX_EN, startEn));
+  }
+
+  /** 撃破した敵が落としたドロップ一覧（リザルト用） */
+  collectedDrops(): WeaponInstance[] {
+    return this.enemies.flatMap((e) => (e.drop ? [e.drop] : []));
   }
 
   get aliveEnemies(): EnemyState[] {
@@ -255,12 +278,13 @@ export class Battle {
     if (wasAlive && e.hp <= 0) this.killEnemy(e, idx);
   }
 
-  /** 敵を撃破：ノックバック・フェード・ドロップ演出を開始する */
+  /** 敵を撃破：ノックバック・フェード・ドロップ（宝箱）演出を開始する */
   private killEnemy(e: EnemyState, idx: number): void {
     e.deathT = DEATH_ANIM_MS;
     e.deathDir = 1; // プレイヤーは左、敵は右向きなので右奥へ吹き飛ぶ
     e.breakRemain = 0;
     e.flinchT = 0;
+    e.drop = rollDrop(this.rarityWeights); // この敵のドロップを確定（宝箱の色に反映）
     this.pushFloat("撃破!", "#ffd35f", idx);
     this.shake(220, 5);
     this.sfx.push("die");
@@ -276,8 +300,10 @@ export class Battle {
         dmg = 0;
         this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + PERFECT_HP_RECOVER);
         this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + PERFECT_EN_RECOVER);
-        // ヒットストップ＋弾きエフェクト＋軽い揺れ
+        // 一瞬の静止→ホワイトアウト→スロー＋弾きエフェクト＋軽い揺れ
         this.hitstopT = HITSTOP_MS;
+        this.whiteFlashT = WHITE_FLASH_MS;
+        this.slowT = SLOWMO_MS;
         this.perfectFxT = 360;
         this.perfectFxIndex = idx;
         this.shake(180, 4);
@@ -332,11 +358,19 @@ export class Battle {
   }
 
   update(dtMs: number): void {
+    // ホワイトアウトは実時間で減衰させる
+    if (this.whiteFlashT > 0) this.whiteFlashT = Math.max(0, this.whiteFlashT - dtMs);
+
     // ヒットストップ中はゲーム進行を凍結（パーフェクトの一瞬の溜め）。
-    // シェイクは凍結中も効かせて衝撃を演出する。
     if (this.hitstopT > 0) {
       this.hitstopT -= dtMs;
       return;
+    }
+
+    // スローモーション：以降の進行を遅い時間で動かす
+    if (this.slowT > 0) {
+      this.slowT = Math.max(0, this.slowT - dtMs);
+      dtMs = dtMs * SLOWMO_SCALE;
     }
 
     for (const f of this.floats) {

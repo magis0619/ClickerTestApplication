@@ -1,6 +1,6 @@
 import { Battle } from "./engine.ts";
 import {
-  STAGES, STAGE_COUNT, getWeapon, skillForClass, rollDrops, PLAYER_MAX_HP,
+  STAGES, STAGE_COUNT, getWeapon, skillForClass, PLAYER_MAX_HP,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
@@ -36,7 +36,7 @@ export class Game {
     if (!this.stageUnlocked(i)) return;
     this.stageIndex = i;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
-    this.battle = new Battle(STAGES[i].enemies);
+    this.battle = new Battle(STAGES[i].enemies, STAGES[i].rarityWeights);
     this.screen = "battle";
   }
 
@@ -122,7 +122,8 @@ export class Game {
     this.lastWon = true;
     const stageNum = this.stageIndex + 1;
     if (stageNum > this.save.bestStage) this.save.bestStage = stageNum;
-    this.lastDrops = rollDrops(this.currentStage);
+    // 各敵が撃破時に落とした宝箱（ドロップ）を集めて入手
+    this.lastDrops = this.battle?.collectedDrops() ?? [];
     this.save.inventory.push(...this.lastDrops);
     writeSave(this.save);
     this.screen = "result";
