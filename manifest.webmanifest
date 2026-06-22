@@ -1,0 +1,18 @@
+{
+  "name": "Stardust Clicker",
+  "short_name": "Stardust",
+  "description": "星屑を集める放置クリッカーゲーム",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1026",
+  "theme_color": "#0b1026",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

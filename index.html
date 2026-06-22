@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1026" />
+  <meta name="description" content="星屑を集める放置クリッカーゲーム Stardust Clicker" />
+  <title>Stardust Clicker</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="title">✦ Stardust Clicker</div>
+      <div class="balance">
+        <div class="amount" id="stardust">0</div>
+        <div class="unit">スターダスト</div>
+      </div>
+      <div class="rate" id="perSecond">毎秒 0</div>
+    </header>
+
+    <section class="tap-area">
+      <button id="tapButton" class="star" aria-label="星をタップして採取">
+        <span class="star-emoji">⭐</span>
+      </button>
+      <div id="floaters" class="floaters" aria-hidden="true"></div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="shop">ショップ</button>
+      <button class="tab" data-tab="prestige">転生</button>
+    </nav>
+
+    <section id="tab-shop" class="panel">
+      <div class="upgrade-card" id="clickUpgrade">
+        <div class="up-icon">👆</div>
+        <div class="up-body">
+          <div class="up-name">クリック強化 <span class="up-level" id="clickLevel">Lv.0</span></div>
+          <div class="up-desc">タップ獲得量 <strong id="perClick">1</strong></div>
+        </div>
+        <div class="up-cost" id="clickCost">25</div>
+      </div>
+      <div id="generators"></div>
+    </section>
+
+    <section id="tab-prestige" class="panel hidden">
+      <div class="prestige-box">
+        <div class="prestige-title">🌌 転生（ネビュラ）</div>
+        <p class="prestige-desc">
+          進行をリセットする代わりに <strong>ネビュラ</strong> を獲得します。<br />
+          ネビュラ 1 個につき全生産・タップが <strong>+2%</strong> 永続強化されます。
+        </p>
+        <div class="prestige-stats">
+          <div>保有ネビュラ: <strong id="nebula">0</strong>（現在ボーナス +<span id="nebulaBonus">0</span>%）</div>
+          <div>転生で獲得: <strong id="nebulaGain">0</strong></div>
+        </div>
+        <button id="prestigeButton" class="prestige-btn" disabled>転生する</button>
+        <p class="prestige-hint" id="prestigeHint"></p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span id="saveStatus">—</span>
+      <button id="wipeButton" class="wipe">データ消去</button>
+    </footer>
+  </main>
+
+  <div id="welcomeModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>おかえりなさい！</h2>
+      <p>離席中に <strong id="offlineEarned">0</strong> スターダストを採取しました。</p>
+      <p class="modal-sub" id="offlineTime"></p>
+      <button id="welcomeClose" class="modal-btn">受け取る</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
