@@ -1,0 +1,279 @@
+:root {
+  --bg: #0c0a18;
+  --panel: #171331;
+  --ink: #e7e3ff;
+  --accent: #5fa8ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.topbar .subtitle {
+  margin: 2px 0 10px;
+  font-size: 12px;
+  color: #8e88b8;
+}
+
+#screen {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border: 2px solid #2e2750;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+
+#controls {
+  margin-top: 12px;
+}
+
+.skills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.wclass {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.wlabel {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2e2750;
+}
+
+.wclass-slash .wlabel { color: #8fd0ff; }
+.wclass-pierce .wlabel { color: #b8ff9f; }
+.wclass-crush .wlabel { color: #ffcf7f; }
+
+.wlabel .weq {
+  display: block;
+  font-size: 9px;
+  font-weight: normal;
+  color: #8e88b8;
+  margin-top: 2px;
+}
+
+/* ヘッダーのミュートボタン */
+.topbar { position: relative; }
+.mute-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #3a3466;
+  border-radius: 6px;
+  background: #1d1940;
+  color: var(--ink);
+  cursor: pointer;
+}
+.mute-btn:hover { background: #2a2456; }
+
+.skill-btn {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 6px;
+  background: #241f47;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.skill-btn:hover { background: #2f2a5c; }
+.skill-btn:active { transform: translateY(1px); }
+
+.sname { font-size: 12px; font-weight: bold; }
+.sname em { font-style: normal; color: #ffcf7f; font-size: 10px; }
+.scost { font-size: 10px; color: #9690c4; }
+
+.skill-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ===== 結果画面 / 育成パネル ===== */
+.result-panel {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.result-panel h2 {
+  margin: 0 0 4px;
+  text-align: center;
+  letter-spacing: 2px;
+  font-size: 22px;
+}
+
+.r-win { color: #66ddff; }
+.r-lose { color: #ff6677; }
+
+.r-info {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #cfc9f2;
+}
+
+.r-drop {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffd35f;
+}
+
+/* 武器付け替えパネル */
+.equip-panel {
+  background: #110d28;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.eq-group { margin-bottom: 8px; }
+
+.eq-label {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.eq-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.eq-btn {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid #2a2350;
+  border-radius: 6px;
+  background: #1b1640;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.eq-btn:hover { background: #241f55; }
+
+.eq-on {
+  border-color: #5fa8ff;
+  background: #1c2c50;
+}
+
+.eq-name { font-size: 11px; font-weight: bold; }
+.eq-stat { font-size: 9px; color: #9690c4; margin-top: 2px; }
+
+.upgrade-panel {
+  background: #110d28;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.u-head {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffcf7f;
+  margin-bottom: 8px;
+}
+
+.u-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid #221c45;
+}
+
+.u-name { flex: 1; font-size: 12px; }
+.u-lv { font-size: 11px; color: #9690c4; min-width: 34px; }
+
+.u-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  border: none;
+  border-radius: 6px;
+  background: #3a7d3a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.u-btn:hover { background: #459245; }
+.u-btn:disabled {
+  background: #2a2a3a;
+  color: #6a6a80;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guard-btn {
+  flex: 2;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #2c6fb8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.guard-btn:hover { background: #3580d2; }
+.guard-btn:active { transform: translateY(1px); }
+
+.reset-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 14px;
+  border: 1px solid #3a3466;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.reset-btn:hover { background: #1d1940; }
