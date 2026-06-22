@@ -31,6 +31,7 @@ function playSfx(ev: SfxEvent): void {
   switch (ev) {
     case "warn": audio.sfxWarn(); break;
     case "perfect": audio.sfxPerfect(); break;
+    case "just": audio.sfxJust(); break;
     case "guard": audio.sfxGuardHit(); break;
     case "hurt": audio.sfxHurt(); break;
     case "break": audio.sfxBreak(); break;

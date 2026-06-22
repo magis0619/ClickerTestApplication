@@ -140,6 +140,11 @@ export class AudioEngine {
     this.blip(300, "triangle", 0.1, 0.35, 200);
     this.noise(0.05, 0.18, 900);
   }
+  /** JUST：通常ガードより澄み、パーフェクトより軽い中間の弾き音 */
+  sfxJust(): void {
+    this.blip(1200, "triangle", 0.1, 0.35, 1600);
+    this.noise(0.04, 0.2, 3000);
+  }
   /** パーフェクト：澄んだ金属音の「キィン！」（弾き返しの快感） */
   sfxPerfect(): void {
     // 鋭いノイズの芯 + 高い金属倍音を重ねる

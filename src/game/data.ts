@@ -199,19 +199,22 @@ export const PLAYER_MAX_EN = 10;
 
 // ===== EN回復（自動回復なし。休憩・ガード成功のみ） =====
 export const REST_EN_RECOVER = 3;
-// 通常ガードはわずかしか得しない。パーフェクトだけが大きく報われる。
+// 通常ガードはわずか、JUSTは中程度、パーフェクトが大きく報われる。
 export const GUARD_EN_RECOVER = 1;
+export const JUST_EN_RECOVER = 3;
 export const PERFECT_EN_RECOVER = 6;
 
 // ===== ガード判定の窓 =====
 // 着弾までの残り時間がこの範囲ならガード成立。
-// PERFECT は着弾ギリギリ（手応えのある狭さ）、それより手前は通常ガード。
+// PERFECT は着弾ギリギリ（手応えのある狭さ）、その少し手前がJUST、さらに手前が通常ガード。
 export const PERFECT_WINDOW_MS = 140;
+export const JUST_WINDOW_MS = 240;
 export const GUARD_WINDOW_MS = 430;
 
 // ===== ガード効果 =====
-// 通常ガードは「軽減はするが地味」。パーフェクトは「完全無効＋HP/EN大回復」。
+// 通常ガードは「軽減はするが地味」。JUSTは中間。パーフェクトは「完全無効＋HP/EN大回復」。
 export const GUARD_DAMAGE_MULT = 0.55;
+export const JUST_DAMAGE_MULT = 0.25;
 export const PERFECT_HP_RECOVER = 18;
 
 // ===== パーフェクトガードの演出・怯ませ =====

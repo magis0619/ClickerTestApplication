@@ -7,10 +7,13 @@ import {
   CHARGE_MULT,
   REST_EN_RECOVER,
   GUARD_EN_RECOVER,
+  JUST_EN_RECOVER,
   PERFECT_EN_RECOVER,
   GUARD_WINDOW_MS,
+  JUST_WINDOW_MS,
   PERFECT_WINDOW_MS,
   GUARD_DAMAGE_MULT,
+  JUST_DAMAGE_MULT,
   PERFECT_HP_RECOVER,
   HITSTOP_MS,
   SLOWMO_MS,
@@ -232,6 +235,7 @@ export class Battle {
     const diff = e.atkTimer; // 着弾までの残り時間
     let result: GuardResult;
     if (diff <= PERFECT_WINDOW_MS) result = "perfect";
+    else if (diff <= JUST_WINDOW_MS) result = "just";
     else if (diff <= GUARD_WINDOW_MS) result = "guard";
     else {
       this.setGuard("none"); // まだ早い
@@ -322,6 +326,15 @@ export class Battle {
         this.sfx.push("perfect");
         break;
       }
+      case "just":
+        // 中間：そこそこ軽減＋EN中回復。PERFECT専用演出は付けない
+        dmg = Math.max(1, Math.round(dmg * JUST_DAMAGE_MULT));
+        this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + JUST_EN_RECOVER);
+        this.pushFloat(`JUST -${dmg}`, "#88ddff", "player");
+        this.playerHp = Math.max(0, this.playerHp - dmg);
+        this.shake(140, 3);
+        this.sfx.push("just");
+        break;
       case "guard":
         // 通常ガード：軽減はするが地味。EN回復もわずか
         dmg = Math.max(1, Math.round(dmg * GUARD_DAMAGE_MULT));

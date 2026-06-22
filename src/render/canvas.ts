@@ -558,8 +558,9 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
 function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (b.lastGuardTtl <= 0 || b.lastGuard === "none") return;
   // PERFECT だけ明確に大きく・派手に。通常ガードは控えめ。
-  const map: Record<string, { text: string; color: string; size: number; perfect?: boolean }> = {
+  const map: Record<string, { text: string; color: string; size: number; perfect?: boolean; glow?: string }> = {
     guard: { text: "GUARD", color: "#dfe6ff", size: 26 },
+    just: { text: "JUST!", color: "#88ddff", size: 32, glow: "#88ddff" },
     perfect: { text: "PERFECT!", color: "#8effe0", size: 44, perfect: true },
   };
   const entry = map[b.lastGuard];
@@ -590,12 +591,18 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
     ctx.fillStyle = "#eafff8";
     ctx.fillText(entry.text, 0, 0);
   } else {
+    // JUST はシアンのグローで GUARD より少し派手に
+    if (entry.glow) {
+      ctx.shadowColor = entry.glow;
+      ctx.shadowBlur = 14;
+    }
     ctx.font = `bold ${entry.size}px monospace`;
     ctx.lineJoin = "round";
     ctx.globalAlpha = baseAlpha;
     ctx.lineWidth = 6;
     ctx.strokeStyle = "#11132a";
     ctx.strokeText(entry.text, 0, 0);
+    ctx.shadowBlur = 0;
     ctx.fillStyle = entry.color;
     ctx.fillText(entry.text, 0, 0);
   }
