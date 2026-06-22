@@ -7,19 +7,29 @@ export type WeaponClass = "slash" | "pierce" | "crush";
 /** 敵の種別。それぞれ弱点となる武器系統を持つ */
 export type EnemyKind = "carapace" | "phantom" | "aerial";
 
-/** スキルの種類 */
-export type SkillKind = "attack" | "aoe" | "heal" | "charge";
+/** スキルの種類。attack=攻撃 / charge=ためる / focus=集中 */
+export type SkillKind = "attack" | "charge" | "focus";
 
-/** スキル */
+/**
+ * スキル。攻撃の「やり方」を決める（攻撃力は持たず、武器本体が持つ）。
+ * ドロップ時に武器レアリティ以下のプールから抽選される。
+ */
 export interface Skill {
   id: string;
   name: string;
-  weapon: WeaponClass;
-  kind: SkillKind;
+  rarity: Rarity;
   enCost: number;
-  power: number;
-  breakPower: number;
-  heal: number;
+  kind: SkillKind;
+  /** ヒット回数（attack時、既定1） */
+  hits: number;
+  /** 対象数（attack時、既定1） */
+  targets: number;
+  /** 会心率への加算(%) */
+  critAdd: number;
+  /** 会心ダメージ倍率（既定1.5） */
+  critMult: number;
+  /** ブレイク蓄積倍率（既定1） */
+  breakMult: number;
 }
 
 /** 敵データ */
@@ -33,56 +43,48 @@ export interface EnemyDef {
   /** 攻撃カウントの開始値（5なら 5→4→…→1→攻撃）。敵ごとにリズムを変える */
   countStart: number;
   breakThreshold: number;
+  /** 撃破時に落とす武器ID */
+  dropWeaponId?: string;
+  /** ドロップ率(%) */
+  dropRate?: number;
   boss?: boolean;
-}
-
-/** 武器の種別（テンプレート）。実際の所持品は WeaponInstance */
-export interface Weapon {
-  id: string;
-  name: string;
-  weapon: WeaponClass;
-  /** 順番に繰り出すスキルID（ローテーション） */
-  skills: string[];
-  desc: string;
 }
 
 /** レアリティ（高いほど強く、出にくい） */
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astral";
 
-/** 武器に宿る固有パッシブ（使用時・命中時に発動する効果） */
-export interface Passive {
+/**
+ * 武器テンプレート。攻撃力・会心・ブレイク値・レアリティを持つ（レアリティは武器ごとに固定）。
+ * 実際の所持品は WeaponInstance（抽選されたスキル付き）。
+ */
+export interface Weapon {
   id: string;
   name: string;
+  weapon: WeaponClass;
+  rarity: Rarity;
+  /** 基礎攻撃力（ダメージの源） */
+  attack: number;
+  /** 会心率(%)。0なら会心なし */
+  critChance: number;
+  /** ブレイク蓄積の基礎値 */
+  breakPower: number;
   desc: string;
-  /** 使うたびに最大HPのx%回復 */
-  healPctOnUse?: number;
-  /** 使うたびにEN+N */
-  enOnUse?: number;
-  /** 与ダメージのx%をHP回復（吸収） */
-  lifestealPct?: number;
-  /** ブレイク蓄積x倍 */
-  breakMult?: number;
-  /** x%で会心（1.5倍ダメージ） */
-  critChance?: number;
 }
 
-/** 所持している武器1本（テンプレ＋レアリティ＋固有ID＋ランダムパラメータ） */
+/** 所持している武器1本（テンプレ＋ドロップ時に抽選されたスキル） */
 export interface WeaponInstance {
   uid: string;
   baseId: string;
-  rarity: Rarity;
-  /** レアリティで付与される追加スキルID（ノーマルは無し） */
-  bonusSkillId?: string;
-  /** ランダムな攻撃力ボーナス（+1〜5）。名前に反映される */
-  atkBonus: number;
-  /** ランダムな固有パッシブID */
-  passiveId: string;
+  /** 抽選されたスキルID（レアリティで1〜2個）。コンボとして順番に発動 */
+  skillIds: string[];
 }
 
-/** 武器インスタンス由来の補正（攻撃時に戦闘へ渡す） */
+/** 武器インスタンス由来の補正（攻撃時に戦闘へ渡す＝武器本体のステータス） */
 export interface WeaponMods {
-  atkBonus: number;
-  passive?: Passive;
+  weapon: WeaponClass;
+  attack: number;
+  critChance: number;
+  breakPower: number;
 }
 
 /** ステージ定義 */
@@ -90,10 +92,6 @@ export interface StageDef {
   name: string;
   desc: string;
   enemies: EnemyDef[];
-  /** ドロップ時のレアリティ抽選の重み [common, uncommon, rare, epic, legend, astral] */
-  rarityWeights: number[];
-  /** クリア時のドロップ本数 */
-  drops: number;
 }
 
 /** ガード判定の結果段階。none=失敗(被弾) / guard=通常ガード / just=中間 / perfect=パーフェクトガード */

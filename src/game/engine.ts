@@ -23,7 +23,7 @@ import {
   PERFECT_BREAK_BONUS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
-  rollDrop,
+  rollEnemyDrop,
 } from "./data.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
@@ -121,8 +121,8 @@ export class Battle {
   perfectFxIndex = -1;
   /** 効果音イベントのキュー（mainが毎フレーム回収して鳴らす） */
   sfx: SfxEvent[] = [];
-  /** ドロップ抽選用のステージ別レアリティ重み */
-  rarityWeights: number[];
+  /** 「集中」発動中：次の行動のEN消費をなくす */
+  freeNextEn = false;
   /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
@@ -130,12 +130,10 @@ export class Battle {
 
   constructor(
     defs: EnemyDef[],
-    rarityWeights: number[] = [],
     startHp: number = PLAYER_MAX_HP,
     startEn: number = PLAYER_MAX_EN,
   ) {
     this.enemies = defs.map((d) => new EnemyState(d));
-    this.rarityWeights = rarityWeights;
     this.playerHp = Math.max(1, Math.min(PLAYER_MAX_HP, startHp));
     this.playerEn = Math.max(0, Math.min(PLAYER_MAX_EN, startEn));
   }
@@ -143,11 +141,6 @@ export class Battle {
   /** 撃破した敵が落としたドロップ一覧（リザルト用） */
   collectedDrops(): WeaponInstance[] {
     return this.enemies.flatMap((e) => (e.drop ? [e.drop] : []));
-  }
-
-  /** いずれかの敵がブレイク中＝EN消費なしで行動できる（ENゲージ金色） */
-  get enFrozen(): boolean {
-    return this.enemies.some((e) => e.isBroken);
   }
 
   get aliveEnemies(): EnemyState[] {
@@ -169,56 +162,60 @@ export class Battle {
 
   // ===== プレイヤー行動 =====
 
-  /** スキル使用。成功でtrue */
+  /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting") return false;
-    const free = this.enFrozen; // ブレイク中はEN消費なし
-    if (!free && this.playerEn < skill.enCost) {
+    const free = this.freeNextEn; // 「集中」発動中はEN消費なし
+    const cost = free ? 0 : skill.enCost;
+    if (this.playerEn < cost) {
       this.pushFloat("ENが足りない", "#ffcc55", "player");
       return false;
     }
-    if (!free) this.playerEn -= skill.enCost;
-
-    // 使用時パッシブ（HP回復・EN獲得）
-    if (mods?.passive) {
-      const p = mods.passive;
-      if (p.healPctOnUse) {
-        const before = this.playerHp;
-        this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + Math.round(PLAYER_MAX_HP * p.healPctOnUse));
-        const gained = Math.round(this.playerHp - before);
-        if (gained > 0) this.pushFloat(`+${gained} HP`, "#66ffaa", "player");
-      }
-      if (p.enOnUse) this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + p.enOnUse);
-    }
+    this.playerEn -= cost;
+    this.freeNextEn = false; // 消費（集中はこの後に再セット）
 
     switch (skill.kind) {
       case "charge":
         this.charge = CHARGE_MULT;
         this.pushFloat("ためる！", "#ffd35f", "player");
         break;
-      case "heal": {
-        const before = this.playerHp;
-        this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + skill.heal);
-        this.pushFloat(`+${this.playerHp - before} HP`, "#66ffaa", "player");
+      case "focus":
+        this.freeNextEn = true;
+        this.pushFloat("集中！ 次の行動EN0", "#9fd9ff", "player");
         break;
-      }
-      case "aoe":
-        for (const e of this.aliveEnemies) this.hitEnemy(e, skill, mods);
-        this.consumeCharge();
-        this.lungeT = 200;
+      case "attack":
+        this.performAttack(skill, mods);
         break;
-      case "attack": {
-        const t = this.target;
-        if (t) this.hitEnemy(t, skill, mods);
-        this.consumeCharge();
-        this.lungeT = 200;
-        break;
-      }
     }
 
     this.advanceCounts(); // 行動したので敵カウントを進める
     this.checkWin();
     return true;
+  }
+
+  /** 攻撃スキルを実行：対象数ぶんの敵に、ヒット数ぶん攻撃する */
+  private performAttack(skill: Skill, mods?: WeaponMods): void {
+    const targets = this.pickTargets(skill.targets);
+    for (const e of targets) {
+      for (let h = 0; h < skill.hits; h++) {
+        if (!e.alive) break;
+        this.hitOne(e, skill, mods);
+      }
+    }
+    this.consumeCharge();
+    this.lungeT = 200;
+  }
+
+  /** 攻撃対象を選ぶ：現在のターゲット＋（足りなければ）他の生存敵を左から補う */
+  private pickTargets(n: number): EnemyState[] {
+    const out: EnemyState[] = [];
+    const t = this.target;
+    if (t) out.push(t);
+    for (const e of this.enemies) {
+      if (out.length >= n) break;
+      if (e.alive && !out.includes(e)) out.push(e);
+    }
+    return out.slice(0, n);
   }
 
   /** 休憩：ENを回復（攻撃はしない） */
@@ -303,15 +300,18 @@ export class Battle {
     this.charge = 1;
   }
 
-  private hitEnemy(e: EnemyState, skill: Skill, mods?: WeaponMods): void {
-    let dmg = skill.power;
-    if (dmg > 0 && mods) dmg += mods.atkBonus; // 武器の攻撃力ボーナス
-    const weak = WEAKNESS[e.def.kind] === skill.weapon;
+  /** 1ヒットぶんのダメージ処理。攻撃力は武器本体(mods)、スキルは倍率・会心・ブレイクを担う */
+  private hitOne(e: EnemyState, skill: Skill, mods?: WeaponMods): void {
+    const atk = mods?.attack ?? 1;
+    let dmg = atk;
+    const weak = mods ? WEAKNESS[e.def.kind] === mods.weapon : false;
     if (weak) dmg *= WEAKNESS_MULTIPLIER;
     if (e.isBroken) dmg *= BREAK_CRIT_MULT;
     if (this.charge > 1) dmg *= this.charge;
-    const crit = !!(mods?.passive?.critChance && Math.random() < mods.passive.critChance);
-    if (crit) dmg *= 1.5;
+    // 会心＝武器の会心率＋スキルの加算。発生で skill.critMult 倍
+    const critChance = ((mods?.critChance ?? 0) + skill.critAdd) / 100;
+    const crit = critChance > 0 && Math.random() < critChance;
+    if (crit) dmg *= skill.critMult;
     dmg = Math.round(dmg);
 
     const wasAlive = e.alive;
@@ -321,16 +321,8 @@ export class Battle {
     const tag = crit ? " 会心!" : this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
     this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 || crit ? "#ff5577" : "#ffffff", idx);
 
-    // 吸収（ライフスティール）
-    if (mods?.passive?.lifestealPct && dmg > 0) {
-      const heal = Math.max(1, Math.round(dmg * mods.passive.lifestealPct));
-      const before = this.playerHp;
-      this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + heal);
-      if (this.playerHp - before > 0) this.pushFloat(`+${Math.round(this.playerHp - before)} HP`, "#66ffaa", "player");
-    }
-
     if (!e.isBroken) {
-      e.breakGauge += skill.breakPower * (mods?.passive?.breakMult ?? 1);
+      e.breakGauge += (mods?.breakPower ?? 0) * skill.breakMult;
       if (e.breakGauge >= e.def.breakThreshold) {
         e.breakTurns = BREAK_TURNS;
         e.breakGauge = 0;
@@ -350,8 +342,8 @@ export class Battle {
     e.deathDir = 1; // プレイヤーは左、敵は右向きなので右奥へ吹き飛ぶ
     e.breakTurns = 0;
     e.flinchT = 0;
-    e.drop = rollDrop(this.rarityWeights); // この敵のドロップを確定（宝箱の色に反映）
-    this.pushFloat("撃破!", "#ffd35f", idx);
+    e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり）
+    this.pushFloat(e.drop ? "ドロップ!" : "撃破!", "#ffd35f", idx);
     this.shake(220, 5);
     this.sfx.push("die");
   }

@@ -1,7 +1,7 @@
 import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
 import {
   KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN,
-  RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS,
+  RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
 } from "../game/data.ts";
 import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
@@ -368,7 +368,7 @@ function drawChest(ctx: CanvasRenderingContext2D, e: EnemyState, L: EnemyLayout)
   if (t <= 0) return;
   const pop = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.3 : 1; // 出現バウンド
   const bob = Math.sin(Date.now() / 320) * 1.5;            // 浮遊
-  const rarity = e.drop!.rarity;
+  const rarity = getWeapon(e.drop!.baseId)?.rarity ?? "common";
   const rainbow = isRainbowRarity(rarity);
   const col = rainbow ? rainbowColor() : RARITY_COLOR[rarity];
 
@@ -527,20 +527,19 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   ctx.fillText(`HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`, W / 2, hpY + 12);
 
   // === EN：左右いっぱい＋1ずつの区切り ===
-  // ブレイク中はEN消費なし＝全セルが金色に輝く
+  // 「集中」発動中は次の行動が無償＝ゲージが金色に光る
   const enY = 40, enH = 13, n = PLAYER_MAX_EN, gap = 3;
   const cw = (fullW - gap * (n - 1)) / n;
   const en = Math.floor(b.playerEn);
-  const frozen = b.enFrozen;
-  const glow = frozen ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 200)) : 0;
+  const focus = b.freeNextEn;
+  const glow = focus ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 200)) : 0;
   for (let i = 0; i < n; i++) {
     const x = M + i * (cw + gap);
     ctx.fillStyle = "#102a3a";
     ctx.fillRect(x, enY, cw, enH);
-    const lit = frozen || i < en; // 金色時は全点灯
-    if (lit) {
-      if (frozen) { ctx.shadowColor = "#ffd35f"; ctx.shadowBlur = 8 * glow; }
-      ctx.fillStyle = frozen ? "#ffd35f" : "#46b6ff";
+    if (i < en) {
+      if (focus) { ctx.shadowColor = "#ffd35f"; ctx.shadowBlur = 8 * glow; }
+      ctx.fillStyle = focus ? "#ffd35f" : "#46b6ff";
       ctx.fillRect(x, enY, cw, enH);
       ctx.shadowBlur = 0;
     }
@@ -550,8 +549,8 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   }
   ctx.textAlign = "right";
   ctx.font = "bold 10px monospace";
-  ctx.fillStyle = frozen ? "#ffe49a" : "#9fd9ff";
-  ctx.fillText(frozen ? "EN FREE!" : `EN ${en}/${n}`, W - M, enY + 11);
+  ctx.fillStyle = focus ? "#ffe49a" : "#9fd9ff";
+  ctx.fillText(focus ? `EN ${en}/${n}（次0!）` : `EN ${en}/${n}`, W - M, enY + 11);
 
   // 対象敵の弱点ヒント
   const t = b.enemies[b.targetIndex];

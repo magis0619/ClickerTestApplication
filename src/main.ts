@@ -3,11 +3,14 @@ import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, getPassive, skillDescription, isBonusSkill, isRainbowRarity,
-  instanceLabel, REST_EN_RECOVER,
+  getWeapon, getSkill, skillDescription, isRainbowRarity, REST_EN_RECOVER,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
+import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
+
+/** インスタンスの武器名・レアリティ（テンプレートから取得） */
+function instName(inst: WeaponInstance): string { return getWeapon(inst.baseId)?.name ?? "???"; }
+function instRarity(inst: WeaponInstance): Rarity { return getWeapon(inst.baseId)?.rarity ?? "common"; }
 
 const canvas = document.getElementById("screen") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -33,7 +36,7 @@ function withFade(action: () => void): void {
   }, 340);
 }
 
-const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", aoe: "✸", heal: "✚", charge: "▲" };
+const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", charge: "▲", focus: "◎" };
 const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
 const CIRCLE = ["①", "②", "③", "④", "⑤", "⑥"];
 
@@ -166,7 +169,7 @@ function buildStageSelect(): void {
     card.innerHTML =
       `<div class="st-title">STAGE ${i + 1}: ${s.name} ${cleared ? "✔" : ""}${unlocked ? "" : " 🔒"}</div>` +
       `<div class="st-desc">${s.desc}</div>` +
-      `<div class="st-enemy">敵: ${enemyNames}（${s.enemies.length}体） / ドロップ${s.drops}本</div>`;
+      `<div class="st-enemy">敵: ${enemyNames}（${s.enemies.length}体）</div>`;
     if (unlocked) card.addEventListener("click", () => withFade(() => game.startStage(i)));
     list.appendChild(card);
   });
@@ -193,7 +196,7 @@ function buildInventory(): void {
   const head = document.createElement("div");
   head.className = `inv-head wclass-${invClass}`;
   const eqInst = game.equippedInstance(invClass);
-  head.textContent = `${WEAPON_LABEL[invClass]}　装備中: ${eqInst ? instanceLabel(eqInst) : "なし"}`;
+  head.textContent = `${WEAPON_LABEL[invClass]}　装備中: ${eqInst ? instName(eqInst) : "なし"}`;
   group.appendChild(head);
 
   const items = game.inventoryOf(invClass).slice().sort(rarityDesc);
@@ -218,15 +221,15 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
 
   const head = document.createElement("div");
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
-  const ids = game.instanceSkillIds(inst);
-  const passive = getPassive(inst.passiveId);
+  const rarity = instRarity(inst);
+  const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
   head.innerHTML =
     `<span class="wpn-icon wclass-${w.weapon}">${WEAPON_ICON[w.weapon]}</span>` +
     `<span class="wpn-main">` +
-    `<span class="wpn-name">${instanceLabel(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
-    `<span ${rarityAttr(inst.rarity, "wpn-stars")}>${rarityStars(inst.rarity)} ` +
-    `<span class="wpn-rlabel">${RARITY_LABEL[inst.rarity]}</span></span>` +
-    `<span class="wpn-sub">⚔+${inst.atkBonus}${passive ? `　✦${passive.name}` : ""}　コンボ${ids.length}段</span></span>`;
+    `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
+    `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
+    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
+    `<span class="wpn-sub">⚔${w.attack}${w.critChance ? `　会心${w.critChance}%` : ""}　${skillNames || "スキルなし"}</span></span>`;
   card.appendChild(head);
 
   const acts = document.createElement("div");
@@ -261,28 +264,25 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
   const box = document.createElement("div");
   box.className = "wpn-detail";
 
-  const passive = getPassive(inst.passiveId);
+  const rarity = instRarity(inst);
   const meta = document.createElement("div");
   meta.className = "wd-meta";
   meta.innerHTML =
-    `<div ${rarityAttr(inst.rarity, "wd-stars")}>${rarityStars(inst.rarity)} ` +
-    `<span class="wd-rlabel">${RARITY_LABEL[inst.rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
+    `<div ${rarityAttr(rarity, "wd-stars")}>${rarityStars(rarity)} ` +
+    `<span class="wd-rlabel">${RARITY_LABEL[rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
     `<div>${w.desc}</div>` +
-    `<div class="wd-rand">⚔ 攻撃力ボーナス <b>+${inst.atkBonus}</b></div>` +
-    (passive ? `<div class="wd-rand">✦ パッシブ <b>${passive.name}</b> — ${passive.desc}</div>` : "") +
-    `<div class="wd-note">武器を押すたびに ①→②→… の順でコンボが発動します</div>`;
+    `<div class="wd-rand">⚔ 攻撃力 <b>${w.attack}</b>　会心率 <b>${w.critChance}%</b>　Break <b>${w.breakPower}</b></div>` +
+    `<div class="wd-note">武器を押すたびに ①→②→… の順でスキルが発動します</div>`;
   box.appendChild(meta);
 
-  const ids = game.instanceSkillIds(inst);
-  ids.forEach((id, i) => {
+  inst.skillIds.forEach((id, i) => {
     const s = getSkill(id);
-    const bonus = isBonusSkill(id);
+    if (!s) return;
     const row = document.createElement("div");
-    row.className = "wd-skill" + (bonus ? " wd-bonus" : "");
+    row.className = "wd-skill";
     row.innerHTML =
       `<div class="wd-sk-head">${i + 1}. ${KIND_ICON[s.kind]} ${s.name} ` +
       `<span class="wd-kind">[${SKILL_KIND_LABEL[s.kind]}]</span> <span class="wd-cost">EN ${s.enCost}</span></div>` +
-      (bonus ? `<div class="wd-bonus-tag">★ レアリティ特典スキル</div>` : "") +
       `<div class="wd-sk-desc">${skillDescription(s)}</div>`;
     box.appendChild(row);
   });
@@ -291,7 +291,7 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
 
 function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
   const order = ["astral", "legend", "epic", "rare", "uncommon", "common"];
-  return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+  return order.indexOf(instRarity(a)) - order.indexOf(instRarity(b));
 }
 
 function buildBattle(): void {
@@ -309,7 +309,7 @@ function buildBattle(): void {
     head.className = "wc-head";
     head.innerHTML =
       `<span class="wc-kind">${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}</span>` +
-      `<span class="wc-name">${inst ? instanceLabel(inst) : "（未装備）"}</span>`;
+      `<span class="wc-name">${inst ? instName(inst) : "（未装備）"}</span>`;
     card.appendChild(head);
 
     // スキルは「コンボ」として①②…で表示

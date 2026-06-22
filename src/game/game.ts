@@ -1,6 +1,6 @@
 import { Battle } from "./engine.ts";
 import {
-  STAGES, STAGE_COUNT, getWeapon, skillForClass, getPassive, PLAYER_MAX_HP,
+  STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
@@ -36,7 +36,7 @@ export class Game {
     if (!this.stageUnlocked(i)) return;
     this.stageIndex = i;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
-    this.battle = new Battle(STAGES[i].enemies, STAGES[i].rarityWeights);
+    this.battle = new Battle(STAGES[i].enemies);
     this.screen = "battle";
   }
 
@@ -53,28 +53,24 @@ export class Game {
     return inst ? getWeapon(inst.baseId) : undefined;
   }
 
-  /** インスタンスの実際のスキルローテーション（基本スキル＋レアリティ追加スキル） */
+  /** インスタンスが持つ（抽選された）スキルID列 */
   instanceSkillIds(inst: WeaponInstance): string[] {
-    const w = getWeapon(inst.baseId);
-    if (!w) return [];
-    return inst.bonusSkillId ? [...w.skills, inst.bonusSkillId] : [...w.skills];
+    return inst.skillIds;
   }
 
   /** その系統の「次に出るスキル」 */
   currentSkill(cls: WeaponClass): Skill | null {
     const inst = this.equippedInstance(cls);
-    if (!inst) return null;
-    const ids = this.instanceSkillIds(inst);
-    if (ids.length === 0) return null;
-    const id = ids[this.rotation[cls] % ids.length];
-    return skillForClass(id, cls);
+    if (!inst || inst.skillIds.length === 0) return null;
+    const id = inst.skillIds[this.rotation[cls] % inst.skillIds.length];
+    return getSkill(id) ?? null;
   }
 
   /** その系統のコンボ（全スキルを順番通りに） */
   comboSkills(cls: WeaponClass): Skill[] {
     const inst = this.equippedInstance(cls);
     if (!inst) return [];
-    return this.instanceSkillIds(inst).map((id) => skillForClass(id, cls));
+    return inst.skillIds.map((id) => getSkill(id)).filter((s): s is Skill => !!s);
   }
 
   /** その系統で次に発動するコンボ段のインデックス（0始まり） */
@@ -86,9 +82,9 @@ export class Game {
   useWeapon(cls: WeaponClass): Skill | null {
     if (!this.battle) return null;
     const skill = this.currentSkill(cls);
-    if (!skill) return null;
-    const inst = this.equippedInstance(cls);
-    const mods = inst ? { atkBonus: inst.atkBonus, passive: getPassive(inst.passiveId) } : undefined;
+    const w = this.equippedWeapon(cls);
+    if (!skill || !w) return null;
+    const mods = { weapon: w.weapon, attack: w.attack, critChance: w.critChance, breakPower: w.breakPower };
     if (this.battle.useSkill(skill, mods)) {
       this.rotation[cls] += 1;
       return skill;
