@@ -1,5 +1,5 @@
 /* Service Worker — オフライン動作のための簡易キャッシュ */
-const CACHE = "stardust-clicker-v5";
+const CACHE = "stardust-clicker-v6";
 const ASSETS = [
   "./",
   "./index.html",

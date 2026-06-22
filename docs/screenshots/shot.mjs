@@ -72,6 +72,19 @@ const PROGRESS = {
   await page.locator('.tab[data-tab="achievements"]').click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: OUT + '/06-achievements.png' });
+
+  // 7) 任務タブ
+  await page.locator('.tab[data-tab="missions"]').click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: OUT + '/08-missions.png' });
+
+  // 8) ボス戦闘中（コックピット）
+  await page.locator('.tab[data-tab="shop"]').click();
+  await page.locator('#bossButton').click().catch(() => {});
+  await page.waitForTimeout(200);
+  await page.locator('#tapButton').click({ force: true });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: OUT + '/09-boss.png' });
   await ctx.close();
 }
 

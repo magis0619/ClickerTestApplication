@@ -33,16 +33,21 @@
 - **F12 演出強化** — 独自SVGアイコン(絵文字不使用)/効果音(WebAudio)/触覚(Vibration)/クリティカル(5%で×7)/タップ時パーティクル・数値ポップ・購入フラッシュ・達成/デイリーのバースト/設定でON/OFF
 - **F10+ 実績の達成率表示** — 各実績に進捗バーと「現在値/目標値」(例 20/50)を表示
 - **F13 恒久アップグレード** — ネビュラで4系統(クリック/生産/ブースト/放置)を強化
+- **F14 コックピット／艦隊表示** — タップ部を宇宙船の舷窓に。宇宙背景＋中央の太陽、保有数に応じて艦隊（ドローン等）が窓内に出現
+- **F15 コンボ（熱中ゲージ）** — 連打でゲージが溜まりタップ倍率UP（最大×3）、止めると減衰
+- **F16 ボス／タイムアタック** — 制限時間内に連打で撃破→報酬。撃破で宝箱も解放
+- **F17 宝箱／ガチャ** — クールダウンで開封、レア度別ランダム報酬（演出付き）
+- **F18 ステージ進行＋デイリー任務** — 累計獲得でステージUP（恒久+3%/段）＋日替わり任務
 
 ## スクリーンショット
 
-| 初期状態 | 進行後 | 転生 | QoL（Max買い＋ブースト） |
+| 初期状態 | 進行後（コックピット＋艦隊） | 転生 | QoL（Max買い＋ブースト） |
 |---|---|---|---|
 | ![start](docs/screenshots/01-start.png) | ![progress](docs/screenshots/02-progress.png) | ![prestige](docs/screenshots/03-prestige.png) | ![qol](docs/screenshots/04-qol.png) |
 
-| 恒久アップグレード（強化） | 実績 |
-|---|---|
-| ![upgrades](docs/screenshots/05-upgrades.png) | ![achievements](docs/screenshots/06-achievements.png) |
+| 恒久アップグレード（強化） | 実績 | デイリー任務 | ボス戦 |
+|---|---|---|---|
+| ![upgrades](docs/screenshots/05-upgrades.png) | ![achievements](docs/screenshots/06-achievements.png) | ![missions](docs/screenshots/08-missions.png) | ![boss](docs/screenshots/09-boss.png) |
 
 > Chromium（iPhone 相当 390×844）で実配信・操作して撮影。
 > 撮影スクリプト: [docs/screenshots/shot.mjs](docs/screenshots/shot.mjs)（Playwright）

@@ -66,6 +66,31 @@
   let boostUntil = 0;
   let boostCooldownUntil = 0;
 
+  // コンボ（熱中ゲージ）— UIアイデア1
+  const COMBO_MAX = 100;
+  const COMBO_PER_TAP = 9;
+  const COMBO_DECAY = 2;          // 100msごとに減衰
+  const COMBO_BONUS = 2;          // 満タンで +200%（最大×3）
+  let comboValue = 0;             // 0..COMBO_MAX（保存しない）
+
+  // ボス／タイムアタック — UIアイデア2
+  const BOSS_DURATION_MS = 15000;
+  const BOSS_COOLDOWN_MS = 60000;
+  let bossActive = false, bossHp = 0, bossMax = 0, bossEndsAt = 0, bossCdUntil = 0;
+
+  // 宝箱／ガチャ — UIアイデア3
+  const CHEST_COOLDOWN_MS = 90000;
+  let chestCdUntil = 0;          // 起動時は即開封可
+
+  // ステージ進行 — UIアイデア4
+  const STAGE_PER_BONUS = 0.03;  // ステージ毎 +3%
+  // デイリー任務 — UIアイデア4
+  const QUESTS = [
+    { id: "tap",  name: "宇宙を採取",   field: "tapped", target: 200, reward: () => Math.max(500, perSecond() * 1800) },
+    { id: "buy",  name: "艦隊を増強",   field: "bought", target: 10,  reward: () => Math.max(800, perSecond() * 2400) },
+    { id: "boss", name: "用心棒",       field: "boss",   target: 1,   reward: () => Math.max(2000, perSecond() * 4800) },
+  ];
+
   // 実績（check は state を受け取り、達成なら true）
   // prog: 現在値と目標値 [cur, target] を返す（達成率バー用）
   const ACHIEVEMENTS = [
@@ -80,6 +105,8 @@
     { id: "boost1",    name: "加速装置",         desc: "ブースト使用",  prog: (s) => [s.lifetime.boostUsed ? 1 : 0, 1] },
     { id: "prestige1", name: "生まれ変わり",     desc: "転生回数",      prog: (s) => [s.lifetime.prestiges, 1] },
     { id: "prestige5", name: "輪廻の探究者",     desc: "転生回数",      prog: (s) => [s.lifetime.prestiges, 5] },
+    { id: "boss1",     name: "用心棒",           desc: "ボス撃破",      prog: (s) => [s.lifetime.bossDefeated, 1] },
+    { id: "boss10",    name: "宇宙の守護者",     desc: "ボス撃破",      prog: (s) => [s.lifetime.bossDefeated, 10] },
   ];
   // 達成判定は prog の cur >= target で統一
   function achDone(a, s) { const [c, t] = a.prog(s); return c >= t; }
@@ -102,8 +129,9 @@
       nebulaEarned: 0,    // 累計獲得ネビュラ（恒久ボーナスの基準）
       upgrades: { click: 0, prod: 0, boost: 0, idle: 0 },
       achievements: {},
-      lifetime: { earned: 0, taps: 0, prestiges: 0, boostUsed: false },
+      lifetime: { earned: 0, taps: 0, prestiges: 0, boostUsed: false, bossDefeated: 0 },
       daily: { lastClaimDay: -1, streak: 0 },
+      quests: { day: -1, tapped: 0, bought: 0, boss: 0, claimed: {} },
       settings: { sound: true, vibe: true },
       buyMode: 1,
       lastSeen: Date.now(),
@@ -121,7 +149,18 @@
   function achievementMultiplier() { return 1 + achUnlockedCount() * ACH_PER_BONUS; }
   function boostActive() { return Date.now() < boostUntil; }
   function boostMultiplier() { return boostActive() ? BOOST_MULT : 1; }
-  function globalMultiplier() { return nebulaMultiplier() * achievementMultiplier() * boostMultiplier(); }
+  function stageMultiplier() { return 1 + (stageInfo().stage - 1) * STAGE_PER_BONUS; }
+  function comboMultiplier() { return 1 + (comboValue / COMBO_MAX) * COMBO_BONUS; }
+  function globalMultiplier() { return nebulaMultiplier() * achievementMultiplier() * boostMultiplier() * stageMultiplier(); }
+
+  // ステージ：累計獲得が 100,1000,10000... を超えるごとに +1
+  function stageInfo() {
+    const earned = state.lifetime.earned;
+    let stage = 1, prev = 0, next = 100;
+    while (earned >= next) { stage += 1; prev = next; next *= 10; }
+    const frac = next > prev ? (earned - prev) / (next - prev) : 0;
+    return { stage, prev, next, frac };
+  }
 
   function clickUpgradeMult() { return 1 + upLevel("click") * 0.5; }
   function prodUpgradeMult() { return 1 + upLevel("prod") * 0.25; }
@@ -272,10 +311,14 @@
   // ---- アクション ----
   function tap(clientX, clientY) {
     state.lifetime.taps += 1;
+    ensureQuestDay();
+    state.quests.tapped += 1;
+    comboValue = Math.min(COMBO_MAX, comboValue + COMBO_PER_TAP);
     const crit = Math.random() < CRIT_CHANCE;
-    let gain = perClick();
+    let gain = perClick() * comboMultiplier();
     if (crit) gain *= CRIT_MULT;
     earn(gain);
+    if (bossActive) damageBoss(gain, clientX, clientY);
     spawnFloater((crit ? "CRIT +" : "+") + fmt(gain), clientX, clientY, crit);
     spawnParticles(clientX, clientY, crit ? 14 : 6, crit ? "#fff" : "#ffd24a");
     bumpStardust();
@@ -300,6 +343,8 @@
     if (n < 1 || state.stardust < cost) return;
     state.stardust -= cost;
     state.generators[i].count += n;
+    ensureQuestDay();
+    state.quests.bought += n;
     const card = dom.generators.querySelector(`[data-cost="${i}"]`);
     flashEl(card && card.closest(".gen-card"));
     beep(440, 0.06, "triangle");
@@ -391,6 +436,150 @@
     toast(`デイリー ${state.daily.streak}日目: +${fmt(reward)}（×${mult}）`);
     beep(660, 0.1, "triangle"); setTimeout(() => beep(880, 0.12, "triangle"), 90);
     render();
+  }
+
+  // ---- ボス／タイムアタック ----
+  function startBoss() {
+    const now = Date.now();
+    if (bossActive || now < bossCdUntil) return;
+    const dps = perClick() * comboMultiplier() * 5 + perSecond();
+    bossMax = Math.max(50, dps * (BOSS_DURATION_MS / 1000) * 0.6);
+    bossHp = bossMax;
+    bossEndsAt = now + BOSS_DURATION_MS;
+    bossActive = true;
+    el("bossPanel").classList.remove("hidden");
+    beep(160, 0.3, "sawtooth", 0.05);
+    toast("ボス出現！制限時間内に連打して撃破せよ");
+    render();
+  }
+  function damageBoss(dmg, x, y) {
+    bossHp -= dmg;
+    if (bossHp <= 0) defeatBoss(x, y);
+  }
+  function defeatBoss(x, y) {
+    bossActive = false;
+    bossCdUntil = Date.now() + BOSS_COOLDOWN_MS;
+    state.lifetime.bossDefeated += 1;
+    ensureQuestDay();
+    state.quests.boss += 1;
+    const reward = bossMax * 1.5;
+    earn(reward);
+    el("bossPanel").classList.add("hidden");
+    bumpStardust();
+    burst(x ?? window.innerWidth / 2, y ?? window.innerHeight * 0.3, 24);
+    beep(523, 0.1, "square", 0.05); setTimeout(() => beep(784, 0.16, "square", 0.05), 100);
+    toast(`ボス撃破！ +${fmt(reward)} スターダスト`);
+    chestCdUntil = Math.min(chestCdUntil, Date.now()); // 撃破で宝箱が開封可能に
+    checkAchievements();
+    render();
+  }
+  function failBoss() {
+    bossActive = false;
+    bossCdUntil = Date.now() + BOSS_COOLDOWN_MS;
+    el("bossPanel").classList.add("hidden");
+    toast("ボスは逃げてしまった…");
+    render();
+  }
+
+  // ---- 宝箱／ガチャ ----
+  const CHEST_TABLE = [
+    { w: 50, rarity: "ノーマル", cls: "r-n", apply: () => ({ msg: `+${fmt(grant(Math.max(200, perSecond() * 600)))} スターダスト` }) },
+    { w: 26, rarity: "レア",     cls: "r-r", apply: () => ({ msg: `+${fmt(grant(Math.max(1000, perSecond() * 3600)))} スターダスト` }) },
+    { w: 12, rarity: "レア",     cls: "r-r", apply: () => { boostUntil = Date.now() + boostDuration(); boostCooldownUntil = boostUntil; state.lifetime.boostUsed = true; return { msg: "ブースト x2 発動！" }; } },
+    { w: 9,  rarity: "エピック", cls: "r-e", apply: () => { state.nebula += 1; return { msg: "ネビュラ +1" }; } },
+    { w: 3,  rarity: "レジェンダリー", cls: "r-l", apply: () => ({ msg: `大当たり！ +${fmt(grant(Math.max(5000, perSecond() * 14400)))} スターダスト` }) },
+  ];
+  function grant(v) { earn(v); return v; }
+  function openChest() {
+    const now = Date.now();
+    if (now < chestCdUntil) return;
+    chestCdUntil = now + CHEST_COOLDOWN_MS;
+    const total = CHEST_TABLE.reduce((a, e) => a + e.w, 0);
+    let r = Math.random() * total, pick = CHEST_TABLE[0];
+    for (const e of CHEST_TABLE) { if ((r -= e.w) <= 0) { pick = e; break; } }
+    const out = pick.apply();
+    el("chestRarity").textContent = pick.rarity;
+    el("chestRarity").className = `chest-burst ${pick.cls}`;
+    el("chestReward").textContent = out.msg;
+    el("chestModal").classList.remove("hidden");
+    bumpStardust();
+    burst(window.innerWidth / 2, window.innerHeight * 0.4, 22);
+    beep(660, 0.1, "triangle"); setTimeout(() => beep(990, 0.16, "triangle"), 110);
+    checkAchievements();
+    render();
+  }
+
+  // ---- デイリー任務 ----
+  function ensureQuestDay() {
+    const today = todayIndex();
+    if (state.quests.day !== today) {
+      state.quests = { day: today, tapped: 0, bought: 0, boss: 0, claimed: {} };
+    }
+  }
+  function buildQuestCards() {
+    dom.quests.innerHTML = "";
+    QUESTS.forEach((q) => {
+      const card = document.createElement("div");
+      card.className = "ach-card";
+      card.dataset.quest = q.id;
+      card.innerHTML = `
+        <div class="ach-icon">${ICONS.medal}</div>
+        <div class="ach-body">
+          <div class="ach-name">${q.name}</div>
+          <div class="ach-prog">
+            <div class="ach-bar"><span data-qbar="${q.id}"></span></div>
+            <div class="ach-count" data-qcount="${q.id}"></div>
+          </div>
+        </div>
+        <button class="quest-claim" data-qclaim="${q.id}">受取</button>`;
+      dom.quests.appendChild(card);
+    });
+  }
+  function claimQuest(id) {
+    ensureQuestDay();
+    const q = QUESTS.find((x) => x.id === id);
+    const cur = state.quests[q.field];
+    if (cur < q.target || state.quests.claimed[id]) return;
+    state.quests.claimed[id] = true;
+    const reward = q.reward();
+    earn(reward);
+    bumpStardust();
+    burst(window.innerWidth / 2, window.innerHeight * 0.4, 18);
+    toast(`任務達成「${q.name}」 +${fmt(reward)}`);
+    beep(700, 0.1, "triangle"); setTimeout(() => beep(932, 0.12, "triangle"), 90);
+    render();
+  }
+
+  // ---- 艦隊表示（保有数に応じてユニットを画面に） ----
+  // 中央のサンを避けた配置スロット（％）
+  const FLEET_SLOTS = [
+    [16, 22], [82, 20], [10, 50], [90, 52], [20, 80], [80, 82],
+    [50, 12], [50, 90], [30, 16], [70, 16], [12, 70], [88, 72],
+    [26, 64], [74, 64], [38, 86], [62, 86], [16, 38], [84, 38],
+    [40, 8], [60, 8], [24, 50], [76, 50], [34, 30], [66, 30],
+  ];
+  function spritesFor(count) { return count <= 0 ? 0 : Math.min(6, 1 + Math.floor(Math.log2(count))); }
+  let fleetSig = "";
+  function renderFleet() {
+    const counts = state.generators.map((g) => spritesFor(g.count));
+    const sig = counts.join(",");
+    if (sig === fleetSig) return;
+    fleetSig = sig;
+    const fleet = el("fleet");
+    fleet.innerHTML = "";
+    let slot = 0;
+    GENERATORS.forEach((def, i) => {
+      const big = def.id === "dyson" || def.id === "station";
+      for (let j = 0; j < counts[i] && slot < FLEET_SLOTS.length; j++, slot++) {
+        const [x, y] = FLEET_SLOTS[slot];
+        const s = document.createElement("span");
+        s.className = "fleet-sprite" + (big ? " big" : "");
+        s.style.left = `${x}%`; s.style.top = `${y}%`;
+        s.style.animationDelay = `${(slot % 6) * 0.4}s`;
+        s.innerHTML = ICONS[def.id];
+        fleet.appendChild(s);
+      }
+    });
   }
 
   // ---- 演出: 数値ポップ / パーティクル / フラッシュ ----
@@ -532,7 +721,65 @@
     el("soundToggle").classList.toggle("off", !state.settings.sound);
     el("vibeToggle").classList.toggle("off", !state.settings.vibe);
 
+    // ステージ
+    const si = stageInfo();
+    el("stageName").textContent = `ステージ ${si.stage}（全生産 +${((si.stage - 1) * STAGE_PER_BONUS * 100).toFixed(0)}%）`;
+    el("stageFill").style.width = `${(si.frac * 100).toFixed(1)}%`;
+    el("stageNext").textContent = `次: ${fmt(Math.floor(si.next))}`;
+
+    // コンボ（熱中ゲージ）
+    el("comboFill").style.width = `${comboValue}%`;
+    el("comboMult").textContent = `×${comboMultiplier().toFixed(1)}`;
+    el("comboBar").classList.toggle("hot", comboValue >= COMBO_MAX * 0.6);
+
+    // 艦隊 / 任務 / ボス・宝箱ボタン
+    renderFleet();
+    renderQuests();
+    renderBoss();
+    renderActions();
     renderBoost();
+  }
+
+  function renderQuests() {
+    ensureQuestDay();
+    QUESTS.forEach((q) => {
+      const cur = state.quests[q.field];
+      const claimed = !!state.quests.claimed[q.id];
+      const done = cur >= q.target;
+      const bar = dom.quests.querySelector(`[data-qbar="${q.id}"]`);
+      const cnt = dom.quests.querySelector(`[data-qcount="${q.id}"]`);
+      const btn = dom.quests.querySelector(`[data-qclaim="${q.id}"]`);
+      if (bar) bar.style.width = `${Math.min(100, (cur / q.target) * 100)}%`;
+      if (cnt) cnt.textContent = claimed ? "受取済 ✓" : `${fmt(Math.min(cur, q.target))}/${fmt(q.target)}`;
+      if (btn) {
+        btn.disabled = !done || claimed;
+        btn.textContent = claimed ? "済" : "受取";
+      }
+      const card = btn && btn.closest(".ach-card");
+      if (card) card.classList.toggle("locked", !done && !claimed);
+    });
+  }
+
+  function renderBoss() {
+    const panel = el("bossPanel");
+    if (!bossActive) { panel.classList.add("hidden"); return; }
+    panel.classList.remove("hidden");
+    el("bossHp").style.width = `${Math.max(0, (bossHp / bossMax) * 100)}%`;
+    el("bossTimer").textContent = Math.max(0, Math.ceil((bossEndsAt - Date.now()) / 1000));
+  }
+
+  function renderActions() {
+    const now = Date.now();
+    const bb = el("bossButton");
+    const bic = `<span class="btn-ico">${ICONS.medal}</span>`;
+    if (bossActive) { bb.innerHTML = `${bic}ボス戦闘中`; bb.disabled = true; }
+    else if (now < bossCdUntil) { bb.innerHTML = `${bic}ボス（${Math.ceil((bossCdUntil - now) / 1000)}秒）`; bb.disabled = true; }
+    else { bb.innerHTML = `${bic}ボス出現`; bb.disabled = false; }
+
+    const cb = el("chestButton");
+    const cic = `<span class="btn-ico">${ICONS.gift}</span>`;
+    if (now < chestCdUntil) { cb.innerHTML = `${cic}宝箱（${Math.ceil((chestCdUntil - now) / 1000)}秒）`; cb.disabled = true; }
+    else { cb.innerHTML = `${cic}宝箱を開ける`; cb.disabled = false; }
   }
 
   function renderBoost() {
@@ -558,6 +805,8 @@
   function loop() {
     const inc = perSecond() * (TICK_MS / 1000);
     if (inc > 0) earn(inc);
+    if (comboValue > 0) comboValue = Math.max(0, comboValue - COMBO_DECAY);
+    if (bossActive && Date.now() > bossEndsAt) failBoss();
     checkAchievements();
     render();
     acc += TICK_MS;
@@ -582,8 +831,9 @@
     // 旧バージョンからの移行・欠損補完
     state.upgrades = Object.assign({ click: 0, prod: 0, boost: 0, idle: 0 }, data.upgrades);
     state.achievements = data.achievements || {};
-    state.lifetime = Object.assign({ earned: 0, taps: 0, prestiges: 0, boostUsed: false }, data.lifetime);
+    state.lifetime = Object.assign({ earned: 0, taps: 0, prestiges: 0, boostUsed: false, bossDefeated: 0 }, data.lifetime);
     state.daily = Object.assign({ lastClaimDay: -1, streak: 0 }, data.daily);
+    state.quests = Object.assign({ day: -1, tapped: 0, bought: 0, boss: 0, claimed: {} }, data.quests);
     state.settings = Object.assign({ sound: true, vibe: true }, data.settings);
     if (data.runEarned == null && data.totalEarned != null) state.runEarned = data.totalEarned;
     if (data.nebulaEarned == null) state.nebulaEarned = data.nebula || 0;
@@ -613,9 +863,16 @@
     dom.clickUpgrade.addEventListener("click", buyClickUpgrade);
     dom.prestigeButton.addEventListener("click", doPrestige);
     dom.boostButton.addEventListener("click", activateBoost);
+    el("bossButton").addEventListener("click", startBoss);
+    el("chestButton").addEventListener("click", openChest);
     el("dailyBanner").addEventListener("click", claimDaily);
     el("wipeButton").addEventListener("click", wipe);
     el("welcomeClose").addEventListener("click", () => el("welcomeModal").classList.add("hidden"));
+    el("chestClose").addEventListener("click", () => el("chestModal").classList.add("hidden"));
+    dom.quests.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-qclaim]");
+      if (b) claimQuest(b.dataset.qclaim);
+    });
 
     el("soundToggle").addEventListener("click", () => { state.settings.sound = !state.settings.sound; if (state.settings.sound) beep(660); render(); });
     el("vibeToggle").addEventListener("click", () => { state.settings.vibe = !state.settings.vibe; vibrate(15); render(); });
@@ -629,7 +886,7 @@
         document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         const name = tab.dataset.tab;
-        ["shop", "upgrades", "achievements", "prestige"].forEach((n) =>
+        ["shop", "upgrades", "missions", "achievements", "prestige"].forEach((n) =>
           el("tab-" + n).classList.toggle("hidden", n !== name));
       });
     });
@@ -644,7 +901,7 @@
       stardust: el("stardust"), perSecond: el("perSecond"), tapButton: el("tapButton"),
       floaters: el("floaters"), perClick: el("perClick"), clickLevel: el("clickLevel"),
       clickCost: el("clickCost"), clickUpgrade: el("clickUpgrade"), generators: el("generators"),
-      upgrades: el("upgrades"), achievements: el("achievements"),
+      upgrades: el("upgrades"), achievements: el("achievements"), quests: el("quests"),
       nebula: el("nebula"), nebulaBonus: el("nebulaBonus"), nebulaGain: el("nebulaGain"),
       prestigeButton: el("prestigeButton"), prestigeHint: el("prestigeHint"),
       saveStatus: el("saveStatus"), boostButton: el("boostButton"),
@@ -656,6 +913,7 @@
     buildGeneratorCards();
     buildUpgradeCards();
     buildAchievementCards();
+    buildQuestCards();
     load();
     bind();
     setBuyMode(state.buyMode || 1);

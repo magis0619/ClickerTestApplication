@@ -21,15 +21,41 @@
       <div class="rate" id="perSecond">毎秒 0</div>
     </header>
 
-    <section class="tap-area">
-      <button id="tapButton" class="star" aria-label="星をタップして採取">
-        <span class="star-svg" data-icon="tapStar"></span>
+    <div class="stage-bar">
+      <span class="stage-name" id="stageName">ステージ 1</span>
+      <div class="stage-track"><span id="stageFill"></span></div>
+      <span class="stage-next" id="stageNext"></span>
+    </div>
+
+    <section class="cockpit">
+      <button id="tapButton" class="window" aria-label="宇宙をタップして採取">
+        <span class="space" aria-hidden="true"></span>
+        <span id="fleet" class="fleet" aria-hidden="true"></span>
+        <span class="sun" aria-hidden="true"></span>
+        <span id="bossPanel" class="boss-panel hidden" aria-hidden="true">
+          <span class="boss-name" id="bossName">隕石ボス</span>
+          <span class="boss-hpwrap"><span id="bossHp" class="boss-hp"></span></span>
+          <span class="boss-timer" id="bossTimer">15</span>
+        </span>
+        <span id="floaters" class="floaters" aria-hidden="true"></span>
       </button>
-      <div id="floaters" class="floaters" aria-hidden="true"></div>
+      <div class="cockpit-frame" aria-hidden="true">
+        <span class="bolt b1"></span><span class="bolt b2"></span>
+        <span class="bolt b3"></span><span class="bolt b4"></span>
+        <span class="glass-glare"></span>
+      </div>
     </section>
 
-    <div class="boost-bar">
-      <button id="boostButton" class="boost"></button>
+    <div class="combo-bar" id="comboBar">
+      <span class="combo-label">熱中</span>
+      <div class="combo-track"><span id="comboFill"></span></div>
+      <span class="combo-mult" id="comboMult">×1.0</span>
+    </div>
+
+    <div class="action-bar">
+      <button id="boostButton" class="action-btn boost"></button>
+      <button id="bossButton" class="action-btn boss-btn"></button>
+      <button id="chestButton" class="action-btn chest-btn"></button>
     </div>
 
     <button id="dailyBanner" class="daily-banner hidden"></button>
@@ -37,6 +63,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="shop">ショップ</button>
       <button class="tab" data-tab="upgrades">強化</button>
+      <button class="tab" data-tab="missions">任務</button>
       <button class="tab" data-tab="achievements">実績</button>
       <button class="tab" data-tab="prestige">転生</button>
     </nav>
@@ -70,6 +97,14 @@
         <span class="panel-sub">保有: <strong id="upNebula">0</strong></span>
       </div>
       <div id="upgrades"></div>
+    </section>
+
+    <section id="tab-missions" class="panel hidden">
+      <div class="panel-head">
+        <span><span class="head-ico" data-icon="gift"></span>デイリー任務</span>
+        <span class="panel-sub" id="questReset">毎日リセット</span>
+      </div>
+      <div id="quests"></div>
     </section>
 
     <section id="tab-achievements" class="panel hidden">
@@ -114,6 +149,15 @@
       <p>離席中に <strong id="offlineEarned">0</strong> スターダストを採取しました。</p>
       <p class="modal-sub" id="offlineTime"></p>
       <button id="welcomeClose" class="modal-btn">受け取る</button>
+    </div>
+  </div>
+
+  <div id="chestModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="chest-burst" id="chestRarity">レア</div>
+      <h2>宝箱を開けた！</h2>
+      <p><strong id="chestReward">0</strong></p>
+      <button id="chestClose" class="modal-btn">受け取る</button>
     </div>
   </div>
 
