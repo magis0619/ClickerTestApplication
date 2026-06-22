@@ -1,7 +1,7 @@
 import type { SaveData, WeaponInstance, WeaponClass } from "./types.ts";
 import { starterInventory, getWeapon } from "./data.ts";
 
-const KEY = "astral-warden-save-v4";
+const KEY = "astral-warden-save-v5";
 
 /** 初期セーブ：標準武器を1本ずつ所持・装備 */
 export function defaultSave(): SaveData {

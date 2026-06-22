@@ -1,5 +1,5 @@
 import type {
-  Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
+  Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind, Passive,
 } from "./types.ts";
 
 // ===== 表示名・相性 =====
@@ -123,6 +123,18 @@ export const WEAPONS: Weapon[] = [
 ];
 export function getWeapon(id: string): Weapon | undefined { return WEAPONS.find((w) => w.id === id); }
 
+// ===== 武器の固有パッシブ（どの武器にもランダムで1つ付く） =====
+export const PASSIVES: Passive[] = [
+  { id: "rejuvenate", name: "リジェネ", desc: "使うたびに最大HPの5%回復", healPctOnUse: 0.05 },
+  { id: "energize", name: "エナジャイズ", desc: "使うたびにEN+1", enOnUse: 1 },
+  { id: "vampiric", name: "ヴァンパイア", desc: "与ダメージの25%をHP回復", lifestealPct: 0.25 },
+  { id: "crusher", name: "クラッシャー", desc: "ブレイク蓄積1.3倍", breakMult: 1.3 },
+  { id: "keen", name: "キーン", desc: "20%で会心（1.5倍ダメージ）", critChance: 0.2 },
+];
+const PASSIVE_MAP: Record<string, Passive> = Object.fromEntries(PASSIVES.map((p) => [p.id, p]));
+export function getPassive(id: string): Passive | undefined { return PASSIVE_MAP[id]; }
+function rollPassive(): string { return PASSIVES[Math.floor(Math.random() * PASSIVES.length)].id; }
+
 // ===== 武器インスタンス生成・ドロップ抽選 =====
 let uidCounter = 0;
 function newUid(): string {
@@ -130,7 +142,17 @@ function newUid(): string {
   return `wi_${Date.now().toString(36)}_${uidCounter}_${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 export function makeInstance(baseId: string, rarity: Rarity): WeaponInstance {
-  return { uid: newUid(), baseId, rarity, bonusSkillId: rollBonusSkill(rarity) };
+  return {
+    uid: newUid(), baseId, rarity, bonusSkillId: rollBonusSkill(rarity),
+    atkBonus: 1 + Math.floor(Math.random() * 5), // +1〜5
+    passiveId: rollPassive(),
+  };
+}
+
+/** 表示名：武器名＋攻撃力ボーナス（例: ショートソード+3） */
+export function instanceLabel(inst: WeaponInstance): string {
+  const w = getWeapon(inst.baseId);
+  return `${w?.name ?? "???"}+${inst.atkBonus}`;
 }
 
 function weightedRarity(weights: number[]): Rarity {
@@ -232,7 +254,8 @@ export const PERFECT_FLINCH_MS = 650;
 export const PERFECT_BREAK_BONUS = 14;
 
 // ===== ブレイク =====
-export const BREAK_DURATION_MS = 4500;
+// ブレイクは「ターン制」。この間プレイヤーはENを消費せず行動でき、敵は攻撃しない。
+export const BREAK_TURNS = 3;
 export const BREAK_CRIT_MULT = 1.6;
 
 /** 初期インベントリ（系統ごとの標準武器をノーマルで1本ずつ） */

@@ -49,13 +49,40 @@ export interface Weapon {
 /** レアリティ（高いほど強く、出にくい） */
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astral";
 
-/** 所持している武器1本（テンプレ＋レアリティ＋固有ID） */
+/** 武器に宿る固有パッシブ（使用時・命中時に発動する効果） */
+export interface Passive {
+  id: string;
+  name: string;
+  desc: string;
+  /** 使うたびに最大HPのx%回復 */
+  healPctOnUse?: number;
+  /** 使うたびにEN+N */
+  enOnUse?: number;
+  /** 与ダメージのx%をHP回復（吸収） */
+  lifestealPct?: number;
+  /** ブレイク蓄積x倍 */
+  breakMult?: number;
+  /** x%で会心（1.5倍ダメージ） */
+  critChance?: number;
+}
+
+/** 所持している武器1本（テンプレ＋レアリティ＋固有ID＋ランダムパラメータ） */
 export interface WeaponInstance {
   uid: string;
   baseId: string;
   rarity: Rarity;
   /** レアリティで付与される追加スキルID（ノーマルは無し） */
   bonusSkillId?: string;
+  /** ランダムな攻撃力ボーナス（+1〜5）。名前に反映される */
+  atkBonus: number;
+  /** ランダムな固有パッシブID */
+  passiveId: string;
+}
+
+/** 武器インスタンス由来の補正（攻撃時に戦闘へ渡す） */
+export interface WeaponMods {
+  atkBonus: number;
+  passive?: Passive;
 }
 
 /** ステージ定義 */

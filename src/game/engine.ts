@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods } from "./types.ts";
 import {
   WEAKNESS,
   WEAKNESS_MULTIPLIER,
@@ -21,7 +21,7 @@ import {
   WHITE_FLASH_MS,
   PERFECT_FLINCH_MS,
   PERFECT_BREAK_BONUS,
-  BREAK_DURATION_MS,
+  BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollDrop,
 } from "./data.ts";
@@ -43,7 +43,8 @@ export class EnemyState {
   def: EnemyDef;
   hp: number;
   breakGauge = 0;
-  breakRemain = 0;
+  /** ブレイク残りターン数（プレイヤーの行動ごとに減少）。>0でブレイク中 */
+  breakTurns = 0;
   /** 攻撃までの残りカウント。プレイヤーの行動ごとに1減り、0で予兆へ */
   count: number;
   /** 予兆（!）の残り時間(ms)。>0 の間だけガード可能、0で着弾 */
@@ -73,7 +74,7 @@ export class EnemyState {
     return this.hp <= 0 && this.deathT > 0;
   }
   get isBroken(): boolean {
-    return this.breakRemain > 0;
+    return this.breakTurns > 0;
   }
   /** 予兆中（!が出て着弾を待っている）か。この間だけガードが成立する */
   get inTelegraph(): boolean {
@@ -144,6 +145,11 @@ export class Battle {
     return this.enemies.flatMap((e) => (e.drop ? [e.drop] : []));
   }
 
+  /** いずれかの敵がブレイク中＝EN消費なしで行動できる（ENゲージ金色） */
+  get enFrozen(): boolean {
+    return this.enemies.some((e) => e.isBroken);
+  }
+
   get aliveEnemies(): EnemyState[] {
     return this.enemies.filter((e) => e.alive);
   }
@@ -164,13 +170,26 @@ export class Battle {
   // ===== プレイヤー行動 =====
 
   /** スキル使用。成功でtrue */
-  useSkill(skill: Skill): boolean {
+  useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting") return false;
-    if (this.playerEn < skill.enCost) {
+    const free = this.enFrozen; // ブレイク中はEN消費なし
+    if (!free && this.playerEn < skill.enCost) {
       this.pushFloat("ENが足りない", "#ffcc55", "player");
       return false;
     }
-    this.playerEn -= skill.enCost;
+    if (!free) this.playerEn -= skill.enCost;
+
+    // 使用時パッシブ（HP回復・EN獲得）
+    if (mods?.passive) {
+      const p = mods.passive;
+      if (p.healPctOnUse) {
+        const before = this.playerHp;
+        this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + Math.round(PLAYER_MAX_HP * p.healPctOnUse));
+        const gained = Math.round(this.playerHp - before);
+        if (gained > 0) this.pushFloat(`+${gained} HP`, "#66ffaa", "player");
+      }
+      if (p.enOnUse) this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + p.enOnUse);
+    }
 
     switch (skill.kind) {
       case "charge":
@@ -184,13 +203,13 @@ export class Battle {
         break;
       }
       case "aoe":
-        for (const e of this.aliveEnemies) this.hitEnemy(e, skill);
+        for (const e of this.aliveEnemies) this.hitEnemy(e, skill, mods);
         this.consumeCharge();
         this.lungeT = 200;
         break;
       case "attack": {
         const t = this.target;
-        if (t) this.hitEnemy(t, skill);
+        if (t) this.hitEnemy(t, skill, mods);
         this.consumeCharge();
         this.lungeT = 200;
         break;
@@ -212,19 +231,37 @@ export class Battle {
   }
 
   /**
-   * プレイヤーの行動ごとに敵の攻撃カウントを1減らす。
-   * 0になった敵は予兆（!）状態に入り、少し待ってから攻撃してくる。
-   * 予兆中・ブレイク中・怯み中の敵は進めない。
+   * プレイヤーの行動ごとに敵の状態を1ターン進める。
+   * ・ブレイク中：残りターンを減らし、0で待ちターンへ復帰
+   * ・通常：攻撃カウントを1減らす（0で「攻撃準備完了」＝待機）
+   * 予兆中・怯み中・既に準備完了の敵は進めない。
    */
   private advanceCounts(): void {
     for (const e of this.enemies) {
-      if (!e.alive || e.isBroken || e.flinchT > 0) continue;
-      if (e.telegraphT > 0) continue; // 既に予兆中
+      if (!e.alive) continue;
+      if (e.breakTurns > 0) {
+        e.breakTurns -= 1;
+        if (e.breakTurns <= 0) e.count = e.def.countStart; // 元の待ちターンに戻る
+        continue;
+      }
+      if (e.flinchT > 0 || e.telegraphT > 0 || e.count <= 0) continue;
       e.count -= 1;
+      if (e.count < 0) e.count = 0;
+    }
+  }
+
+  /**
+   * 攻撃準備完了(count<=0)の敵を「左から順に」1体ずつ予兆させる。
+   * 同時に複数体が準備完了でも、予兆は常に1体だけ＝順番に攻撃させる。
+   */
+  private startNextTelegraph(): void {
+    if (this.enemies.some((e) => e.telegraphT > 0)) return; // 既に1体予兆中
+    for (const e of this.enemies) {
+      if (!e.alive || e.isBroken || e.flinchT > 0) continue;
       if (e.count <= 0) {
-        e.count = 0;
         e.telegraphT = e.def.telegraphMs; // 予兆開始（! が出る）
         this.sfx.push("warn");
+        return;
       }
     }
   }
@@ -266,26 +303,38 @@ export class Battle {
     this.charge = 1;
   }
 
-  private hitEnemy(e: EnemyState, skill: Skill): void {
+  private hitEnemy(e: EnemyState, skill: Skill, mods?: WeaponMods): void {
     let dmg = skill.power;
+    if (dmg > 0 && mods) dmg += mods.atkBonus; // 武器の攻撃力ボーナス
     const weak = WEAKNESS[e.def.kind] === skill.weapon;
     if (weak) dmg *= WEAKNESS_MULTIPLIER;
     if (e.isBroken) dmg *= BREAK_CRIT_MULT;
     if (this.charge > 1) dmg *= this.charge;
+    const crit = !!(mods?.passive?.critChance && Math.random() < mods.passive.critChance);
+    if (crit) dmg *= 1.5;
     dmg = Math.round(dmg);
 
     const wasAlive = e.alive;
     e.hp = Math.max(0, e.hp - dmg);
     e.hitFlash = 260;
     const idx = this.enemies.indexOf(e);
-    const tag = this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
-    this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 ? "#ff5577" : "#ffffff", idx);
+    const tag = crit ? " 会心!" : this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
+    this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 || crit ? "#ff5577" : "#ffffff", idx);
+
+    // 吸収（ライフスティール）
+    if (mods?.passive?.lifestealPct && dmg > 0) {
+      const heal = Math.max(1, Math.round(dmg * mods.passive.lifestealPct));
+      const before = this.playerHp;
+      this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + heal);
+      if (this.playerHp - before > 0) this.pushFloat(`+${Math.round(this.playerHp - before)} HP`, "#66ffaa", "player");
+    }
 
     if (!e.isBroken) {
-      e.breakGauge += skill.breakPower;
+      e.breakGauge += skill.breakPower * (mods?.passive?.breakMult ?? 1);
       if (e.breakGauge >= e.def.breakThreshold) {
-        e.breakRemain = BREAK_DURATION_MS;
+        e.breakTurns = BREAK_TURNS;
         e.breakGauge = 0;
+        e.telegraphT = 0; // 予兆中ならキャンセル
         this.pushFloat("BREAK!!", "#ffdd44", idx);
         this.sfx.push("break");
       }
@@ -299,7 +348,7 @@ export class Battle {
   private killEnemy(e: EnemyState, idx: number): void {
     e.deathT = DEATH_ANIM_MS;
     e.deathDir = 1; // プレイヤーは左、敵は右向きなので右奥へ吹き飛ぶ
-    e.breakRemain = 0;
+    e.breakTurns = 0;
     e.flinchT = 0;
     e.drop = rollDrop(this.rarityWeights); // この敵のドロップを確定（宝箱の色に反映）
     this.pushFloat("撃破!", "#ffd35f", idx);
@@ -330,7 +379,7 @@ export class Battle {
         if (!e.isBroken) {
           e.breakGauge += PERFECT_BREAK_BONUS;
           if (e.breakGauge >= e.def.breakThreshold) {
-            e.breakRemain = BREAK_DURATION_MS;
+            e.breakTurns = BREAK_TURNS;
             e.breakGauge = 0;
             this.pushFloat("BREAK!!", "#ffdd44", idx);
           }
@@ -427,12 +476,9 @@ export class Battle {
     }
 
     // 予兆中の敵だけ時間で進み、0になったら着弾（ガードされなければフルダメージ）
+    // ブレイクはターン制なので時間では減らさない。
     for (const e of this.enemies) {
-      if (!e.alive) continue;
-      if (e.breakRemain > 0) {
-        e.breakRemain = Math.max(0, e.breakRemain - dtMs);
-        continue; // ブレイク中は攻撃しない
-      }
+      if (!e.alive || e.isBroken) continue;
       if (e.telegraphT > 0) {
         e.telegraphT -= dtMs;
         if (e.telegraphT <= 0) {
@@ -443,6 +489,9 @@ export class Battle {
         }
       }
     }
+
+    // 攻撃準備完了の敵を左から1体ずつ予兆させる（同時攻撃を順番に）
+    this.startNextTelegraph();
 
     this.checkWin();
   }

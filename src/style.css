@@ -592,6 +592,8 @@ button.wpn-row:hover { background: #241f55; }
 }
 .wd-meta { font-size: 11px; color: #cfc9f2; margin-bottom: 6px; }
 .wd-meta .wd-note { color: #7f7aa0; margin-top: 2px; }
+.wd-rand { font-size: 11px; color: #d7d2f4; margin-top: 3px; }
+.wd-rand b { color: #ffd35f; }
 .wd-stars { font-size: 14px; letter-spacing: 1px; margin-bottom: 3px; }
 .wd-rlabel { font-size: 10px; color: #9690c4; letter-spacing: 0; }
 .wd-cls { font-size: 10px; color: #b6b0dc; }

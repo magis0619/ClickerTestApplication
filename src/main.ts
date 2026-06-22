@@ -3,7 +3,8 @@ import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, skillDescription, isBonusSkill, isRainbowRarity, REST_EN_RECOVER,
+  getWeapon, getSkill, getPassive, skillDescription, isBonusSkill, isRainbowRarity,
+  instanceLabel, REST_EN_RECOVER,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type { SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
@@ -191,7 +192,8 @@ function buildInventory(): void {
   group.className = "inv-group";
   const head = document.createElement("div");
   head.className = `inv-head wclass-${invClass}`;
-  head.textContent = `${WEAPON_LABEL[invClass]}　装備中: ${game.equippedWeapon(invClass)?.name ?? "なし"}`;
+  const eqInst = game.equippedInstance(invClass);
+  head.textContent = `${WEAPON_LABEL[invClass]}　装備中: ${eqInst ? instanceLabel(eqInst) : "なし"}`;
   group.appendChild(head);
 
   const items = game.inventoryOf(invClass).slice().sort(rarityDesc);
@@ -217,14 +219,14 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   const head = document.createElement("div");
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const ids = game.instanceSkillIds(inst);
-  const skills = ids.map((id) => getSkill(id).name).join(" → ");
+  const passive = getPassive(inst.passiveId);
   head.innerHTML =
     `<span class="wpn-icon wclass-${w.weapon}">${WEAPON_ICON[w.weapon]}</span>` +
     `<span class="wpn-main">` +
-    `<span class="wpn-name">${w.name}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
+    `<span class="wpn-name">${instanceLabel(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
     `<span ${rarityAttr(inst.rarity, "wpn-stars")}>${rarityStars(inst.rarity)} ` +
     `<span class="wpn-rlabel">${RARITY_LABEL[inst.rarity]}</span></span>` +
-    `<span class="wpn-sub">コンボ${ids.length}段：${skills}</span></span>`;
+    `<span class="wpn-sub">⚔+${inst.atkBonus}${passive ? `　✦${passive.name}` : ""}　コンボ${ids.length}段</span></span>`;
   card.appendChild(head);
 
   const acts = document.createElement("div");
@@ -259,12 +261,15 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
   const box = document.createElement("div");
   box.className = "wpn-detail";
 
+  const passive = getPassive(inst.passiveId);
   const meta = document.createElement("div");
   meta.className = "wd-meta";
   meta.innerHTML =
     `<div ${rarityAttr(inst.rarity, "wd-stars")}>${rarityStars(inst.rarity)} ` +
     `<span class="wd-rlabel">${RARITY_LABEL[inst.rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
     `<div>${w.desc}</div>` +
+    `<div class="wd-rand">⚔ 攻撃力ボーナス <b>+${inst.atkBonus}</b></div>` +
+    (passive ? `<div class="wd-rand">✦ パッシブ <b>${passive.name}</b> — ${passive.desc}</div>` : "") +
     `<div class="wd-note">武器を押すたびに ①→②→… の順でコンボが発動します</div>`;
   box.appendChild(meta);
 
@@ -293,18 +298,18 @@ function buildBattle(): void {
   const row = document.createElement("div");
   row.className = "weapons";
   for (const cls of CLASSES) {
-    const w = game.equippedWeapon(cls);
+    const inst = game.equippedInstance(cls);
     const card = document.createElement("button");
     card.className = `weapon-card wclass-${cls}`;
     card.addEventListener("click", () => attackWith(cls));
     pressFx(card);
 
-    // ヘッダー：系統を主役に、武器名を併記
+    // ヘッダー：系統を主役に、武器名（＋ボーナス）を併記
     const head = document.createElement("div");
     head.className = "wc-head";
     head.innerHTML =
       `<span class="wc-kind">${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}</span>` +
-      `<span class="wc-name">${w?.name ?? "（未装備）"}</span>`;
+      `<span class="wc-name">${inst ? instanceLabel(inst) : "（未装備）"}</span>`;
     card.appendChild(head);
 
     // スキルは「コンボ」として①②…で表示

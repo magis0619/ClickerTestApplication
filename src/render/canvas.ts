@@ -298,7 +298,7 @@ function drawEnemyCard(
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffdd44";
     ctx.font = "bold 12px monospace";
-    ctx.fillText("BREAK", L.cx, cy);
+    ctx.fillText(`BREAK ${e.breakTurns}`, L.cx, cy);
   } else if (e.inTelegraph) {
     // 予兆：びっくりマーク
     const pulse = 1 + 0.35 * Math.abs(Math.sin(Date.now() / 80));
@@ -527,16 +527,22 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   ctx.fillText(`HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`, W / 2, hpY + 12);
 
   // === EN：左右いっぱい＋1ずつの区切り ===
+  // ブレイク中はEN消費なし＝全セルが金色に輝く
   const enY = 40, enH = 13, n = PLAYER_MAX_EN, gap = 3;
   const cw = (fullW - gap * (n - 1)) / n;
   const en = Math.floor(b.playerEn);
+  const frozen = b.enFrozen;
+  const glow = frozen ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 200)) : 0;
   for (let i = 0; i < n; i++) {
     const x = M + i * (cw + gap);
     ctx.fillStyle = "#102a3a";
     ctx.fillRect(x, enY, cw, enH);
-    if (i < en) {
-      ctx.fillStyle = "#46b6ff";
+    const lit = frozen || i < en; // 金色時は全点灯
+    if (lit) {
+      if (frozen) { ctx.shadowColor = "#ffd35f"; ctx.shadowBlur = 8 * glow; }
+      ctx.fillStyle = frozen ? "#ffd35f" : "#46b6ff";
       ctx.fillRect(x, enY, cw, enH);
+      ctx.shadowBlur = 0;
     }
     ctx.strokeStyle = "rgba(255,255,255,0.25)";
     ctx.lineWidth = 1;
@@ -544,8 +550,8 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   }
   ctx.textAlign = "right";
   ctx.font = "bold 10px monospace";
-  ctx.fillStyle = "#9fd9ff";
-  ctx.fillText(`EN ${en}/${n}`, W - M, enY + 11);
+  ctx.fillStyle = frozen ? "#ffe49a" : "#9fd9ff";
+  ctx.fillText(frozen ? "EN FREE!" : `EN ${en}/${n}`, W - M, enY + 11);
 
   // 対象敵の弱点ヒント
   const t = b.enemies[b.targetIndex];

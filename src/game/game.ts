@@ -1,6 +1,6 @@
 import { Battle } from "./engine.ts";
 import {
-  STAGES, STAGE_COUNT, getWeapon, skillForClass, PLAYER_MAX_HP,
+  STAGES, STAGE_COUNT, getWeapon, skillForClass, getPassive, PLAYER_MAX_HP,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
@@ -87,7 +87,9 @@ export class Game {
     if (!this.battle) return null;
     const skill = this.currentSkill(cls);
     if (!skill) return null;
-    if (this.battle.useSkill(skill)) {
+    const inst = this.equippedInstance(cls);
+    const mods = inst ? { atkBonus: inst.atkBonus, passive: getPassive(inst.passiveId) } : undefined;
+    if (this.battle.useSkill(skill, mods)) {
       this.rotation[cls] += 1;
       return skill;
     }
