@@ -86,6 +86,34 @@ export function render(
   if (b.phase !== "fighting") drawResult(ctx, b);
 }
 
+/** タイトル/メニュー画面用の背景＋見出し */
+export function drawBackdrop(ctx: CanvasRenderingContext2D, title: string, subtitle = ""): void {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#1a1430");
+  grad.addColorStop(1, "#0c0a18");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "#2e2750";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 255);
+  ctx.lineTo(W, 255);
+  ctx.stroke();
+
+  drawSprite(ctx, WARDEN, W / 2, 250, 5);
+
+  ctx.textAlign = "center";
+  ctx.font = "bold 30px monospace";
+  ctx.fillStyle = "#5fa8ff";
+  ctx.fillText(title, W / 2, 60);
+  if (subtitle) {
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "#9690c4";
+    ctx.fillText(subtitle, W / 2, 84);
+  }
+}
+
 function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = PLAYER_POS;
   drawSprite(ctx, WARDEN, x, y, 4);

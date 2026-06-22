@@ -255,6 +255,73 @@ body {
   justify-content: center;
 }
 
+/* ===== メニュー / タイトル ===== */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.menu-btn {
+  padding: 18px;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  background: #2c6fb8;
+  color: #fff;
+  cursor: pointer;
+}
+.menu-btn:hover { background: #3580d2; }
+.menu-btn:active { transform: translateY(1px); }
+
+/* ===== ステージ選択 ===== */
+.stage-list { display: flex; flex-direction: column; gap: 10px; }
+.stage-card {
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #2e2750;
+  border-radius: 10px;
+  background: #1b1640;
+  color: var(--ink);
+  cursor: pointer;
+}
+.stage-card:hover { background: #241f55; }
+.stage-card.locked { opacity: 0.5; cursor: not-allowed; }
+.st-title { font-size: 14px; font-weight: bold; color: #9fd9ff; }
+.st-desc { font-size: 11px; color: #cfc9f2; margin: 4px 0; }
+.st-enemy { font-size: 10px; color: #8e88b8; }
+
+/* ===== インベントリ / 武器行 ===== */
+.inv-wrap { display: flex; flex-direction: column; gap: 10px; }
+.inv-group { background: #110d28; border-radius: 8px; padding: 8px; }
+.inv-head { font-size: 12px; font-weight: bold; margin-bottom: 6px; }
+.inv-empty { font-size: 11px; color: #6a6a80; padding: 4px; }
+
+.wpn-row, .drop-list .wpn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  margin-bottom: 5px;
+  border: 1px solid #2a2350;
+  border-radius: 6px;
+  background: #1b1640;
+  color: var(--ink);
+  cursor: pointer;
+}
+button.wpn-row:hover { background: #241f55; }
+.wpn-on { border-color: #5fa8ff; background: #1c2c50; }
+.wpn-rarity { font-size: 16px; line-height: 1; }
+.wpn-main { display: flex; flex-direction: column; }
+.wpn-name { font-size: 12px; font-weight: bold; }
+.wpn-sub { font-size: 9px; color: #9690c4; }
+
+.drop-list { margin-bottom: 10px; }
+.drop-list .wpn-row { cursor: default; }
+
 .rest-btn {
   flex: 1;
   padding: 14px;

@@ -8,25 +8,17 @@ export type WeaponClass = "slash" | "pierce" | "crush";
 export type EnemyKind = "carapace" | "phantom" | "aerial";
 
 /** スキルの種類 */
-export type SkillKind =
-  | "attack" // 単体攻撃
-  | "aoe" // 全体攻撃（敵全体）
-  | "heal" // 自己HP回復
-  | "charge"; // ためる（次の攻撃を強化）
+export type SkillKind = "attack" | "aoe" | "heal" | "charge";
 
-/** プレイヤーが使えるスキル */
+/** スキル */
 export interface Skill {
   id: string;
   name: string;
   weapon: WeaponClass;
   kind: SkillKind;
-  /** 消費EN（エナジー） */
   enCost: number;
-  /** 基礎ダメージ（attack/aoe） */
   power: number;
-  /** ブレイク蓄積量（attack/aoe） */
   breakPower: number;
-  /** 回復量（heal） */
   heal: number;
 }
 
@@ -36,34 +28,42 @@ export interface EnemyDef {
   name: string;
   kind: EnemyKind;
   maxHp: number;
-  /** 攻撃力 */
   attack: number;
-  /** 攻撃の予兆〜着弾までの時間(ms)。短いほど反応が難しい */
   telegraphMs: number;
-  /** 攻撃と攻撃の間隔(ms)。小さいほど攻撃頻度が高い */
   intervalMs: number;
-  /** ブレイクまでに必要な蓄積量 */
   breakThreshold: number;
-  /** 撃破報酬（霊片） */
-  reward: number;
-  /** ボス敵かどうか（演出・難度用） */
   boss?: boolean;
-  /** 撃破時に入手できる武器ID（未所持なら入手） */
-  dropWeapon?: string;
 }
 
-/**
- * 武器。各武器は1つの系統に属し、固有のスキルを順番に繰り出す（収集要素）。
- * 例: スキルが2つなら、攻撃ボタンを押すたびに交互に発動する。
- */
+/** 武器の種別（テンプレート）。実際の所持品は WeaponInstance */
 export interface Weapon {
   id: string;
   name: string;
   weapon: WeaponClass;
-  /** この武器が順番に繰り出すスキルID（ローテーション） */
+  /** 順番に繰り出すスキルID（ローテーション） */
   skills: string[];
-  /** フレーバー説明 */
   desc: string;
+}
+
+/** レアリティ（高いほど強く、出にくい） */
+export type Rarity = "normal" | "uncommon" | "rare" | "superrare" | "ultrarare";
+
+/** 所持している武器1本（テンプレ＋レアリティ＋固有ID） */
+export interface WeaponInstance {
+  uid: string;
+  baseId: string;
+  rarity: Rarity;
+}
+
+/** ステージ定義 */
+export interface StageDef {
+  name: string;
+  desc: string;
+  enemies: EnemyDef[];
+  /** ドロップ時のレアリティ抽選の重み [normal, uncommon, rare, superrare, ultrarare] */
+  rarityWeights: number[];
+  /** クリア時のドロップ本数 */
+  drops: number;
 }
 
 /** ガード判定の結果段階 */
@@ -73,18 +73,14 @@ export type GuardResult = "none" | "guard" | "just" | "parry";
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "battle" | "reward" | "clear" | "gameover";
+export type Screen = "title" | "stageSelect" | "inventory" | "battle" | "result";
 
-/** セーブデータ（育成の永続化） */
+/** セーブデータ */
 export interface SaveData {
-  /** 所持している霊片（強化通貨） */
-  shards: number;
-  /** スキルIDごとの強化レベル（1始まり） */
-  skillLevels: Record<string, number>;
-  /** これまでに到達した最深ステージ番号(1始まり) */
-  bestStage: number;
-  /** 所持している武器ID一覧 */
-  ownedWeapons: string[];
-  /** 系統ごとに装備中の武器ID */
+  /** 所持武器（過去の冒険で入手したものすべて） */
+  inventory: WeaponInstance[];
+  /** 系統ごとに装備中の武器インスタンスUID */
   equipped: Record<WeaponClass, string>;
+  /** これまでにクリアした最深ステージ番号(1始まり、0=未クリア) */
+  bestStage: number;
 }

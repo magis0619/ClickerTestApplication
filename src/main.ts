@@ -1,48 +1,40 @@
 import "./style.css";
-import { render, enemySlots } from "./render/canvas.ts";
-import { Game, CLASSES } from "./game/game.ts";
-import { STAGE_COUNT, WEAPON_LABEL } from "./game/data.ts";
+import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
+import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
+import { STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, getWeapon, getSkill } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { SkillKind, WeaponClass } from "./game/types.ts";
+import type { SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
 
 const canvas = document.getElementById("screen") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const controls = document.getElementById("controls") as HTMLDivElement;
 
 const game = new Game();
-
 let weaponButtons: { btn: HTMLButtonElement; cls: WeaponClass }[] = [];
 let renderedScreen = "";
 
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", aoe: "✸", heal: "✚", charge: "▲" };
 
-// ===== オーディオ起動 =====
+// ===== オーディオ =====
 window.addEventListener("pointerdown", () => audio.init());
 const muteBtn = document.createElement("button");
 muteBtn.className = "mute-btn";
 muteBtn.textContent = "♪ ON";
-muteBtn.addEventListener("click", () => {
-  audio.init();
-  muteBtn.textContent = audio.toggleMute() ? "♪ OFF" : "♪ ON";
-});
+muteBtn.addEventListener("click", () => { audio.init(); muteBtn.textContent = audio.toggleMute() ? "♪ OFF" : "♪ ON"; });
 document.querySelector(".topbar")?.appendChild(muteBtn);
 
-// ===== 敵タップで対象選択 =====
+// ===== 敵タップで対象選択（戦闘中のみ） =====
 canvas.addEventListener("pointerdown", (e) => {
-  if (game.screen !== "battle") return;
+  if (game.screen !== "battle" || !game.battle) return;
   const rect = canvas.getBoundingClientRect();
   const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
   const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
   const slots = enemySlots(game.battle.enemies.length);
-  let best = -1;
-  let bestD = 45 * 45;
+  let best = -1, bestD = 45 * 45;
   slots.forEach((s, i) => {
-    if (!game.battle.enemies[i].alive) return;
+    if (!game.battle!.enemies[i].alive) return;
     const d = (s.x - cx) ** 2 + (s.y - cy) ** 2;
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
+    if (d < bestD) { bestD = d; best = i; }
   });
   if (best >= 0) game.battle.selectTarget(best);
 });
@@ -52,11 +44,92 @@ function buildControls(): void {
   controls.innerHTML = "";
   weaponButtons = [];
   renderedScreen = game.screen;
-  if (game.screen === "battle") buildBattleControls();
-  else buildResultControls();
+  switch (game.screen) {
+    case "title": buildTitle(); break;
+    case "stageSelect": buildStageSelect(); break;
+    case "inventory": buildInventory(); break;
+    case "battle": buildBattle(); break;
+    case "result": buildResult(); break;
+  }
 }
 
-function buildBattleControls(): void {
+function buildTitle(): void {
+  const menu = document.createElement("div");
+  menu.className = "menu";
+  menu.appendChild(bigButton("⚔ ステージ選択", () => { game.goStageSelect(); buildControls(); }));
+  menu.appendChild(bigButton("🎒 インベントリ", () => { game.goInventory(); buildControls(); }));
+  controls.appendChild(menu);
+}
+
+function buildStageSelect(): void {
+  const list = document.createElement("div");
+  list.className = "stage-list";
+  STAGES.forEach((s, i) => {
+    const unlocked = game.stageUnlocked(i);
+    const cleared = game.save.bestStage > i;
+    const card = document.createElement("button");
+    card.className = "stage-card" + (unlocked ? "" : " locked");
+    card.disabled = !unlocked;
+    const enemyNames = s.enemies.map((e) => e.name).join("・");
+    card.innerHTML =
+      `<div class="st-title">STAGE ${i + 1}: ${s.name} ${cleared ? "✔" : ""}${unlocked ? "" : " 🔒"}</div>` +
+      `<div class="st-desc">${s.desc}</div>` +
+      `<div class="st-enemy">敵: ${enemyNames}（${s.enemies.length}体） / ドロップ${s.drops}本</div>`;
+    if (unlocked) card.addEventListener("click", () => { game.startStage(i); buildControls(); });
+    list.appendChild(card);
+  });
+  controls.appendChild(list);
+  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+}
+
+function buildInventory(): void {
+  const wrap = document.createElement("div");
+  wrap.className = "inv-wrap";
+  for (const cls of CLASSES) {
+    const group = document.createElement("div");
+    group.className = "inv-group";
+    const head = document.createElement("div");
+    head.className = `inv-head wclass-${cls}`;
+    head.textContent = `${WEAPON_LABEL[cls]}（装備中: ${game.equippedWeapon(cls)?.name ?? "なし"}）`;
+    group.appendChild(head);
+
+    const items = game.inventoryOf(cls).slice().sort(rarityDesc);
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "inv-empty";
+      empty.textContent = "（所持なし）";
+      group.appendChild(empty);
+    }
+    for (const inst of items) {
+      group.appendChild(weaponRow(inst, true));
+    }
+    wrap.appendChild(group);
+  }
+  controls.appendChild(wrap);
+  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+}
+
+/** 武器1本の行（装備可能ボタンとして） */
+function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
+  const w = getWeapon(inst.baseId)!;
+  const equipped = game.save.equipped[w.weapon] === inst.uid;
+  const el = document.createElement(equippable ? "button" : "div");
+  el.className = "wpn-row" + (equipped ? " wpn-on" : "");
+  const skills = w.skills.map((id) => getSkill(id).name).join(" → ");
+  el.innerHTML =
+    `<span class="wpn-rarity" style="color:${RARITY_COLOR[inst.rarity]}">●</span>` +
+    `<span class="wpn-main"><span class="wpn-name">${w.name}${equipped ? " ✔" : ""}</span>` +
+    `<span class="wpn-sub">[${RARITY_LABEL[inst.rarity]}] ${skills}</span></span>`;
+  if (equippable) el.addEventListener("click", () => { if (game.equip(inst.uid)) buildControls(); });
+  return el;
+}
+
+function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
+  const order = ["ultrarare", "superrare", "rare", "uncommon", "normal"];
+  return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+}
+
+function buildBattle(): void {
   const row = document.createElement("div");
   row.className = "skills";
   for (const cls of CLASSES) {
@@ -67,161 +140,84 @@ function buildBattleControls(): void {
     label.className = "wlabel";
     label.innerHTML = `${WEAPON_LABEL[cls]}<span class="weq">${w?.name ?? "-"}</span>`;
     col.appendChild(label);
-
     const btn = document.createElement("button");
     btn.className = "skill-btn weapon-btn";
-    btn.addEventListener("click", () => {
-      const used = game.useWeapon(cls);
-      if (used) audio.sfxAttack();
-    });
+    btn.addEventListener("click", () => { if (game.useWeapon(cls)) audio.sfxAttack(); });
     col.appendChild(btn);
     row.appendChild(col);
     weaponButtons.push({ btn, cls });
   }
-
   const actions = document.createElement("div");
   actions.className = "actions";
   const guardBtn = document.createElement("button");
   guardBtn.className = "guard-btn";
   guardBtn.textContent = "ガード (Space)";
-  guardBtn.addEventListener("click", () => {
-    game.battle.guard();
-    audio.sfxGuard();
-  });
+  guardBtn.addEventListener("click", () => { game.battle?.guard(); audio.sfxGuard(); });
   const restBtn = document.createElement("button");
   restBtn.className = "rest-btn";
   restBtn.textContent = "休憩 (R)";
-  restBtn.addEventListener("click", () => {
-    game.battle.rest();
-    audio.sfxGuard();
-  });
+  restBtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
   actions.appendChild(guardBtn);
   actions.appendChild(restBtn);
-
   controls.appendChild(row);
   controls.appendChild(actions);
   updateWeaponButtons();
 }
 
-/** 武器ボタンのラベル/活性をローテーション・ENに合わせて更新 */
 function updateWeaponButtons(): void {
+  if (!game.battle) return;
   for (const { btn, cls } of weaponButtons) {
     const s = game.currentSkill(cls);
-    if (!s) {
-      btn.textContent = "-";
-      btn.classList.add("disabled");
-      continue;
-    }
+    if (!s) { btn.textContent = "-"; btn.classList.add("disabled"); continue; }
     const cost = s.kind === "heal" || s.kind === "charge" ? `EN ${s.enCost}` : `威力${s.power} / EN ${s.enCost}`;
     btn.innerHTML = `<span class="sname">${KIND_ICON[s.kind]} ${s.name}</span><span class="scost">${cost}</span>`;
     btn.classList.toggle("disabled", game.battle.playerEn < s.enCost);
   }
 }
 
-function buildResultControls(): void {
+function buildResult(): void {
   const panel = document.createElement("div");
   panel.className = "result-panel";
-
   const title = document.createElement("h2");
-  if (game.screen === "reward") {
-    title.textContent = `STAGE ${game.stageIndex + 1} CLEAR`;
-    title.className = "r-win";
-  } else if (game.screen === "clear") {
-    title.textContent = "DUNGEON CLEAR!";
-    title.className = "r-win";
-  } else {
-    title.textContent = "DEFEATED";
-    title.className = "r-lose";
-  }
+  title.textContent = game.lastWon ? `STAGE ${game.stageIndex + 1} CLEAR` : "DEFEATED";
+  title.className = game.lastWon ? "r-win" : "r-lose";
   panel.appendChild(title);
 
-  const info = document.createElement("p");
-  info.className = "r-info";
-  if (game.screen === "reward") info.textContent = `霊片 +${game.lastReward}　所持: ${game.save.shards}`;
-  else if (game.screen === "clear") info.textContent = `全${STAGE_COUNT}ステージ制覇！　所持霊片: ${game.save.shards}`;
-  else info.textContent = `到達: STAGE ${game.stageIndex + 1}　所持霊片: ${game.save.shards}`;
-  panel.appendChild(info);
-
-  if (game.lastDrops.length > 0 && game.screen !== "gameover") {
-    const drop = document.createElement("p");
-    drop.className = "r-drop";
-    drop.textContent = `🗡 新しい武器を入手: ${game.lastDrops.map((w) => w.name).join("、")}！`;
-    panel.appendChild(drop);
+  if (game.lastWon) {
+    const head = document.createElement("div");
+    head.className = "u-head";
+    head.textContent = `🗡 入手した武器（${game.lastDrops.length}本）`;
+    panel.appendChild(head);
+    const drops = document.createElement("div");
+    drops.className = "drop-list";
+    for (const inst of game.lastDrops) drops.appendChild(weaponRow(inst, false));
+    panel.appendChild(drops);
+  } else {
+    const info = document.createElement("p");
+    info.className = "r-info";
+    info.textContent = "倒れてしまった……装備を見直して再挑戦しよう";
+    panel.appendChild(info);
   }
-
-  panel.appendChild(buildEquipPanel());
-  panel.appendChild(buildUpgradePanel());
 
   const actions = document.createElement("div");
   actions.className = "actions";
-  if (game.screen === "reward") {
-    actions.appendChild(primaryButton("次のステージへ (N)", () => { game.next(); buildControls(); }));
-  } else {
-    actions.appendChild(primaryButton("ダンジョンに再挑戦 (R)", () => { game.restartRun(); buildControls(); }));
-  }
+  if (!game.lastWon) actions.appendChild(primaryButton("もう一度", () => { game.retryStage(); buildControls(); }));
+  const hasNext = game.lastWon && game.stageIndex + 1 < STAGE_COUNT && game.stageUnlocked(game.stageIndex + 1);
+  if (hasNext) actions.appendChild(primaryButton("次のステージへ", () => { game.startStage(game.stageIndex + 1); buildControls(); }));
+  actions.appendChild(secondaryButton("ステージ選択", () => { game.goStageSelect(); buildControls(); }));
+  actions.appendChild(secondaryButton("インベントリ", () => { game.goInventory(); buildControls(); }));
   panel.appendChild(actions);
   controls.appendChild(panel);
 }
 
-function buildEquipPanel(): HTMLDivElement {
-  const wrap = document.createElement("div");
-  wrap.className = "equip-panel";
-  const head = document.createElement("div");
-  head.className = "u-head";
-  head.textContent = "武器の付け替え（スキルは順番に発動）";
-  wrap.appendChild(head);
-
-  for (const cls of CLASSES) {
-    const group = document.createElement("div");
-    group.className = "eq-group";
-    const lbl = document.createElement("div");
-    lbl.className = `eq-label wclass-${cls}`;
-    lbl.textContent = WEAPON_LABEL[cls];
-    group.appendChild(lbl);
-
-    const list = document.createElement("div");
-    list.className = "eq-list";
-    for (const w of game.ownedWeaponsOf(cls)) {
-      const isEq = game.save.equipped[cls] === w.id;
-      const b = document.createElement("button");
-      b.className = "eq-btn" + (isEq ? " eq-on" : "");
-      const skillNames = w.skills.map((id) => game.upgradableSkills().find((s) => s.id === id)?.name ?? "ためる").join(" → ");
-      b.innerHTML = `<span class="eq-name">${w.name}${isEq ? " ✔" : ""}</span><span class="eq-stat">${skillNames}</span>`;
-      b.title = w.desc;
-      b.addEventListener("click", () => { if (game.equip(w.id)) buildControls(); });
-      list.appendChild(b);
-    }
-    group.appendChild(list);
-    wrap.appendChild(group);
-  }
-  return wrap;
+// ===== UI部品 =====
+function bigButton(text: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.className = "menu-btn";
+  b.textContent = text;
+  b.addEventListener("click", onClick);
+  return b;
 }
-
-function buildUpgradePanel(): HTMLDivElement {
-  const wrap = document.createElement("div");
-  wrap.className = "upgrade-panel";
-  const head = document.createElement("div");
-  head.className = "u-head";
-  head.textContent = "スキル強化（霊片を消費）";
-  wrap.appendChild(head);
-
-  for (const base of game.upgradableSkills()) {
-    const lv = game.skillLevel(base.id);
-    const cost = game.costFor(base.id);
-    const row = document.createElement("div");
-    row.className = "u-row";
-    row.innerHTML = `<span class="u-name">${KIND_ICON[base.kind]} ${base.name}</span><span class="u-lv">Lv${lv}</span>`;
-    const up = document.createElement("button");
-    up.className = "u-btn";
-    up.textContent = `強化 (${cost})`;
-    up.disabled = !game.canUpgrade(base.id);
-    up.addEventListener("click", () => { if (game.upgrade(base.id)) buildControls(); });
-    row.appendChild(up);
-    wrap.appendChild(row);
-  }
-  return wrap;
-}
-
 function primaryButton(text: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.className = "guard-btn";
@@ -229,28 +225,38 @@ function primaryButton(text: string, onClick: () => void): HTMLButtonElement {
   b.addEventListener("click", onClick);
   return b;
 }
+function secondaryButton(text: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.className = "reset-btn";
+  b.textContent = text;
+  b.addEventListener("click", onClick);
+  return b;
+}
+function backRow(onClick: () => void): HTMLDivElement {
+  const row = document.createElement("div");
+  row.className = "actions";
+  row.appendChild(secondaryButton("← タイトルへ戻る", onClick));
+  return row;
+}
 
 // ===== キーボード =====
 window.addEventListener("keydown", (e) => {
   if (e.repeat) return;
   audio.init();
-  if (game.screen === "battle") {
+  if (game.screen === "battle" && game.battle) {
     if (e.code === "Space") { e.preventDefault(); game.battle.guard(); audio.sfxGuard(); return; }
     if (e.key === "r") { game.battle.rest(); audio.sfxGuard(); return; }
     if (e.key === "t") {
       const alive = game.battle.enemies.map((en, i) => ({ en, i })).filter((x) => x.en.alive);
       if (alive.length) {
-        const cur = alive.findIndex((x) => x.i === game.battle.targetIndex);
+        const cur = alive.findIndex((x) => x.i === game.battle!.targetIndex);
         game.battle.selectTarget(alive[(cur + 1) % alive.length].i);
       }
       return;
     }
     const map: Record<string, WeaponClass> = { "1": "slash", "2": "pierce", "3": "crush" };
     if (map[e.key] && game.useWeapon(map[e.key])) audio.sfxAttack();
-    return;
   }
-  if (game.screen === "reward" && (e.key === "n" || e.code === "Enter")) { game.next(); buildControls(); }
-  else if ((game.screen === "gameover" || game.screen === "clear") && e.key === "r") { game.restartRun(); buildControls(); }
 });
 
 // ===== メインループ =====
@@ -261,14 +267,23 @@ function loop(now: number): void {
 
   const prev = game.screen;
   game.update(dt);
-  if (game.screen !== prev) {
-    if (game.screen === "gameover") audio.sfxLose();
-    else if (game.screen === "reward" || game.screen === "clear") audio.sfxWin();
+  if (game.screen !== prev && game.screen === "result") {
+    if (game.lastWon) audio.sfxWin(); else audio.sfxLose();
   }
   if (game.screen !== renderedScreen) buildControls();
-  if (game.screen === "battle") updateWeaponButtons();
 
-  render(ctx, game.battle, { index: game.stageIndex, count: STAGE_COUNT });
+  switch (game.screen) {
+    case "title": drawBackdrop(ctx, "ASTRAL WARDEN", "タイミングアクションRPG"); break;
+    case "stageSelect": drawBackdrop(ctx, "ステージ選択"); break;
+    case "inventory": drawBackdrop(ctx, "インベントリ"); break;
+    case "battle":
+    case "result":
+      if (game.battle) {
+        if (game.screen === "battle") updateWeaponButtons();
+        render(ctx, game.battle, { index: game.stageIndex, count: STAGE_COUNT });
+      }
+      break;
+  }
   requestAnimationFrame(loop);
 }
 
