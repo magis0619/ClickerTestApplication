@@ -219,10 +219,14 @@
       card.innerHTML = `
         <div class="gen-icon">${ICONS[def.id]}</div>
         <div class="gen-body">
-          <div class="gen-name">${def.name}<span class="gen-count" data-count="${i}">×0</span></div>
+          <div class="gen-name">${def.name}</div>
           <div class="gen-desc">毎秒 +${fmt(def.rate)} / 個</div>
         </div>
-        <div class="gen-cost" data-cost="${i}">${fmt(def.baseCost)}</div>`;
+        <div class="gen-owned"><span class="col-val" data-count="${i}">0</span></div>
+        <div class="gen-buy">
+          <span class="buy-qty" data-qty="${i}">＋1</span>
+          <span class="gen-cost" data-cost="${i}"></span>
+        </div>`;
       card.addEventListener("click", () => buyGenerator(i));
       dom.generators.appendChild(card);
     });
@@ -457,19 +461,20 @@
     dom.perClick.textContent = fmt(perClick());
     dom.clickLevel.textContent = `Lv.${state.clickLevel}`;
     const cCost = clickCost();
-    dom.clickCost.textContent = fmt(cCost);
+    dom.clickCost.innerHTML = `<span class="cost-ico">${ICONS.stardust}</span>${fmt(cCost)}`;
     dom.clickUpgrade.classList.toggle("affordable", state.stardust >= cCost);
 
-    // 自動生産（まとめ買い）
+    // 自動生産（まとめ買い）— 所持数 / 購入数 / 価格 を分離表示
     GENERATORS.forEach((def, i) => {
       const { n, cost } = buyPlan(i);
       const affordable = n >= 1 && state.stardust >= cost;
       const countEl = dom.generators.querySelector(`[data-count="${i}"]`);
+      const qtyEl = dom.generators.querySelector(`[data-qty="${i}"]`);
       const costEl = dom.generators.querySelector(`[data-cost="${i}"]`);
       if (countEl) countEl.textContent = `×${state.generators[i].count}`;
+      if (qtyEl) qtyEl.textContent = `＋${n}`;
       if (costEl) {
-        const qty = state.buyMode === "max" ? (n >= 1 ? `×${n}  ` : "×0  ") : "";
-        costEl.textContent = qty + fmt(cost);
+        costEl.innerHTML = `<span class="cost-ico">${ICONS.stardust}</span>${fmt(cost)}`;
         costEl.classList.toggle("cant", !affordable);
       }
       const card = costEl && costEl.closest(".gen-card");

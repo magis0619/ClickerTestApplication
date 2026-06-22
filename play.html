@@ -172,7 +172,7 @@ html, body {
 .upgrade-card.affordable, .gen-card.affordable { background: var(--card2); border-color: var(--accent2); }
 .upgrade-card.locked, .gen-card.locked { opacity: 0.5; }
 
-.up-icon, .gen-icon { font-size: 30px; width: 40px; text-align: center; }
+.up-icon, .gen-icon { font-size: 30px; width: 40px; text-align: center; flex: 0 0 40px; }
 .up-body, .gen-body { flex: 1; min-width: 0; }
 .up-name, .gen-name { font-size: 15px; font-weight: 700; }
 .up-level, .gen-count {
@@ -184,6 +184,26 @@ html, body {
   white-space: nowrap; text-align: right;
 }
 .gen-cost.cant { color: var(--bad); }
+
+/* ---- Shop columns (所持 / 購入数・価格) ---- */
+.gen-head {
+  display: flex; align-items: center;
+  padding: 4px 14px 2px; font-size: 11px; color: var(--muted); font-weight: 700;
+}
+.gh-name { flex: 1; padding-left: 52px; }
+.gh-owned { flex: 0 0 48px; text-align: center; }
+.gh-buy { flex: 0 0 100px; text-align: right; }
+
+.gen-owned {
+  flex: 0 0 48px; text-align: center;
+  border-left: 1px solid #2b346e; padding-left: 4px;
+}
+.gen-owned .col-val { font-size: 15px; font-weight: 800; color: var(--accent2); }
+.gen-buy {
+  flex: 0 0 100px; display: flex; flex-direction: column; align-items: flex-end;
+  border-left: 1px solid #2b346e; padding-left: 8px; gap: 2px;
+}
+.buy-qty { font-size: 12px; font-weight: 700; color: var(--good); }
 
 /* ---- Prestige ---- */
 .prestige-box {
@@ -394,6 +414,11 @@ html, body {
         <button class="bm active" data-mode="1">×1</button>
         <button class="bm" data-mode="10">×10</button>
         <button class="bm" data-mode="max">Max</button>
+      </div>
+      <div class="gen-head">
+        <span class="gh-name">自動生産ユニット</span>
+        <span class="gh-owned">所持数</span>
+        <span class="gh-buy">購入数 ／ 価格</span>
       </div>
       <div id="generators"></div>
     </section>
@@ -675,10 +700,14 @@ html, body {
       card.innerHTML = `
         <div class="gen-icon">${ICONS[def.id]}</div>
         <div class="gen-body">
-          <div class="gen-name">${def.name}<span class="gen-count" data-count="${i}">×0</span></div>
+          <div class="gen-name">${def.name}</div>
           <div class="gen-desc">毎秒 +${fmt(def.rate)} / 個</div>
         </div>
-        <div class="gen-cost" data-cost="${i}">${fmt(def.baseCost)}</div>`;
+        <div class="gen-owned"><span class="col-val" data-count="${i}">0</span></div>
+        <div class="gen-buy">
+          <span class="buy-qty" data-qty="${i}">＋1</span>
+          <span class="gen-cost" data-cost="${i}"></span>
+        </div>`;
       card.addEventListener("click", () => buyGenerator(i));
       dom.generators.appendChild(card);
     });
@@ -913,19 +942,20 @@ html, body {
     dom.perClick.textContent = fmt(perClick());
     dom.clickLevel.textContent = `Lv.${state.clickLevel}`;
     const cCost = clickCost();
-    dom.clickCost.textContent = fmt(cCost);
+    dom.clickCost.innerHTML = `<span class="cost-ico">${ICONS.stardust}</span>${fmt(cCost)}`;
     dom.clickUpgrade.classList.toggle("affordable", state.stardust >= cCost);
 
-    // 自動生産（まとめ買い）
+    // 自動生産（まとめ買い）— 所持数 / 購入数 / 価格 を分離表示
     GENERATORS.forEach((def, i) => {
       const { n, cost } = buyPlan(i);
       const affordable = n >= 1 && state.stardust >= cost;
       const countEl = dom.generators.querySelector(`[data-count="${i}"]`);
+      const qtyEl = dom.generators.querySelector(`[data-qty="${i}"]`);
       const costEl = dom.generators.querySelector(`[data-cost="${i}"]`);
       if (countEl) countEl.textContent = `×${state.generators[i].count}`;
+      if (qtyEl) qtyEl.textContent = `＋${n}`;
       if (costEl) {
-        const qty = state.buyMode === "max" ? (n >= 1 ? `×${n}  ` : "×0  ") : "";
-        costEl.textContent = qty + fmt(cost);
+        costEl.innerHTML = `<span class="cost-ico">${ICONS.stardust}</span>${fmt(cost)}`;
         costEl.classList.toggle("cant", !affordable);
       }
       const card = costEl && costEl.closest(".gen-card");

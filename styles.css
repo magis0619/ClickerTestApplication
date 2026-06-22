@@ -161,7 +161,7 @@ html, body {
 .upgrade-card.affordable, .gen-card.affordable { background: var(--card2); border-color: var(--accent2); }
 .upgrade-card.locked, .gen-card.locked { opacity: 0.5; }
 
-.up-icon, .gen-icon { font-size: 30px; width: 40px; text-align: center; }
+.up-icon, .gen-icon { font-size: 30px; width: 40px; text-align: center; flex: 0 0 40px; }
 .up-body, .gen-body { flex: 1; min-width: 0; }
 .up-name, .gen-name { font-size: 15px; font-weight: 700; }
 .up-level, .gen-count {
@@ -173,6 +173,26 @@ html, body {
   white-space: nowrap; text-align: right;
 }
 .gen-cost.cant { color: var(--bad); }
+
+/* ---- Shop columns (所持 / 購入数・価格) ---- */
+.gen-head {
+  display: flex; align-items: center;
+  padding: 4px 14px 2px; font-size: 11px; color: var(--muted); font-weight: 700;
+}
+.gh-name { flex: 1; padding-left: 52px; }
+.gh-owned { flex: 0 0 48px; text-align: center; }
+.gh-buy { flex: 0 0 100px; text-align: right; }
+
+.gen-owned {
+  flex: 0 0 48px; text-align: center;
+  border-left: 1px solid #2b346e; padding-left: 4px;
+}
+.gen-owned .col-val { font-size: 15px; font-weight: 800; color: var(--accent2); }
+.gen-buy {
+  flex: 0 0 100px; display: flex; flex-direction: column; align-items: flex-end;
+  border-left: 1px solid #2b346e; padding-left: 8px; gap: 2px;
+}
+.buy-qty { font-size: 12px; font-weight: 700; color: var(--good); }
 
 /* ---- Prestige ---- */
 .prestige-box {
