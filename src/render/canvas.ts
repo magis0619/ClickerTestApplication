@@ -116,10 +116,12 @@ export function render(
   const layout = enemyLayout(b.enemies.length);
   const slots = layout.map((L) => ({ x: L.cx, y: L.footY }));
 
-  // 「次に攻撃する敵」（生存・非ブレイクで最も着弾が近い）を特定
+  // 「次に攻撃する敵」を特定：予兆中を最優先、なければカウントが小さい順
   let imminent = -1, best = Infinity;
   b.enemies.forEach((e, i) => {
-    if (e.alive && !e.isBroken && e.flinchT <= 0 && e.atkTimer < best) { best = e.atkTimer; imminent = i; }
+    if (!e.alive || e.isBroken || e.flinchT > 0) return;
+    const key = e.telegraphT > 0 ? e.telegraphT : 100000 + e.count * 1000;
+    if (key < best) { best = key; imminent = i; }
   });
 
   // 画面シェイク（ヒットストップ中はフリーズフレームにして揺らさない）
@@ -140,9 +142,9 @@ export function render(
   drawPlayerHud(ctx, b);
   if (stage) {
     ctx.textAlign = "right";
-    ctx.font = "11px monospace";
+    ctx.font = "bold 11px monospace";
     ctx.fillStyle = "#9690c4";
-    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W - 12, 24);
+    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W - 10, 14);
   }
 
   drawWarningBanner(ctx, b, imminent);
@@ -298,16 +300,17 @@ function drawEnemyCard(
     ctx.font = "bold 12px monospace";
     ctx.fillText("BREAK", L.cx, cy);
   } else if (e.inTelegraph) {
-    const pulse = 1 + 0.3 * Math.abs(Math.sin(Date.now() / 90));
+    // 予兆：びっくりマーク
+    const pulse = 1 + 0.35 * Math.abs(Math.sin(Date.now() / 80));
     ctx.save();
     ctx.translate(L.cx, cy - 4);
     ctx.scale(pulse, pulse);
     ctx.textAlign = "center";
-    ctx.font = "bold 22px monospace";
+    ctx.font = "bold 26px monospace";
     ctx.fillStyle = "#1a0a0a";
-    ctx.fillText("!!", 1, 1);
+    ctx.fillText("!", 1.5, 1.5);
     ctx.fillStyle = "#ff3b3b";
-    ctx.fillText("!!", 0, 0);
+    ctx.fillText("!", 0, 0);
     ctx.restore();
   } else {
     const urgent = e.count <= 1;
@@ -342,15 +345,13 @@ function drawEnemyCard(
 function drawWarningBanner(ctx: CanvasRenderingContext2D, b: Battle, imminent: number): void {
   if (imminent < 0) return;
   const e = b.enemies[imminent];
-  if (!e || e.danger < 0.45) return;
-  const tele = e.inTelegraph;
-  const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / (tele ? 80 : 160)));
+  if (!e || !e.inTelegraph) return; // 予兆中（!が出ている間）だけ表示
+  const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 80));
   ctx.textAlign = "center";
   ctx.globalAlpha = pulse;
-  ctx.font = `bold ${tele ? 17 : 14}px monospace`;
-  ctx.fillStyle = tele ? "#ff4040" : "#ffb347";
-  const text = tele ? "⚠ 今だ！ ガード！" : "⚠ 敵が次に攻撃！";
-  ctx.fillText(text, W / 2, 50);
+  ctx.font = "bold 17px monospace";
+  ctx.fillStyle = "#ff4040";
+  ctx.fillText("⚠ 敵の攻撃！ ガード！", W / 2, 74);
   ctx.globalAlpha = 1;
 }
 
@@ -508,22 +509,51 @@ function drawPerfectFx(
 }
 
 function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
+  const M = 10;            // 左右マージン
+  const fullW = W - M * 2; // 画面いっぱいの幅
+
+  // ラベル行（左:WARDEN）
   ctx.textAlign = "left";
   ctx.fillStyle = "#cfe4ff";
-  ctx.font = "11px monospace";
-  ctx.fillText("WARDEN", 12, 28);
-  bar(ctx, 12, 33, 150, 10, b.playerHp / PLAYER_MAX_HP, "#3ad27a", "#10331f");
+  ctx.font = "bold 11px monospace";
+  ctx.fillText("WARDEN", M, 14);
+
+  // === HP：左右いっぱいのバー ===
+  const hpY = 18, hpH = 16;
+  bar(ctx, M, hpY, fullW, hpH, b.playerHp / PLAYER_MAX_HP, "#3ad27a", "#10331f");
+  ctx.textAlign = "center";
+  ctx.font = "bold 11px monospace";
+  ctx.fillStyle = "#eafff2";
+  ctx.fillText(`HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`, W / 2, hpY + 12);
+
+  // === EN：左右いっぱい＋1ずつの区切り ===
+  const enY = 40, enH = 13, n = PLAYER_MAX_EN, gap = 3;
+  const cw = (fullW - gap * (n - 1)) / n;
+  const en = Math.floor(b.playerEn);
+  for (let i = 0; i < n; i++) {
+    const x = M + i * (cw + gap);
+    ctx.fillStyle = "#102a3a";
+    ctx.fillRect(x, enY, cw, enH);
+    if (i < en) {
+      ctx.fillStyle = "#46b6ff";
+      ctx.fillRect(x, enY, cw, enH);
+    }
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, enY + 0.5, cw - 1, enH - 1);
+  }
+  ctx.textAlign = "right";
+  ctx.font = "bold 10px monospace";
   ctx.fillStyle = "#9fd9ff";
-  ctx.fillText(`HP ${Math.ceil(b.playerHp)}/${PLAYER_MAX_HP}`, 12, 56);
-  bar(ctx, 12, 61, 150, 8, b.playerEn / PLAYER_MAX_EN, "#46b6ff", "#102a3a");
-  ctx.fillStyle = "#9fd9ff";
-  ctx.fillText(`EN ${Math.floor(b.playerEn)}/${PLAYER_MAX_EN}`, 12, 83);
+  ctx.fillText(`EN ${en}/${n}`, W - M, enY + 11);
 
   // 対象敵の弱点ヒント
   const t = b.enemies[b.targetIndex];
   if (t && t.alive) {
+    ctx.textAlign = "left";
+    ctx.font = "11px monospace";
     ctx.fillStyle = "#7f7aa0";
-    ctx.fillText(`対象: ${t.def.name}（${KIND_LABEL[t.def.kind]}） 弱点:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, 12, H - 10);
+    ctx.fillText(`対象: ${t.def.name}（${KIND_LABEL[t.def.kind]}） 弱点:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, H - 10);
   }
 }
 
@@ -611,12 +641,39 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
 }
 
 function drawResult(ctx: CanvasRenderingContext2D, b: Battle): void {
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  const won = b.phase === "won";
+  // 画面いっぱいの暗幕（勝敗で色味を変える）
+  ctx.fillStyle = won ? "rgba(6,20,38,0.82)" : "rgba(32,8,12,0.84)";
   ctx.fillRect(0, 0, W, H);
+
+  // 出現アニメ（小さく弾けて大きく → 落ち着く）
+  const t = Math.min(1, b.resultT / 380);
+  const back = (x: number) => 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2);
+  const pop = 0.3 + 0.7 * back(t);
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(pop, pop);
   ctx.textAlign = "center";
-  ctx.font = "bold 28px monospace";
-  ctx.fillStyle = b.phase === "won" ? "#66ddff" : "#ff6677";
-  ctx.fillText(b.phase === "won" ? "STAGE CLEAR" : "DEFEATED", W / 2, H / 2);
+  ctx.lineJoin = "round";
+
+  const main = won ? "#bfefff" : "#ffb3bd";
+  const glow = won ? "#3fa8ff" : "#ff4d63";
+  const line1 = won ? "STAGE" : "YOU";
+  const line2 = won ? "CLEAR!" : "DIED";
+
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 26;
+  ctx.font = "900 52px monospace";
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = won ? "#062542" : "#2a060c";
+  ctx.strokeText(line1, 0, -24);
+  ctx.strokeText(line2, 0, 34);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = main;
+  ctx.fillText(line1, 0, -24);
+  ctx.fillText(line2, 0, 34);
+  ctx.restore();
 }
 
 function bar(

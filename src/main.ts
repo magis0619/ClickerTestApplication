@@ -17,6 +17,21 @@ const game = new Game();
 let weaponButtons: { card: HTMLButtonElement; cls: WeaponClass; steps: HTMLElement[] }[] = [];
 let renderedScreen = "";
 
+// ===== 画面遷移の暗転オーバーレイ =====
+const fadeEl = document.createElement("div");
+fadeEl.className = "fade-overlay";
+document.body.appendChild(fadeEl);
+
+/** 暗転 → action実行 → 明転、の順で画面遷移する */
+function withFade(action: () => void): void {
+  fadeEl.classList.add("show");
+  window.setTimeout(() => {
+    action();
+    buildControls();
+    window.setTimeout(() => fadeEl.classList.remove("show"), 60);
+  }, 340);
+}
+
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", aoe: "✸", heal: "✚", charge: "▲" };
 const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
 const CIRCLE = ["①", "②", "③", "④", "⑤", "⑥"];
@@ -151,7 +166,7 @@ function buildStageSelect(): void {
       `<div class="st-title">STAGE ${i + 1}: ${s.name} ${cleared ? "✔" : ""}${unlocked ? "" : " 🔒"}</div>` +
       `<div class="st-desc">${s.desc}</div>` +
       `<div class="st-enemy">敵: ${enemyNames}（${s.enemies.length}体） / ドロップ${s.drops}本</div>`;
-    if (unlocked) card.addEventListener("click", () => { game.startStage(i); buildControls(); });
+    if (unlocked) card.addEventListener("click", () => withFade(() => game.startStage(i)));
     list.appendChild(card);
   });
   controls.appendChild(list);
@@ -377,9 +392,9 @@ function buildResult(): void {
 
   const actions = document.createElement("div");
   actions.className = "actions";
-  if (!game.lastWon) actions.appendChild(primaryButton("もう一度", () => { game.retryStage(); buildControls(); }));
+  if (!game.lastWon) actions.appendChild(primaryButton("もう一度", () => withFade(() => game.retryStage())));
   const hasNext = game.lastWon && game.stageIndex + 1 < STAGE_COUNT && game.stageUnlocked(game.stageIndex + 1);
-  if (hasNext) actions.appendChild(primaryButton("次のステージへ", () => { game.startStage(game.stageIndex + 1); buildControls(); }));
+  if (hasNext) actions.appendChild(primaryButton("次のステージへ", () => withFade(() => game.startStage(game.stageIndex + 1))));
   actions.appendChild(secondaryButton("ステージ選択", () => { game.goStageSelect(); buildControls(); }));
   actions.appendChild(secondaryButton("インベントリ", () => { game.goInventory(); buildControls(); }));
   panel.appendChild(actions);

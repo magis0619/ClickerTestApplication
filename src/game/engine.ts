@@ -29,9 +29,6 @@ import {
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
 
-/** カウント1つあたりの時間(ms)。countStart×これ＋telegraph が1サイクル */
-export const COUNT_TICK_MS = 1000;
-
 export interface FloatText {
   text: string;
   color: string;
@@ -47,8 +44,10 @@ export class EnemyState {
   hp: number;
   breakGauge = 0;
   breakRemain = 0;
-  /** 次の攻撃までの残り時間(ms) */
-  atkTimer: number;
+  /** 攻撃までの残りカウント。プレイヤーの行動ごとに1減り、0で予兆へ */
+  count: number;
+  /** 予兆（!）の残り時間(ms)。>0 の間だけガード可能、0で着弾 */
+  telegraphT = 0;
   /** 被弾フラッシュ演出の残り時間(ms) */
   hitFlash = 0;
   /** 撃破アニメの残り時間(ms)。>0 の間は撃破演出を描画 */
@@ -57,20 +56,13 @@ export class EnemyState {
   deathDir = 1;
   /** パーフェクトで弾かれた怯み演出の残り時間(ms) */
   flinchT = 0;
-  /** 予兆SEを既に鳴らしたか（1回だけ鳴らすためのフラグ） */
-  warned = false;
   /** 撃破時に確定したドロップ（宝箱の色＝レアリティ表示に使う） */
   drop?: WeaponInstance;
 
   constructor(def: EnemyDef) {
     this.def = def;
     this.hp = def.maxHp;
-    this.atkTimer = this.cycleMs;
-  }
-
-  /** 攻撃1サイクルの長さ(ms)。telegraph ＋ カウント開始値ぶんの秒数 */
-  get cycleMs(): number {
-    return this.def.telegraphMs + this.def.countStart * COUNT_TICK_MS;
+    this.count = def.countStart;
   }
 
   get alive(): boolean {
@@ -83,23 +75,17 @@ export class EnemyState {
   get isBroken(): boolean {
     return this.breakRemain > 0;
   }
-  /** 予兆中（着弾までtelegraph時間以内）か */
+  /** 予兆中（!が出て着弾を待っている）か。この間だけガードが成立する */
   get inTelegraph(): boolean {
-    return this.alive && !this.isBroken && this.flinchT <= 0 && this.atkTimer <= this.def.telegraphMs;
-  }
-  /** 頭上に出す攻撃カウント。予兆中は0扱い */
-  get count(): number {
-    return Math.max(0, Math.ceil((this.atkTimer - this.def.telegraphMs) / COUNT_TICK_MS));
+    return this.alive && !this.isBroken && this.flinchT <= 0 && this.telegraphT > 0;
   }
   /**
-   * 緊張度 0..1。着弾が近いほど高い。震え・赤点滅の強さに使う。
-   * カウント1あたりから立ち上がり、予兆中（着弾直前）に最大化する。
+   * 緊張度 0..1。予兆中のみ立ち上がり、着弾が近いほど高い。
+   * 震え・赤点滅の強さに使う。
    */
   get danger(): number {
-    if (!this.alive || this.isBroken || this.flinchT > 0) return 0;
-    const lead = this.def.telegraphMs + 1000; // カウント1の頭から
-    if (this.atkTimer > lead) return 0;
-    return Math.max(0, Math.min(1, (lead - this.atkTimer) / lead));
+    if (!this.inTelegraph) return 0;
+    return Math.max(0, Math.min(1, 1 - this.telegraphT / this.def.telegraphMs));
   }
 }
 
@@ -136,6 +122,8 @@ export class Battle {
   sfx: SfxEvent[] = [];
   /** ドロップ抽選用のステージ別レアリティ重み */
   rarityWeights: number[];
+  /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
+  resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
   private winPending = false;
 
@@ -209,6 +197,7 @@ export class Battle {
       }
     }
 
+    this.advanceCounts(); // 行動したので敵カウントを進める
     this.checkWin();
     return true;
   }
@@ -219,20 +208,45 @@ export class Battle {
     const before = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
+    this.advanceCounts(); // 休憩も「行動」なので敵カウントを進める
+  }
+
+  /**
+   * プレイヤーの行動ごとに敵の攻撃カウントを1減らす。
+   * 0になった敵は予兆（!）状態に入り、少し待ってから攻撃してくる。
+   * 予兆中・ブレイク中・怯み中の敵は進めない。
+   */
+  private advanceCounts(): void {
+    for (const e of this.enemies) {
+      if (!e.alive || e.isBroken || e.flinchT > 0) continue;
+      if (e.telegraphT > 0) continue; // 既に予兆中
+      e.count -= 1;
+      if (e.count <= 0) {
+        e.count = 0;
+        e.telegraphT = e.def.telegraphMs; // 予兆開始（! が出る）
+        this.sfx.push("warn");
+      }
+    }
+  }
+
+  /** 予兆の決着後、カウントを開始値に戻す */
+  private endTelegraph(e: EnemyState): void {
+    e.telegraphT = 0;
+    e.count = e.def.countStart;
   }
 
   /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める。判定結果を返す */
   guard(): GuardResult {
     if (this.phase !== "fighting") return "none";
-    // 予兆中の敵のうち、最も着弾が近い（atkTimerが小さい）ものを対象に
+    // 予兆中の敵のうち、最も着弾が近い（telegraphTが小さい）ものを対象に
     const targets = this.enemies.filter((e) => e.inTelegraph);
     if (targets.length === 0) {
       this.setGuard("none");
       return "none";
     }
-    targets.sort((a, b) => a.atkTimer - b.atkTimer);
+    targets.sort((a, b) => a.telegraphT - b.telegraphT);
     const e = targets[0];
-    const diff = e.atkTimer; // 着弾までの残り時間
+    const diff = e.telegraphT; // 着弾までの残り時間
     let result: GuardResult;
     if (diff <= PERFECT_WINDOW_MS) result = "perfect";
     else if (diff <= JUST_WINDOW_MS) result = "just";
@@ -242,8 +256,7 @@ export class Battle {
       return "none";
     }
     this.resolveEnemyHit(e, result);
-    e.atkTimer = e.cycleMs; // 受け止めたので再充填
-    e.warned = false;
+    this.endTelegraph(e); // 受け止めたのでカウントを戻す
     return result;
   }
 
@@ -312,9 +325,8 @@ export class Battle {
         this.perfectFxIndex = idx;
         this.shake(180, 4);
         this.pushFloat(`+${PERFECT_HP_RECOVER}HP +${PERFECT_EN_RECOVER}EN`, "#66ffaa", "player");
-        // 敵を怯ませる：次の攻撃を遅らせ、ブレイクゲージも溜める
+        // 敵を怯ませる：カウントを戻し、ブレイクゲージも溜める
         e.flinchT = PERFECT_FLINCH_MS;
-        e.atkTimer = Math.max(e.atkTimer, e.def.telegraphMs + PERFECT_FLINCH_MS);
         if (!e.isBroken) {
           e.breakGauge += PERFECT_BREAK_BONUS;
           if (e.breakGauge >= e.def.breakThreshold) {
@@ -401,7 +413,10 @@ export class Battle {
       if (e.deathT > 0) e.deathT = Math.max(0, e.deathT - dtMs);
     }
 
-    if (this.phase !== "fighting") return;
+    if (this.phase !== "fighting") {
+      this.resultT += dtMs; // リザルト演出の出現アニメ用
+      return;
+    }
 
     // 全滅していたら、撃破アニメ完了を待って勝利確定
     if (this.winPending) {
@@ -411,25 +426,21 @@ export class Battle {
       return;
     }
 
+    // 予兆中の敵だけ時間で進み、0になったら着弾（ガードされなければフルダメージ）
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (e.breakRemain > 0) {
         e.breakRemain = Math.max(0, e.breakRemain - dtMs);
         continue; // ブレイク中は攻撃しない
       }
-      if (e.flinchT > 0) continue; // 怯み中は攻撃しない
-      const before = e.atkTimer;
-      e.atkTimer -= dtMs;
-      // 予兆に入った瞬間に1回だけ警告SE（攻撃直前のSE）
-      if (!e.warned && before > e.def.telegraphMs && e.atkTimer <= e.def.telegraphMs) {
-        e.warned = true;
-        this.sfx.push("warn");
-      }
-      if (e.atkTimer <= 0) {
-        this.resolveEnemyHit(e, "none"); // ガードされなければフルダメージ
-        e.atkTimer = e.cycleMs;
-        e.warned = false;
-        if (this.phase !== "fighting") return;
+      if (e.telegraphT > 0) {
+        e.telegraphT -= dtMs;
+        if (e.telegraphT <= 0) {
+          e.telegraphT = 0;
+          this.resolveEnemyHit(e, "none");
+          this.endTelegraph(e);
+          if (this.phase !== "fighting") return;
+        }
       }
     }
 

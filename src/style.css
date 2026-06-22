@@ -32,6 +32,21 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 画面遷移の暗転オーバーレイ */
+.fade-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.34s ease;
+  z-index: 100;
+}
+.fade-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 #screen {
   touch-action: manipulation;
 }
