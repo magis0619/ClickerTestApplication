@@ -1,0 +1,131 @@
+:root {
+  --bg: #0c0a18;
+  --panel: #171331;
+  --ink: #e7e3ff;
+  --accent: #5fa8ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 520px;
+  padding: 12px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.topbar .subtitle {
+  margin: 2px 0 10px;
+  font-size: 12px;
+  color: #8e88b8;
+}
+
+#screen {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border: 2px solid #2e2750;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+
+#controls {
+  margin-top: 12px;
+}
+
+.skills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.wclass {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.wlabel {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2e2750;
+}
+
+.wclass-slash .wlabel { color: #8fd0ff; }
+.wclass-pierce .wlabel { color: #b8ff9f; }
+.wclass-crush .wlabel { color: #ffcf7f; }
+
+.skill-btn {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 6px;
+  background: #241f47;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.skill-btn:hover { background: #2f2a5c; }
+.skill-btn:active { transform: translateY(1px); }
+
+.sname { font-size: 12px; font-weight: bold; }
+.scost { font-size: 10px; color: #9690c4; }
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guard-btn {
+  flex: 2;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #2c6fb8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.guard-btn:hover { background: #3580d2; }
+.guard-btn:active { transform: translateY(1px); }
+
+.reset-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 14px;
+  border: 1px solid #3a3466;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.reset-btn:hover { background: #1d1940; }
