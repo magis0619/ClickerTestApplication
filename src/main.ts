@@ -87,6 +87,8 @@ function doGuard(): void {
 
 /** 詳細を開いている武器UID（再描画後も維持） */
 const expandedWeapons = new Set<string>();
+/** 削除確認中の武器UID（2タップ目で確定） */
+let pendingDeleteUid: string | null = null;
 /** インベントリで表示中の系統タブ */
 let invClass: WeaponClass = "slash";
 
@@ -165,11 +167,12 @@ function buildStageSelect(): void {
     const card = document.createElement("button");
     card.className = "stage-card" + (unlocked ? "" : " locked");
     card.disabled = !unlocked;
-    const enemyNames = s.enemies.map((e) => e.name).join("・");
+    const bossName = s.waves[s.waves.length - 1].find((e) => e.boss)?.name
+      ?? s.waves[s.waves.length - 1][0]?.name ?? "";
     card.innerHTML =
       `<div class="st-title">STAGE ${i + 1}: ${s.name} ${cleared ? "✔" : ""}${unlocked ? "" : " 🔒"}</div>` +
       `<div class="st-desc">${s.desc}</div>` +
-      `<div class="st-enemy">敵: ${enemyNames}（${s.enemies.length}体）</div>`;
+      `<div class="st-enemy">${s.waves.length}連戦 / BOSS: ${bossName}</div>`;
     if (unlocked) card.addEventListener("click", () => withFade(() => game.startStage(i)));
     list.appendChild(card);
   });
@@ -252,6 +255,26 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
     buildControls();
   });
   acts.appendChild(det);
+
+  // 削除（インベントリのみ・装備中は不可・2タップ確認）
+  if (equippable && game.canDelete(inst.uid)) {
+    const del = document.createElement("button");
+    del.className = "wpn-act wpn-del";
+    const confirming = pendingDeleteUid === inst.uid;
+    del.textContent = confirming ? "本当に削除？" : "削除";
+    if (confirming) del.classList.add("wpn-del-confirm");
+    del.addEventListener("click", () => {
+      if (pendingDeleteUid === inst.uid) {
+        pendingDeleteUid = null;
+        game.deleteWeapon(inst.uid);
+        expandedWeapons.delete(inst.uid);
+      } else {
+        pendingDeleteUid = inst.uid;
+      }
+      buildControls();
+    });
+    acts.appendChild(del);
+  }
   card.appendChild(acts);
 
   if (open) card.appendChild(weaponDetail(inst));
@@ -474,7 +497,10 @@ function loop(now: number): void {
     case "result":
       if (game.battle) {
         if (game.screen === "battle") updateWeaponButtons();
-        render(ctx, game.battle, { index: game.stageIndex, count: STAGE_COUNT });
+        render(ctx, game.battle, {
+          index: game.stageIndex, count: STAGE_COUNT,
+          wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
+        });
       }
       break;
   }

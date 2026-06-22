@@ -1,0 +1,29 @@
+[
+  {
+    "name": "始まりの森",
+    "desc": "3戦を勝ち抜こう。最後はボスが待つ",
+    "waves": [
+      ["straw_golem"],
+      ["straw_golem", "dust_imp"],
+      ["shell_warden"]
+    ]
+  },
+  {
+    "name": "双影の回廊",
+    "desc": "弱点の異なる敵が増える。3戦目はボス",
+    "waves": [
+      ["wraith_feather", "dust_imp"],
+      ["gloom_shade", "venom_lurker"],
+      ["wraith_monarch", "ember_hound"]
+    ]
+  },
+  {
+    "name": "獣王の広間",
+    "desc": "強敵が連戦で襲う。最深部に獣王",
+    "waves": [
+      ["stone_sentinel", "shell_crawler"],
+      ["ember_hound", "venom_lurker", "gloom_shade"],
+      ["carapace_tyrant", "wraith_feather", "gloom_shade"]
+    ]
+  }
+]

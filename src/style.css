@@ -584,6 +584,10 @@ button.wpn-row:hover { background: #241f55; }
 }
 .wpn-act:hover { background: #2f2a5c; }
 .wpn-act:disabled { background: #1c2c50; color: #7fb0ff; cursor: default; }
+.wpn-del { border-color: #6a3340; color: #ff9aa8; }
+.wpn-del:hover { background: #3a2026; }
+.wpn-del-confirm { background: #7a2230; border-color: #ff5d6e; color: #fff; }
+.wpn-del-confirm:hover { background: #93293a; }
 
 .wpn-detail {
   padding: 8px 10px;

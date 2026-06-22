@@ -57,6 +57,12 @@ export class EnemyState {
   deathDir = 1;
   /** パーフェクトで弾かれた怯み演出の残り時間(ms) */
   flinchT = 0;
+  /** 登場アニメ（横からスライドイン）の残り時間(ms) */
+  spawnT = 420;
+  /** アニメ位相（個体ごとに揺れをずらす） */
+  phase = Math.random() * Math.PI * 2;
+  /** 攻撃モーション（着弾時に前へ踏み込む）の残り時間(ms) */
+  atkAnimT = 0;
   /** 撃破時に確定したドロップ（宝箱の色＝レアリティ表示に使う） */
   drop?: WeaponInstance;
 
@@ -289,6 +295,7 @@ export class Battle {
       this.setGuard("none"); // まだ早い
       return "none";
     }
+    if (result !== "perfect") e.atkAnimT = 300; // 弾かれない攻撃は踏み込みモーション
     this.resolveEnemyHit(e, result);
     this.endTelegraph(e); // 受け止めたのでカウントを戻す
     return result;
@@ -452,6 +459,8 @@ export class Battle {
       if (e.hitFlash > 0) e.hitFlash -= dtMs;
       if (e.flinchT > 0) e.flinchT -= dtMs;
       if (e.deathT > 0) e.deathT = Math.max(0, e.deathT - dtMs);
+      if (e.spawnT > 0) e.spawnT = Math.max(0, e.spawnT - dtMs);
+      if (e.atkAnimT > 0) e.atkAnimT = Math.max(0, e.atkAnimT - dtMs);
     }
 
     if (this.phase !== "fighting") {
@@ -475,6 +484,7 @@ export class Battle {
         e.telegraphT -= dtMs;
         if (e.telegraphT <= 0) {
           e.telegraphT = 0;
+          e.atkAnimT = 300; // 攻撃の踏み込みモーション
           this.resolveEnemyHit(e, "none");
           this.endTelegraph(e);
           if (this.phase !== "fighting") return;
@@ -495,5 +505,11 @@ export class Battle {
 
   private pushFloat(text: string, color: string, anchor: FloatText["anchor"]): void {
     this.floats.push({ text, color, ttl: 900, anchor, rise: 0 });
+  }
+
+  /** ウェーブ開始など、画面中央に大きく告知する */
+  announce(text: string, color: string): void {
+    this.floats.push({ text, color, ttl: 1300, anchor: "center", rise: 0 });
+    this.whiteFlashT = 120;
   }
 }

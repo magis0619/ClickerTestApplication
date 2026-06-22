@@ -3,6 +3,8 @@ import type {
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
+import enemiesJson from "./enemies.json";
+import stagesJson from "./stages.json";
 
 // ===== 表示名・相性 =====
 export const WEAPON_LABEL: Record<WeaponClass, string> = { slash: "斬撃", pierce: "刺突", crush: "打撃" };
@@ -113,34 +115,24 @@ export function rollEnemyDrop(def: EnemyDef): WeaponInstance | undefined {
   return makeInstance(def.dropWeaponId);
 }
 
-// ===== 敵 =====
-const E: Record<string, EnemyDef> = {
-  // countStart で攻撃リズムを、dropWeaponId/dropRate でドロップを設定
-  straw_golem: { id: "straw_golem", name: "ストローゴーレム", kind: "carapace", maxHp: 80, attack: 10, telegraphMs: 1300, countStart: 3, breakThreshold: 35, dropWeaponId: "w_iron_edge", dropRate: 70 },
-  shell_crawler: { id: "shell_crawler", name: "シェルクローラー", kind: "carapace", maxHp: 130, attack: 16, telegraphMs: 1150, countStart: 5, breakThreshold: 45, dropWeaponId: "w_quake_hammer", dropRate: 45 },
-  wraith_feather: { id: "wraith_feather", name: "レイスフェザー", kind: "aerial", maxHp: 150, attack: 19, telegraphMs: 1000, countStart: 4, breakThreshold: 52, dropWeaponId: "w_wind_pike", dropRate: 50 },
-  gloom_shade: { id: "gloom_shade", name: "グルームシェイド", kind: "phantom", maxHp: 170, attack: 22, telegraphMs: 950, countStart: 2, breakThreshold: 58, dropWeaponId: "w_storm_saber", dropRate: 45 },
-  carapace_tyrant: { id: "carapace_tyrant", name: "カラペイス・タイラント", kind: "carapace", maxHp: 480, attack: 32, telegraphMs: 820, countStart: 3, breakThreshold: 100, boss: true, dropWeaponId: "w_astral_edge", dropRate: 100 },
-};
+// ===== 敵（enemies.json から読み込み） =====
+interface RawEnemy {
+  id: string; name: string; kind: EnemyKind; maxHp: number; attack: number;
+  telegraphMs: number; countStart: number; breakThreshold: number;
+  dropWeaponId?: string; dropRate?: number; boss?: boolean;
+}
+const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(
+  (enemiesJson as RawEnemy[]).map((e) => [e.id, e as EnemyDef]),
+);
+export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id]; }
 
-// ===== ステージ（3つ） =====
-export const STAGES: StageDef[] = [
-  {
-    name: "練習の間",
-    desc: "チュートリアル。弱い敵1体。攻撃・ガード・休憩を試そう",
-    enemies: [E.straw_golem],
-  },
-  {
-    name: "双影の回廊",
-    desc: "弱点の異なる敵が2体。武器の使い分けを意識",
-    enemies: [E.wraith_feather, E.gloom_shade],
-  },
-  {
-    name: "獣王の広間",
-    desc: "ボスを含む強敵3体。総力戦",
-    enemies: [E.carapace_tyrant, E.wraith_feather, E.gloom_shade],
-  },
-];
+// ===== ステージ（stages.json から読み込み。各ステージは3戦の waves を持つ） =====
+interface RawStage { name: string; desc: string; waves: string[][]; }
+export const STAGES: StageDef[] = (stagesJson as RawStage[]).map((s) => ({
+  name: s.name,
+  desc: s.desc,
+  waves: s.waves.map((wave) => wave.map((id) => ENEMY_MAP[id]).filter(Boolean)),
+}));
 export const STAGE_COUNT = STAGES.length;
 
 // ===== プレイヤー =====

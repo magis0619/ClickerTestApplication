@@ -12,6 +12,8 @@ export class Game {
   save: SaveData;
   screen: Screen = "title";
   stageIndex = 0;
+  /** ステージ内の現在の戦闘番号（0始まり。最後がボス戦） */
+  waveIndex = 0;
   battle: Battle | null = null;
   /** 直近の戦闘結果（result画面用） */
   lastWon = false;
@@ -35,14 +37,20 @@ export class Game {
   startStage(i: number): void {
     if (!this.stageUnlocked(i)) return;
     this.stageIndex = i;
+    this.waveIndex = 0;
+    this.lastDrops = [];
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
-    this.battle = new Battle(STAGES[i].enemies);
+    this.battle = new Battle(this.currentStage.waves[0]);
     this.screen = "battle";
   }
 
   retryStage(): void { this.startStage(this.stageIndex); }
 
   get currentStage(): StageDef { return STAGES[this.stageIndex]; }
+  /** このステージの総戦闘数 */
+  get waveCount(): number { return this.currentStage.waves.length; }
+  /** 現在の戦闘がボス戦か */
+  get isBossWave(): boolean { return this.waveIndex === this.waveCount - 1; }
 
   // ===== 武器・装備（インスタンスベース） =====
   equippedInstance(cls: WeaponClass): WeaponInstance | undefined {
@@ -107,6 +115,20 @@ export class Game {
     return true;
   }
 
+  /** 装備中でない武器を削除する（装備中は不可） */
+  canDelete(uid: string): boolean {
+    const inst = this.save.inventory.find((it) => it.uid === uid);
+    const w = inst ? getWeapon(inst.baseId) : undefined;
+    if (!inst || !w) return false;
+    return this.save.equipped[w.weapon] !== uid;
+  }
+  deleteWeapon(uid: string): boolean {
+    if (!this.canDelete(uid)) return false;
+    this.save.inventory = this.save.inventory.filter((it) => it.uid !== uid);
+    writeSave(this.save);
+    return true;
+  }
+
   // ===== 進行 =====
   update(dt: number): void {
     if (!this.battle) return;
@@ -117,11 +139,28 @@ export class Game {
   }
 
   private onWin(): void {
+    if (!this.battle) return;
+    // この戦闘のドロップを蓄積
+    this.lastDrops.push(...this.battle.collectedDrops());
+
+    if (this.waveIndex < this.waveCount - 1) {
+      // まだ戦闘が残る：HP/ENを引き継いで次の戦闘へ
+      const hp = this.battle.playerHp;
+      const en = this.battle.playerEn;
+      this.waveIndex += 1;
+      this.rotation = { slash: 0, pierce: 0, crush: 0 };
+      this.battle = new Battle(this.currentStage.waves[this.waveIndex], hp, en);
+      this.battle.announce(
+        this.isBossWave ? "BOSS BATTLE" : `WAVE ${this.waveIndex + 1} / ${this.waveCount}`,
+        this.isBossWave ? "#ff6b6b" : "#ffd35f",
+      );
+      return;
+    }
+
+    // 最終戦闘クリア＝ステージクリア
     this.lastWon = true;
     const stageNum = this.stageIndex + 1;
     if (stageNum > this.save.bestStage) this.save.bestStage = stageNum;
-    // 各敵が撃破時に落とした宝箱（ドロップ）を集めて入手
-    this.lastDrops = this.battle?.collectedDrops() ?? [];
     this.save.inventory.push(...this.lastDrops);
     writeSave(this.save);
     this.screen = "result";

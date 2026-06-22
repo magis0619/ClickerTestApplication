@@ -97,7 +97,7 @@ function drawSprite(
 export function render(
   ctx: CanvasRenderingContext2D,
   b: Battle,
-  stage?: { index: number; count: number },
+  stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean },
 ): void {
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, "#1a1430");
@@ -144,7 +144,12 @@ export function render(
     ctx.textAlign = "right";
     ctx.font = "bold 11px monospace";
     ctx.fillStyle = "#9690c4";
-    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W - 10, 14);
+    let label = `STAGE ${stage.index + 1} / ${stage.count}`;
+    if (stage.wave != null && stage.waves != null) {
+      label += stage.boss ? "　BOSS" : `　戦闘 ${stage.wave + 1}/${stage.waves}`;
+    }
+    if (stage.boss) ctx.fillStyle = "#ff6b6b";
+    ctx.fillText(label, W - 10, 14);
   }
 
   drawWarningBanner(ctx, b, imminent);
@@ -186,11 +191,35 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, title: string, subti
   }
 }
 
+interface AnimOpts {
+  flip?: boolean;
+  tint?: { color: string; alpha: number };
+  bob?: number; sx?: number; sy?: number; rot?: number; dx?: number;
+}
+/** 揺れ・伸縮・回転つきでスプライトを描く（足元を基準に変形） */
+function drawSpriteAnim(
+  ctx: CanvasRenderingContext2D, sprite: Sprite, cx: number, footY: number, scale: number, o: AnimOpts,
+): void {
+  ctx.save();
+  ctx.translate(cx + (o.dx ?? 0), footY + (o.bob ?? 0));
+  if (o.rot) ctx.rotate(o.rot);
+  ctx.scale(o.sx ?? 1, o.sy ?? 1);
+  drawSprite(ctx, sprite, 0, 0, scale, o.flip, o.tint);
+  ctx.restore();
+}
+
 function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = PLAYER_POS;
   // 攻撃時の踏み込み（前に出てから戻る）
   const lunge = b.lungeT > 0 ? Math.sin(Math.PI * (1 - b.lungeT / 200)) * 20 : 0;
-  drawSprite(ctx, WARDEN, x + lunge, y, 5);
+  // 常時アイドル：呼吸（上下＋伸縮）
+  const t = Date.now() / 1000;
+  const breathe = Math.sin(t * 2.2);
+  drawSpriteAnim(ctx, WARDEN, x + lunge, y, 5, {
+    bob: breathe * 1.3,
+    sy: 1 + breathe * 0.035,
+    sx: 1 - breathe * 0.025,
+  });
   if (b.charge > 1) {
     ctx.textAlign = "center";
     ctx.font = "bold 12px monospace";
@@ -218,6 +247,12 @@ function drawEnemyCard(
   }
 
   const danger = e.danger;
+
+  // === 登場アニメ：右からスライドイン＋フェード（カードごと） ===
+  const sp = e.spawnT > 0 ? e.spawnT / 420 : 0; // 1→0
+  ctx.save();
+  ctx.translate(sp * 150, 0);
+  if (sp > 0) ctx.globalAlpha = 1 - sp;
 
   // === カード枠 ===
   ctx.save();
@@ -289,7 +324,16 @@ function drawEnemyCard(
     const blink = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 70 : 130));
     tint = { color: "#ff2020", alpha: ((danger - 0.5) / 0.5) * 0.6 * blink };
   }
-  drawSprite(ctx, sprite, L.cx + flinch + trembleX + flinchKnock, L.footY + trembleY, scale, true, tint);
+  // 種別ごとのアイドルアニメ（浮遊・呼吸）＋攻撃の踏み込み
+  const at = Date.now() / 1000 + e.phase;
+  let bob = 0, sx = 1, sy = 1, rot = 0;
+  if (e.def.kind === "aerial") { bob = Math.sin(at * 2.4) * 5; rot = Math.sin(at * 1.7) * 0.06; }
+  else if (e.def.kind === "phantom") { bob = Math.sin(at * 1.9) * 4; sy = 1 + Math.sin(at * 1.9) * 0.04; }
+  else { sy = 1 + Math.sin(at * 1.6) * 0.05; sx = 1 - Math.sin(at * 1.6) * 0.04; }
+  const atkLunge = e.atkAnimT > 0 ? Math.sin(Math.PI * (1 - e.atkAnimT / 300)) * -18 : 0;
+  drawSpriteAnim(ctx, sprite, L.cx + flinch + trembleX + flinchKnock + atkLunge, L.footY + trembleY, scale, {
+    flip: true, tint, bob, sx, sy, rot,
+  });
   ctx.globalAlpha = 1;
 
   // === 攻撃カウントバッジ（カード下端中央） ===
@@ -339,6 +383,8 @@ function drawEnemyCard(
     ctx.closePath();
     ctx.fill();
   }
+
+  ctx.restore(); // 登場アニメ（スライド/フェード）の終了
 }
 
 /** 上部の警告バナー：次に攻撃する敵が迫っているとき表示 */

@@ -87,11 +87,12 @@ export interface WeaponMods {
   breakPower: number;
 }
 
-/** ステージ定義 */
+/** ステージ定義。各ステージは3回の戦闘（waves）を持ち、3回目はボス */
 export interface StageDef {
   name: string;
   desc: string;
-  enemies: EnemyDef[];
+  /** 各戦闘の敵編成（通常3戦闘。最後がボス戦） */
+  waves: EnemyDef[][];
 }
 
 /** ガード判定の結果段階。none=失敗(被弾) / guard=通常ガード / just=中間 / perfect=パーフェクトガード */
