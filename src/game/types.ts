@@ -34,6 +34,10 @@ export interface EnemyDef {
   intervalMs: number;
   /** ブレイクまでに必要な蓄積量 */
   breakThreshold: number;
+  /** 撃破報酬（霊片） */
+  reward: number;
+  /** ボス敵かどうか（演出・難度用） */
+  boss?: boolean;
 }
 
 /** ガード判定の結果段階 */
@@ -41,3 +45,16 @@ export type GuardResult = "none" | "guard" | "just" | "parry";
 
 /** 戦闘のフェーズ */
 export type BattlePhase = "fighting" | "won" | "lost";
+
+/** 画面（ゲーム全体の状態遷移） */
+export type Screen = "battle" | "reward" | "clear" | "gameover";
+
+/** セーブデータ（育成の永続化） */
+export interface SaveData {
+  /** 所持している霊片（強化通貨） */
+  shards: number;
+  /** スキルIDごとの強化レベル（1始まり） */
+  skillLevels: Record<string, number>;
+  /** これまでに到達した最深ステージ番号(1始まり) */
+  bestStage: number;
+}

@@ -61,10 +61,12 @@ export class Battle {
   lastGuard: GuardResult = "none";
   lastGuardTtl = 0;
 
-  constructor(enemy: EnemyDef) {
+  constructor(enemy: EnemyDef, startHp: number = PLAYER_MAX_HP, startEn: number = PLAYER_MAX_EN) {
     this.enemy = enemy;
     this.enemyHp = enemy.maxHp;
     this.nextAttackIn = enemy.intervalMs;
+    this.playerHp = Math.max(1, Math.min(PLAYER_MAX_HP, startHp));
+    this.playerEn = Math.max(0, Math.min(PLAYER_MAX_EN, startEn));
   }
 
   get isBroken(): boolean {

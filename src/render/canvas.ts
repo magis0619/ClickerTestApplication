@@ -7,7 +7,11 @@ const H = 320;
 const PLAYER_POS = { x: 110, y: 200 };
 const ENEMY_POS = { x: 360, y: 180 };
 
-export function render(ctx: CanvasRenderingContext2D, b: Battle): void {
+export function render(
+  ctx: CanvasRenderingContext2D,
+  b: Battle,
+  stage?: { index: number; count: number },
+): void {
   // 背景
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, "#1a1430");
@@ -26,6 +30,12 @@ export function render(ctx: CanvasRenderingContext2D, b: Battle): void {
   drawPlayer(ctx, b);
   drawEnemy(ctx, b);
   drawHud(ctx, b);
+  if (stage) {
+    ctx.textAlign = "center";
+    ctx.font = "11px monospace";
+    ctx.fillStyle = "#9690c4";
+    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W / 2, 16);
+  }
   drawFloats(ctx, b);
   drawGuardBadge(ctx, b);
 

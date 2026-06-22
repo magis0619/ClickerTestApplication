@@ -94,7 +94,79 @@ body {
 .skill-btn:active { transform: translateY(1px); }
 
 .sname { font-size: 12px; font-weight: bold; }
+.sname em { font-style: normal; color: #ffcf7f; font-size: 10px; }
 .scost { font-size: 10px; color: #9690c4; }
+
+.skill-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ===== 結果画面 / 育成パネル ===== */
+.result-panel {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.result-panel h2 {
+  margin: 0 0 4px;
+  text-align: center;
+  letter-spacing: 2px;
+  font-size: 22px;
+}
+
+.r-win { color: #66ddff; }
+.r-lose { color: #ff6677; }
+
+.r-info {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #cfc9f2;
+}
+
+.upgrade-panel {
+  background: #110d28;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.u-head {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffcf7f;
+  margin-bottom: 8px;
+}
+
+.u-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid #221c45;
+}
+
+.u-name { flex: 1; font-size: 12px; }
+.u-lv { font-size: 11px; color: #9690c4; min-width: 34px; }
+
+.u-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  border: none;
+  border-radius: 6px;
+  background: #3a7d3a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.u-btn:hover { background: #459245; }
+.u-btn:disabled {
+  background: #2a2a3a;
+  color: #6a6a80;
+  cursor: not-allowed;
+}
 
 .actions {
   display: flex;

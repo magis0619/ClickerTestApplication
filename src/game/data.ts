@@ -36,30 +36,98 @@ export const SKILLS: Skill[] = [
   { id: "ground_break", name: "グランドブレイク", weapon: "crush", enCost: 50, power: 34, breakPower: 30 },
 ];
 
-/** 序盤の敵（プロトタイプではこの1体と戦う） */
+/**
+ * ダンジョンのステージ順（先頭から順に戦う）。
+ * 種別を散らすことで武器相性の付け替えが意味を持つように設計。
+ */
 export const ENEMIES: EnemyDef[] = [
   {
     id: "carapace_crawler",
     name: "シェルクローラー",
     kind: "carapace",
-    maxHp: 220,
-    attack: 26,
-    telegraphMs: 1100,
-    intervalMs: 2600,
+    maxHp: 180,
+    attack: 22,
+    telegraphMs: 1150,
+    intervalMs: 2700,
+    breakThreshold: 55,
+    reward: 18,
+  },
+  {
+    id: "wraith_feather",
+    name: "レイスフェザー",
+    kind: "aerial",
+    maxHp: 210,
+    attack: 25,
+    telegraphMs: 1000,
+    intervalMs: 2400,
     breakThreshold: 60,
+    reward: 24,
+  },
+  {
+    id: "gloom_shade",
+    name: "グルームシェイド",
+    kind: "phantom",
+    maxHp: 240,
+    attack: 28,
+    telegraphMs: 950,
+    intervalMs: 2200,
+    breakThreshold: 70,
+    reward: 30,
+  },
+  {
+    id: "carapace_tyrant",
+    name: "カラペイス・タイラント",
+    kind: "carapace",
+    maxHp: 460,
+    attack: 34,
+    telegraphMs: 900,
+    intervalMs: 2100,
+    breakThreshold: 95,
+    reward: 70,
+    boss: true,
   },
 ];
+
+/** 総ステージ数 */
+export const STAGE_COUNT = ENEMIES.length;
+
+// ===== 育成（スキル強化） =====
+/** レベルごとのダメージ上昇率（+15%/Lv） */
+export const SKILL_POWER_PER_LEVEL = 0.15;
+/** レベルごとのブレイク蓄積上昇率（+10%/Lv） */
+export const SKILL_BREAK_PER_LEVEL = 0.1;
+/** スキル強化の必要霊片（次レベルへ上げる費用 = base * level） */
+export const UPGRADE_BASE_COST = 12;
+
+/** あるレベルのスキルを次のレベルへ上げる費用 */
+export function upgradeCost(currentLevel: number): number {
+  return UPGRADE_BASE_COST * currentLevel;
+}
+
+/** 強化レベルを反映した実効スキルを返す */
+export function effectiveSkill(base: Skill, level: number): Skill {
+  const lv = Math.max(1, level);
+  return {
+    ...base,
+    power: Math.round(base.power * (1 + SKILL_POWER_PER_LEVEL * (lv - 1))),
+    breakPower: Math.round(base.breakPower * (1 + SKILL_BREAK_PER_LEVEL * (lv - 1))),
+  };
+}
+
+// ===== ステージ間の回復 =====
+/** 勝利後に回復する最大HPの割合 */
+export const STAGE_HEAL_RATIO = 0.45;
 
 // ===== プレイヤーの初期パラメータ =====
 export const PLAYER_MAX_HP = 120;
 export const PLAYER_MAX_EN = 100;
 /** EN自然回復（毎秒） */
-export const EN_REGEN_PER_SEC = 14;
+export const EN_REGEN_PER_SEC = 16;
 
 // ===== ガード判定のタイミング窓（着弾時刻からの差の絶対値, ms） =====
-export const GUARD_WINDOW_MS = 350; // これ以内でガード成立（軽減）
-export const JUST_WINDOW_MS = 160; // これ以内でJUST（大軽減+EN回復）
-export const PARRY_WINDOW_MS = 70; // これ以内でPARRY（無効化+HP回復）
+export const GUARD_WINDOW_MS = 360; // これ以内でガード成立（軽減）
+export const JUST_WINDOW_MS = 175; // これ以内でJUST（大軽減+EN回復）
+export const PARRY_WINDOW_MS = 80; // これ以内でPARRY（無効化+HP回復）
 
 // ===== ガード効果 =====
 export const GUARD_DAMAGE_MULT = 0.5; // 通常ガード：被ダメ50%
