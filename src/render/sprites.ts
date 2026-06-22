@@ -38,6 +38,48 @@ export const WARDEN: Sprite = {
   ],
 };
 
+/** プレイヤー：攻撃フレーム（剣を前方へ突き出す） */
+export const WARDEN_ATTACK: Sprite = {
+  palette: KNIGHT_PAL,
+  rows: [
+    "....oooo....",
+    "...ommmmo...",
+    "..ommddmmo..",
+    "..omdssdmo..",
+    "..osssssso..",
+    "...osssso...",
+    "..occbbcco..",
+    ".occbbbbccoo",
+    ".ocbyyyybcww",
+    ".occbbbbccoo",
+    "..ocbbbbco..",
+    "..ocb.bco...",
+    "..odb.bdo...",
+    "..oo..oo....",
+  ],
+};
+
+/** プレイヤー：被弾フレーム（のけぞって両腕を上げる） */
+export const WARDEN_HURT: Sprite = {
+  palette: KNIGHT_PAL,
+  rows: [
+    "...oooo....w",
+    "..ommmmo...o",
+    ".ommddmmo...",
+    ".omdssdmo...",
+    ".osssssso...",
+    "..osssso....",
+    "o.ccbbcc.o..",
+    "ooccbbbbcoo.",
+    ".ocbyyyybco.",
+    ".occbbbbcco.",
+    "..ocbbbbco..",
+    "..ocb..bco..",
+    "..odb..bdo..",
+    "..oo....oo..",
+  ],
+};
+
 const CARAPACE_PAL: Record<string, string> = {
   o: "#0c0a18",
   s: "#4a8c5a", // 甲殻(緑)
@@ -64,6 +106,23 @@ export const CARAPACE: Sprite = {
   ],
 };
 
+/** 甲殻種：予兆/攻撃フレーム（爪を上げて構える） */
+export const CARAPACE_TEL: Sprite = {
+  palette: CARAPACE_PAL,
+  rows: [
+    "..o.oooo.o..",
+    "..oodssdoo..",
+    ".odsSSSSsdo.",
+    ".osSeeeeSso.",
+    "odsSssssSsdo",
+    "osSssssssSso",
+    "odssssssssdo",
+    ".oddddddddo.",
+    "obo.oooo.obo",
+    "o.o......o.o",
+  ],
+};
+
 const AERIAL_PAL: Record<string, string> = {
   o: "#0c0a18",
   p: "#8a5ad0", // 翼(紫)
@@ -81,6 +140,22 @@ export const AERIAL: Sprite = {
     "Po........oP",
     "PPo..oo..oPP",
     "dPPodbbdoPPd",
+    ".dPdbeebdPd.",
+    "..odbbbbdo..",
+    "...odbbdo...",
+    "....oddo....",
+    ".....oo.....",
+  ],
+};
+
+/** 飛翔種：予兆/攻撃フレーム（翼を大きく広げる） */
+export const AERIAL_TEL: Sprite = {
+  palette: AERIAL_PAL,
+  rows: [
+    "oo........oo",
+    "PPo......oPP",
+    "PPPo.oo.oPPP",
+    "dPPPdbbdPPPd",
     ".dPdbeebdPd.",
     "..odbbbbdo..",
     "...odbbdo...",
@@ -113,6 +188,22 @@ export const PHANTOM: Sprite = {
   ],
 };
 
+/** 霊体種：予兆/攻撃フレーム（目を見開く） */
+export const PHANTOM_TEL: Sprite = {
+  palette: PHANTOM_PAL,
+  rows: [
+    "...oooo...",
+    "..oGGGGo..",
+    ".oGeeGeGo.",
+    "oGeeGGeeGo",
+    "oGeeGGeeGo",
+    "oGGGGGGGGo",
+    "oGGGGGGGGo",
+    "odGGGGGGdo",
+    ".oo.oo.oo.",
+  ],
+};
+
 const BOSS_PAL: Record<string, string> = {
   o: "#0c0a18",
   s: "#b5443a", // 甲殻(赤)
@@ -138,5 +229,23 @@ export const BOSS: Sprite = {
     ".odddddddddo .",
     "obbo.oooo.obbo",
     ".obo......obo.",
+  ],
+};
+
+/** ボス：予兆/攻撃フレーム（口を開き威嚇） */
+export const BOSS_TEL: Sprite = {
+  palette: BOSS_PAL,
+  rows: [
+    "y...oooooo...y",
+    "yo.odssssdo.oy",
+    ".odsSSSSSSsdo.",
+    "odsSSSssSSSsdo",
+    "osSSsssssSSSso",
+    "oseeeeeeeeesso",
+    "odsSSSSSSSSsdo",
+    "odssssssssssdo",
+    ".odddddddddo .",
+    "obbo.oooo.obbo",
+    "o.bo......ob.o",
   ],
 };

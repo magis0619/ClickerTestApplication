@@ -3,7 +3,10 @@ import {
   KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
 } from "../game/data.ts";
-import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.ts";
+import {
+  WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
+  CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, type Sprite,
+} from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
 
 const W = 480;
@@ -54,6 +57,18 @@ const ENEMY_SPRITE: Record<EnemyKind, Sprite> = {
   aerial: AERIAL,
   phantom: PHANTOM,
 };
+/** 予兆/攻撃モーション用フレーム */
+const ENEMY_TEL_SPRITE: Record<EnemyKind, Sprite> = {
+  carapace: CARAPACE_TEL,
+  aerial: AERIAL_TEL,
+  phantom: PHANTOM_TEL,
+};
+/** 状態に応じて敵のフレーム（待機/予兆）を選ぶ */
+function enemyFrame(e: EnemyState): Sprite {
+  const acting = e.inTelegraph || e.atkAnimT > 0;
+  if (e.def.boss) return acting ? BOSS_TEL : BOSS;
+  return acting ? ENEMY_TEL_SPRITE[e.def.kind] : ENEMY_SPRITE[e.def.kind];
+}
 
 function drawSprite(
   ctx: CanvasRenderingContext2D,
@@ -210,15 +225,25 @@ function drawSpriteAnim(
 
 function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = PLAYER_POS;
-  // 攻撃時の踏み込み（前に出てから戻る）
-  const lunge = b.lungeT > 0 ? Math.sin(Math.PI * (1 - b.lungeT / 200)) * 20 : 0;
+  // 被弾を最優先（攻撃中でも割り込んでのけぞる）
+  const hurt = b.playerHitT > 0;
+  const attacking = !hurt && b.lungeT > 0;
+  // 被弾モーション：強くのけぞって（左後方へ）すぐ戻る＋赤フラッシュ
+  const hp = hurt ? b.playerHitT / 320 : 0; // 1→0
+  const knock = hurt ? -hp * 18 : 0;
+  // 攻撃モーション：序盤に少し引き（windup）→前へ踏み込む→戻る
+  const k = attacking ? 1 - b.lungeT / 200 : 0; // 0→1
+  const lunge = attacking ? (k < 0.25 ? -k * 24 : Math.sin(Math.PI * k) * 24) : 0;
   // 常時アイドル：呼吸（上下＋伸縮）
   const t = Date.now() / 1000;
   const breathe = Math.sin(t * 2.2);
-  drawSpriteAnim(ctx, WARDEN, x + lunge, y, 5, {
-    bob: breathe * 1.3,
-    sy: 1 + breathe * 0.035,
-    sx: 1 - breathe * 0.025,
+  const sprite = hurt ? WARDEN_HURT : attacking ? WARDEN_ATTACK : WARDEN;
+  const tint = hurt ? { color: "#ff4040", alpha: hp * 0.7 } : undefined;
+  drawSpriteAnim(ctx, sprite, x + lunge + knock, y, 5, {
+    tint,
+    bob: hurt ? -hp * 3 : attacking ? 0 : breathe * 1.3,
+    sy: hurt ? 1 - hp * 0.06 : attacking ? 1 : 1 + breathe * 0.035,
+    sx: hurt ? 1 + hp * 0.05 : attacking ? 1 : 1 - breathe * 0.025,
   });
   if (b.charge > 1) {
     ctx.textAlign = "center";
@@ -331,7 +356,8 @@ function drawEnemyCard(
   else if (e.def.kind === "phantom") { bob = Math.sin(at * 1.9) * 4; sy = 1 + Math.sin(at * 1.9) * 0.04; }
   else { sy = 1 + Math.sin(at * 1.6) * 0.05; sx = 1 - Math.sin(at * 1.6) * 0.04; }
   const atkLunge = e.atkAnimT > 0 ? Math.sin(Math.PI * (1 - e.atkAnimT / 300)) * -18 : 0;
-  drawSpriteAnim(ctx, sprite, L.cx + flinch + trembleX + flinchKnock + atkLunge, L.footY + trembleY, scale, {
+  const recoil = e.hitFlash > 0 ? (e.hitFlash / 260) * 7 : 0; // 被弾でのけぞる（右へ）
+  drawSpriteAnim(ctx, enemyFrame(e), L.cx + flinch + trembleX + flinchKnock + atkLunge + recoil, L.footY + trembleY, scale, {
     flip: true, tint, bob, sx, sy, rot,
   });
   ctx.globalAlpha = 1;
@@ -564,17 +590,20 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   ctx.font = "bold 11px monospace";
   ctx.fillText("WARDEN", M, 14);
 
-  // === HP：左右いっぱいのバー ===
-  const hpY = 18, hpH = 16;
+  // === HP：左右いっぱいのバー（数値を大きく） ===
+  const hpY = 18, hpH = 20;
   bar(ctx, M, hpY, fullW, hpH, b.playerHp / PLAYER_MAX_HP, "#3ad27a", "#10331f");
+  const hpText = `HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`;
   ctx.textAlign = "center";
-  ctx.font = "bold 11px monospace";
+  ctx.font = "bold 16px monospace";
+  ctx.fillStyle = "rgba(0,0,0,0.55)"; // 読みやすさのための影
+  ctx.fillText(hpText, W / 2 + 1, hpY + 16);
   ctx.fillStyle = "#eafff2";
-  ctx.fillText(`HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`, W / 2, hpY + 12);
+  ctx.fillText(hpText, W / 2, hpY + 15);
 
   // === EN：左右いっぱい＋1ずつの区切り ===
   // 「集中」発動中は次の行動が無償＝ゲージが金色に光る
-  const enY = 40, enH = 13, n = PLAYER_MAX_EN, gap = 3;
+  const enY = 44, enH = 16, n = PLAYER_MAX_EN, gap = 3;
   const cw = (fullW - gap * (n - 1)) / n;
   const en = Math.floor(b.playerEn);
   const focus = b.freeNextEn;
@@ -593,10 +622,13 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
     ctx.lineWidth = 1;
     ctx.strokeRect(x + 0.5, enY + 0.5, cw - 1, enH - 1);
   }
+  const enText = focus ? `EN ${en}/${n}（次0!）` : `EN ${en}/${n}`;
   ctx.textAlign = "right";
-  ctx.font = "bold 10px monospace";
-  ctx.fillStyle = focus ? "#ffe49a" : "#9fd9ff";
-  ctx.fillText(focus ? `EN ${en}/${n}（次0!）` : `EN ${en}/${n}`, W - M, enY + 11);
+  ctx.font = "bold 14px monospace";
+  ctx.fillStyle = "rgba(0,0,0,0.55)"; // 読みやすさのための影
+  ctx.fillText(enText, W - M + 1, enY + 14);
+  ctx.fillStyle = focus ? "#ffe49a" : "#dff1ff";
+  ctx.fillText(enText, W - M, enY + 13);
 
   // 対象敵の弱点ヒント
   const t = b.enemies[b.targetIndex];

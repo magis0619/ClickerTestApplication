@@ -115,6 +115,8 @@ export class Battle {
   shakeMag = 0;
   /** プレイヤーの踏み込み演出残り時間(ms) */
   lungeT = 0;
+  /** プレイヤーの被弾リアクション（のけぞり＋フラッシュ）残り時間(ms) */
+  playerHitT = 0;
   /** ヒットストップ（一瞬の静止）残り時間(ms)。>0 の間ゲーム進行を凍結 */
   hitstopT = 0;
   /** スローモーション残り時間(ms)。>0 の間ゲーム進行を遅くする */
@@ -411,6 +413,8 @@ export class Battle {
         this.sfx.push("hurt");
         break;
     }
+    // パーフェクト以外は被弾＝のけぞり演出（生身ガードも軽く反応）
+    if (guard !== "perfect") this.playerHitT = guard === "none" ? 320 : 220;
     if (this.playerHp <= 0) {
       this.phase = "lost";
       this.pushFloat("DEFEATED", "#ff5555", "center");
@@ -454,6 +458,7 @@ export class Battle {
     if (this.lastGuardTtl > 0) this.lastGuardTtl -= dtMs;
     if (this.shakeT > 0) this.shakeT -= dtMs;
     if (this.lungeT > 0) this.lungeT -= dtMs;
+    if (this.playerHitT > 0) this.playerHitT -= dtMs;
     if (this.perfectFxT > 0) this.perfectFxT -= dtMs;
     for (const e of this.enemies) {
       if (e.hitFlash > 0) e.hitFlash -= dtMs;
