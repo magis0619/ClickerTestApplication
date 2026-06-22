@@ -1,5 +1,5 @@
 import type {
-  Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef,
+  Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
 } from "./types.ts";
 
 // ===== 表示名・相性 =====
@@ -51,6 +51,20 @@ const SKILL_MAP: Record<string, Skill> = Object.fromEntries(SKILLS.map((s) => [s
 export function getSkill(id: string): Skill { return SKILL_MAP[id]; }
 
 export const CHARGE_MULT = 2.3;
+
+export const SKILL_KIND_LABEL: Record<SkillKind, string> = {
+  attack: "単体攻撃", aoe: "全体攻撃", heal: "回復", charge: "ためる",
+};
+
+/** スキルが何をするかの説明文（レアリティ反映後の値で生成） */
+export function skillDescription(s: Skill): string {
+  switch (s.kind) {
+    case "attack": return `対象1体に威力${s.power}のダメージ（ブレイク蓄積${s.breakPower}）`;
+    case "aoe": return `敵全体に威力${s.power}のダメージ（ブレイク蓄積${s.breakPower}）`;
+    case "heal": return `自分のHPを${s.heal}回復する`;
+    case "charge": return `次に当てる攻撃の威力を${CHARGE_MULT}倍にする`;
+  }
+}
 
 /** レアリティ倍率を反映した実効スキル */
 export function effectiveSkill(base: Skill, rarityMult: number): Skill {

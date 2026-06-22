@@ -33,6 +33,7 @@ function drawSprite(
   footY: number,
   scale: number,
   flip = false,
+  tint?: { color: string; alpha: number },
 ): void {
   const width = sprite.rows.reduce((m, r) => Math.max(m, r.length), 0);
   const height = sprite.rows.length;
@@ -47,6 +48,20 @@ function drawSprite(
       ctx.fillStyle = color;
       ctx.fillRect(left + px * scale, top + y * scale, scale, scale);
     }
+  }
+  // 被弾フラッシュなどの白系オーバーレイ
+  if (tint && tint.alpha > 0) {
+    ctx.globalAlpha = tint.alpha;
+    ctx.fillStyle = tint.color;
+    for (let y = 0; y < height; y++) {
+      const row = sprite.rows[y];
+      for (let x = 0; x < row.length; x++) {
+        if (!sprite.palette[row[x]]) continue;
+        const px = flip ? width - 1 - x : x;
+        ctx.fillRect(left + px * scale, top + y * scale, scale, scale);
+      }
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -70,8 +85,16 @@ export function render(
 
   const slots = enemySlots(b.enemies.length);
 
+  // 画面シェイク（エンティティ層のみ）
+  ctx.save();
+  if (b.shakeT > 0) {
+    const mag = Math.min(8, b.shakeT * 0.03);
+    ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
+  }
   drawPlayer(ctx, b);
   b.enemies.forEach((e, i) => drawEnemy(ctx, e, slots[i], i === b.targetIndex && e.alive));
+  drawFloats(ctx, b, slots);
+  ctx.restore();
 
   drawPlayerHud(ctx, b);
   if (stage) {
@@ -81,7 +104,6 @@ export function render(
     ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W / 2, 14);
   }
 
-  drawFloats(ctx, b, slots);
   drawGuardBadge(ctx, b);
   if (b.phase !== "fighting") drawResult(ctx, b);
 }
@@ -116,7 +138,9 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, title: string, subti
 
 function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = PLAYER_POS;
-  drawSprite(ctx, WARDEN, x, y, 4);
+  // 攻撃時の踏み込み（前に出てから戻る）
+  const lunge = b.lungeT > 0 ? Math.sin(Math.PI * (1 - b.lungeT / 200)) * 16 : 0;
+  drawSprite(ctx, WARDEN, x + lunge, y, 4);
   if (b.charge > 1) {
     ctx.textAlign = "center";
     ctx.font = "bold 11px monospace";
@@ -138,8 +162,11 @@ function drawEnemy(
   const sprite = e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
   const scale = e.def.boss ? 4 : 3;
 
+  // 被弾時のけぞり（横揺れ）
+  const flinch = e.hitFlash > 0 ? (Math.random() * 2 - 1) * 4 : 0;
   if (e.alive && e.isBroken) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(Date.now() / 80);
-  drawSprite(ctx, sprite, x, y, scale, true);
+  const flash = e.hitFlash > 0 ? { color: "#ffffff", alpha: Math.min(0.85, e.hitFlash / 260) } : undefined;
+  drawSprite(ctx, sprite, x + flinch, y, scale, true, flash);
   ctx.globalAlpha = 1;
 
   if (!e.alive) return;
@@ -170,20 +197,38 @@ function drawEnemy(
   ctx.fillStyle = "#ffd0e0";
   ctx.fillText(e.def.name, x, top - 14);
 
-  // 攻撃カウント / 予兆
+  // 攻撃カウント / 予兆（ポップ演出付き）
+  const cy = top - 4;
   if (e.isBroken) {
     ctx.fillStyle = "#ffdd44";
-    ctx.font = "bold 10px monospace";
-    ctx.fillText("BREAK", x, top - 3);
+    ctx.font = "bold 11px monospace";
+    ctx.fillText("BREAK", x, cy);
   } else if (e.inTelegraph) {
-    ctx.fillStyle = "#ffea00";
-    ctx.font = "bold 18px monospace";
-    ctx.fillText("!!", x, top - 2);
+    // 「!!」を鼓動させる
+    const pulse = 1 + 0.3 * Math.abs(Math.sin(Date.now() / 90));
+    ctx.save();
+    ctx.translate(x, cy);
+    ctx.scale(pulse, pulse);
+    ctx.font = "bold 20px monospace";
+    ctx.fillStyle = "#1a0a0a";
+    ctx.fillText("!!", 1, 1); // 影
+    ctx.fillStyle = "#ff3b3b";
+    ctx.fillText("!!", 0, 0);
+    ctx.restore();
   } else {
-    // カウント数字
-    ctx.fillStyle = "#cfc9f2";
-    ctx.font = "bold 13px monospace";
-    ctx.fillText(`${e.count}`, x, top - 2);
+    // カウント数字を円バッジでポップ表示
+    const urgent = e.count <= 1;
+    const r = 9 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2 : 0);
+    ctx.beginPath();
+    ctx.arc(x, cy - 4, r, 0, Math.PI * 2);
+    ctx.fillStyle = urgent ? "#a8324a" : "#2a2350";
+    ctx.fill();
+    ctx.strokeStyle = urgent ? "#ff6f8a" : "#5a4fa0";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px monospace";
+    ctx.fillText(`${e.count}`, x, cy);
   }
 }
 
@@ -209,15 +254,28 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
 
 function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
   ctx.textAlign = "center";
-  ctx.font = "bold 13px monospace";
   for (const f of b.floats) {
     let pos: { x: number; y: number };
     if (f.anchor === "player") pos = PLAYER_POS;
     else if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
     else pos = slots[f.anchor] ?? { x: W / 2, y: H / 2 };
+    // 出現直後に大きく→通常サイズへ縮むポップ
+    const age = 900 - f.ttl;
+    const scale = age < 140 ? 1.8 - 0.8 * (age / 140) : 1;
+    const px = pos.x;
+    const py = pos.y - 50 - f.rise;
+    ctx.globalAlpha = Math.max(0, Math.min(1, f.ttl / 900));
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(scale, scale);
+    ctx.font = "bold 13px monospace";
+    ctx.fillStyle = "#000000";
+    ctx.globalAlpha *= 0.5;
+    ctx.fillText(f.text, 1, 1);
     ctx.globalAlpha = Math.max(0, Math.min(1, f.ttl / 900));
     ctx.fillStyle = f.color;
-    ctx.fillText(f.text, pos.x, pos.y - 50 - f.rise);
+    ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 }
@@ -231,11 +289,21 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   };
   const entry = map[b.lastGuard];
   if (!entry) return;
+  const age = 700 - b.lastGuardTtl;
+  const scale = age < 130 ? 1.6 - 0.6 * (age / 130) : 1;
   ctx.textAlign = "center";
+  ctx.globalAlpha = Math.min(1, b.lastGuardTtl / 700);
+  ctx.save();
+  ctx.translate(W / 2, 130);
+  ctx.scale(scale, scale);
   ctx.font = "bold 20px monospace";
+  ctx.fillStyle = "#000000";
+  ctx.globalAlpha *= 0.4;
+  ctx.fillText(entry[0], 1.5, 1.5);
   ctx.globalAlpha = Math.min(1, b.lastGuardTtl / 700);
   ctx.fillStyle = entry[1];
-  ctx.fillText(entry[0], W / 2, 130);
+  ctx.fillText(entry[0], 0, 0);
+  ctx.restore();
   ctx.globalAlpha = 1;
 }
 

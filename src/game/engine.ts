@@ -36,6 +36,8 @@ export class EnemyState {
   breakRemain = 0;
   /** 次の攻撃までの残り時間(ms) */
   atkTimer: number;
+  /** 被弾フラッシュ演出の残り時間(ms) */
+  hitFlash = 0;
 
   constructor(def: EnemyDef) {
     this.def = def;
@@ -72,6 +74,10 @@ export class Battle {
   floats: FloatText[] = [];
   lastGuard: GuardResult = "none";
   lastGuardTtl = 0;
+  /** 画面シェイク残り時間(ms) */
+  shakeT = 0;
+  /** プレイヤーの踏み込み演出残り時間(ms) */
+  lungeT = 0;
 
   constructor(defs: EnemyDef[], startHp: number = PLAYER_MAX_HP, startEn: number = PLAYER_MAX_EN) {
     this.enemies = defs.map((d) => new EnemyState(d));
@@ -121,11 +127,13 @@ export class Battle {
       case "aoe":
         for (const e of this.aliveEnemies) this.hitEnemy(e, skill);
         this.consumeCharge();
+        this.lungeT = 200;
         break;
       case "attack": {
         const t = this.target;
         if (t) this.hitEnemy(t, skill);
         this.consumeCharge();
+        this.lungeT = 200;
         break;
       }
     }
@@ -181,6 +189,7 @@ export class Battle {
     dmg = Math.round(dmg);
 
     e.hp = Math.max(0, e.hp - dmg);
+    e.hitFlash = 260;
     const idx = this.enemies.indexOf(e);
     const tag = this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
     this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 ? "#ff5577" : "#ffffff", idx);
@@ -220,6 +229,7 @@ export class Battle {
         break;
     }
     if (dmg > 0) {
+      this.shakeT = Math.max(this.shakeT, guard === "none" ? 320 : 160);
       this.playerHp = Math.max(0, this.playerHp - dmg);
       if (this.playerHp <= 0) {
         this.phase = "lost";
@@ -242,6 +252,9 @@ export class Battle {
     }
     this.floats = this.floats.filter((f) => f.ttl > 0);
     if (this.lastGuardTtl > 0) this.lastGuardTtl -= dtMs;
+    if (this.shakeT > 0) this.shakeT -= dtMs;
+    if (this.lungeT > 0) this.lungeT -= dtMs;
+    for (const e of this.enemies) if (e.hitFlash > 0) e.hitFlash -= dtMs;
 
     if (this.phase !== "fighting") return;
 

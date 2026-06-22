@@ -1,7 +1,10 @@
 import "./style.css";
 import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
-import { STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, getWeapon, getSkill } from "./game/data.ts";
+import {
+  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, RARITY_MULT, SKILL_KIND_LABEL,
+  getWeapon, getSkill, effectiveSkill, skillDescription,
+} from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type { SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
 
@@ -14,6 +17,9 @@ let weaponButtons: { btn: HTMLButtonElement; cls: WeaponClass }[] = [];
 let renderedScreen = "";
 
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", aoe: "✸", heal: "✚", charge: "▲" };
+
+/** 詳細を開いている武器UID（再描画後も維持） */
+const expandedWeapons = new Set<string>();
 
 // ===== オーディオ =====
 window.addEventListener("pointerdown", () => audio.init());
@@ -109,19 +115,75 @@ function buildInventory(): void {
   controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
 }
 
-/** 武器1本の行（装備可能ボタンとして） */
+/** 武器1本のカード（ヘッダー＋装備/詳細ボタン＋展開する詳細） */
 function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   const w = getWeapon(inst.baseId)!;
   const equipped = game.save.equipped[w.weapon] === inst.uid;
-  const el = document.createElement(equippable ? "button" : "div");
-  el.className = "wpn-row" + (equipped ? " wpn-on" : "");
+  const card = document.createElement("div");
+  card.className = "wpn-card";
+
+  const head = document.createElement("div");
+  head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const skills = w.skills.map((id) => getSkill(id).name).join(" → ");
-  el.innerHTML =
+  head.innerHTML =
     `<span class="wpn-rarity" style="color:${RARITY_COLOR[inst.rarity]}">●</span>` +
     `<span class="wpn-main"><span class="wpn-name">${w.name}${equipped ? " ✔" : ""}</span>` +
     `<span class="wpn-sub">[${RARITY_LABEL[inst.rarity]}] ${skills}</span></span>`;
-  if (equippable) el.addEventListener("click", () => { if (game.equip(inst.uid)) buildControls(); });
-  return el;
+  card.appendChild(head);
+
+  const acts = document.createElement("div");
+  acts.className = "wpn-acts";
+  if (equippable) {
+    const eq = document.createElement("button");
+    eq.className = "wpn-act";
+    eq.textContent = equipped ? "装備中" : "装備";
+    eq.disabled = equipped;
+    eq.addEventListener("click", () => { if (game.equip(inst.uid)) buildControls(); });
+    acts.appendChild(eq);
+  }
+  const det = document.createElement("button");
+  det.className = "wpn-act";
+  const open = expandedWeapons.has(inst.uid);
+  det.textContent = open ? "詳細 ▲" : "詳細 ▼";
+  det.addEventListener("click", () => {
+    if (expandedWeapons.has(inst.uid)) expandedWeapons.delete(inst.uid);
+    else expandedWeapons.add(inst.uid);
+    buildControls();
+  });
+  acts.appendChild(det);
+  card.appendChild(acts);
+
+  if (open) card.appendChild(weaponDetail(inst));
+  return card;
+}
+
+/** 武器の詳細パラメータ＋スキル説明 */
+function weaponDetail(inst: WeaponInstance): HTMLElement {
+  const w = getWeapon(inst.baseId)!;
+  const mult = RARITY_MULT[inst.rarity];
+  const box = document.createElement("div");
+  box.className = "wpn-detail";
+
+  const meta = document.createElement("div");
+  meta.className = "wd-meta";
+  meta.innerHTML =
+    `<div>${w.desc}</div>` +
+    `<div>レアリティ: <b style="color:${RARITY_COLOR[inst.rarity]}">${RARITY_LABEL[inst.rarity]}</b>（性能 ×${mult}）　系統: ${WEAPON_LABEL[w.weapon]}</div>` +
+    `<div class="wd-note">攻撃ボタンを押すと下のスキルを上から順番に発動します</div>`;
+  box.appendChild(meta);
+
+  w.skills.forEach((id, i) => {
+    const s = effectiveSkill(getSkill(id), mult);
+    const row = document.createElement("div");
+    row.className = "wd-skill";
+    const cost = `EN ${s.enCost}`;
+    row.innerHTML =
+      `<div class="wd-sk-head">${i + 1}. ${KIND_ICON[s.kind]} ${s.name} ` +
+      `<span class="wd-kind">[${SKILL_KIND_LABEL[s.kind]}]</span> <span class="wd-cost">${cost}</span></div>` +
+      `<div class="wd-sk-desc">${skillDescription(s)}</div>`;
+    box.appendChild(row);
+  });
+  return box;
 }
 
 function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {

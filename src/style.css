@@ -320,7 +320,54 @@ button.wpn-row:hover { background: #241f55; }
 .wpn-sub { font-size: 9px; color: #9690c4; }
 
 .drop-list { margin-bottom: 10px; }
-.drop-list .wpn-row { cursor: default; }
+
+/* ===== 武器カード（ヘッダー＋操作＋詳細） ===== */
+.wpn-card {
+  border: 1px solid #2a2350;
+  border-radius: 8px;
+  background: #161232;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.wpn-card .wpn-row {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  background: transparent;
+  cursor: default;
+}
+.wpn-card .wpn-on { background: #1c2c50; }
+
+.wpn-acts {
+  display: flex;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+.wpn-act {
+  flex: 1;
+  padding: 6px;
+  font-size: 11px;
+  border: 1px solid #3a3466;
+  border-radius: 6px;
+  background: #241f47;
+  color: var(--ink);
+  cursor: pointer;
+}
+.wpn-act:hover { background: #2f2a5c; }
+.wpn-act:disabled { background: #1c2c50; color: #7fb0ff; cursor: default; }
+
+.wpn-detail {
+  padding: 8px 10px;
+  background: #0e0b22;
+  border-top: 1px solid #2a2350;
+}
+.wd-meta { font-size: 10px; color: #cfc9f2; margin-bottom: 6px; }
+.wd-meta .wd-note { color: #7f7aa0; margin-top: 2px; }
+.wd-skill { padding: 4px 0; border-top: 1px solid #1d1940; }
+.wd-sk-head { font-size: 11px; font-weight: bold; }
+.wd-kind { color: #9690c4; font-weight: normal; font-size: 10px; }
+.wd-cost { color: #7fb0ff; font-weight: normal; font-size: 10px; float: right; }
+.wd-sk-desc { font-size: 10px; color: #b6b0dc; margin-top: 2px; }
 
 .rest-btn {
   flex: 1;
