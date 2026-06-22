@@ -250,6 +250,25 @@ body {
   margin-top: 10px;
 }
 
+.weapon-btn {
+  min-height: 52px;
+  justify-content: center;
+}
+
+.rest-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #3a7d6a;
+  color: #fff;
+  cursor: pointer;
+}
+.rest-btn:hover { background: #44917b; }
+.rest-btn:active { transform: translateY(1px); }
+
 .guard-btn {
   flex: 2;
   padding: 14px;

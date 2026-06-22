@@ -1,7 +1,7 @@
 import type { SaveData } from "./types.ts";
 import { SKILLS, STARTER_WEAPONS, DEFAULT_EQUIPPED } from "./data.ts";
 
-const KEY = "astral-warden-save-v1";
+const KEY = "astral-warden-save-v2";
 
 /** 初期セーブデータ（全スキルLv1・霊片0・標準武器所持） */
 export function defaultSave(): SaveData {

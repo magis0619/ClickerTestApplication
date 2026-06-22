@@ -4,76 +4,101 @@ import {
   WEAKNESS_MULTIPLIER,
   PLAYER_MAX_HP,
   PLAYER_MAX_EN,
-  EN_REGEN_PER_SEC,
+  CHARGE_MULT,
+  REST_EN_RECOVER,
+  GUARD_EN_RECOVER,
+  JUST_EN_RECOVER,
+  PARRY_EN_RECOVER,
   GUARD_WINDOW_MS,
   JUST_WINDOW_MS,
   PARRY_WINDOW_MS,
   GUARD_DAMAGE_MULT,
   JUST_DAMAGE_MULT,
-  JUST_EN_RECOVER,
   PARRY_HP_RECOVER,
   BREAK_DURATION_MS,
   BREAK_CRIT_MULT,
-  BREAK_EN_RECOVER,
 } from "./data.ts";
 
-/** 画面に一瞬表示される演出テキスト */
 export interface FloatText {
   text: string;
   color: string;
-  /** 残り表示時間(ms) */
   ttl: number;
-  /** 出現位置（"player" | "enemy" | "center"） */
-  anchor: "player" | "enemy" | "center";
-  /** 上方向への移動量蓄積 */
+  /** 出現位置（enemyの場合はインデックス） */
+  anchor: "player" | "center" | number;
   rise: number;
 }
 
-/** 進行中の敵攻撃（予兆） */
-interface PendingAttack {
-  /** 予兆開始からの経過(ms) */
-  elapsed: number;
-  /** 着弾までの時間(ms) */
-  landAt: number;
-  /** すでにガード入力を受け付けたか */
-  resolved: boolean;
+/** 戦闘中の敵1体の状態 */
+export class EnemyState {
+  def: EnemyDef;
+  hp: number;
+  breakGauge = 0;
+  breakRemain = 0;
+  /** 次の攻撃までの残り時間(ms) */
+  atkTimer: number;
+
+  constructor(def: EnemyDef) {
+    this.def = def;
+    this.hp = def.maxHp;
+    this.atkTimer = def.intervalMs;
+  }
+
+  get alive(): boolean {
+    return this.hp > 0;
+  }
+  get isBroken(): boolean {
+    return this.breakRemain > 0;
+  }
+  /** 予兆中（着弾までtelegraph時間以内）か */
+  get inTelegraph(): boolean {
+    return this.alive && !this.isBroken && this.atkTimer <= this.def.telegraphMs;
+  }
+  /** 頭上に出す攻撃カウント（秒）。予兆中は0扱い */
+  get count(): number {
+    return Math.max(0, Math.ceil((this.atkTimer - this.def.telegraphMs) / 1000));
+  }
 }
 
 export class Battle {
   phase: BattlePhase = "fighting";
+  playerHp: number;
+  playerEn: number;
+  /** ためる中の倍率（1なら通常） */
+  charge = 1;
 
-  playerHp = PLAYER_MAX_HP;
-  playerEn = PLAYER_MAX_EN;
-
-  enemy: EnemyDef;
-  enemyHp: number;
-  /** ブレイク蓄積量 */
-  breakGauge = 0;
-  /** ブレイク残り時間(ms)。0なら非ブレイク */
-  breakRemain = 0;
-
-  /** 次の敵攻撃までのカウントダウン(ms) */
-  private nextAttackIn: number;
-  pending: PendingAttack | null = null;
+  enemies: EnemyState[];
+  targetIndex = 0;
 
   floats: FloatText[] = [];
-  /** 直近のガード結果（HUD表示用） */
   lastGuard: GuardResult = "none";
   lastGuardTtl = 0;
 
-  constructor(enemy: EnemyDef, startHp: number = PLAYER_MAX_HP, startEn: number = PLAYER_MAX_EN) {
-    this.enemy = enemy;
-    this.enemyHp = enemy.maxHp;
-    this.nextAttackIn = enemy.intervalMs;
+  constructor(defs: EnemyDef[], startHp: number = PLAYER_MAX_HP, startEn: number = PLAYER_MAX_EN) {
+    this.enemies = defs.map((d) => new EnemyState(d));
     this.playerHp = Math.max(1, Math.min(PLAYER_MAX_HP, startHp));
     this.playerEn = Math.max(0, Math.min(PLAYER_MAX_EN, startEn));
   }
 
-  get isBroken(): boolean {
-    return this.breakRemain > 0;
+  get aliveEnemies(): EnemyState[] {
+    return this.enemies.filter((e) => e.alive);
   }
 
-  /** スキル使用（プレイヤー攻撃）。成功したらtrue */
+  /** 現在の攻撃対象（死亡していれば自動で次へ） */
+  get target(): EnemyState | null {
+    const t = this.enemies[this.targetIndex];
+    if (t && t.alive) return t;
+    const next = this.aliveEnemies[0];
+    if (next) this.targetIndex = this.enemies.indexOf(next);
+    return next ?? null;
+  }
+
+  selectTarget(i: number): void {
+    if (this.enemies[i]?.alive) this.targetIndex = i;
+  }
+
+  // ===== プレイヤー行動 =====
+
+  /** スキル使用。成功でtrue */
   useSkill(skill: Skill): boolean {
     if (this.phase !== "fighting") return false;
     if (this.playerEn < skill.enCost) {
@@ -82,83 +107,103 @@ export class Battle {
     }
     this.playerEn -= skill.enCost;
 
-    // ダメージ計算：弱点補正 → ブレイク中の会心補正
-    let dmg = skill.power;
-    const weak = WEAKNESS[this.enemy.kind] === skill.weapon;
-    if (weak) dmg *= WEAKNESS_MULTIPLIER;
-
-    if (this.isBroken) {
-      dmg *= BREAK_CRIT_MULT;
-      this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + BREAK_EN_RECOVER);
-    }
-    dmg = Math.round(dmg);
-
-    this.enemyHp = Math.max(0, this.enemyHp - dmg);
-
-    // 演出
-    const label = weak ? `${dmg} 弱点!` : this.isBroken ? `${dmg} 会心!` : `${dmg}`;
-    this.pushFloat(label, weak || this.isBroken ? "#ff5577" : "#ffffff", "enemy");
-
-    // ブレイク蓄積（ブレイク中は蓄積しない）
-    if (!this.isBroken) {
-      this.breakGauge += skill.breakPower;
-      if (this.breakGauge >= this.enemy.breakThreshold) {
-        this.triggerBreak();
+    switch (skill.kind) {
+      case "charge":
+        this.charge = CHARGE_MULT;
+        this.pushFloat("ためる！", "#ffd35f", "player");
+        break;
+      case "heal": {
+        const before = this.playerHp;
+        this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + skill.heal);
+        this.pushFloat(`+${this.playerHp - before} HP`, "#66ffaa", "player");
+        break;
+      }
+      case "aoe":
+        for (const e of this.aliveEnemies) this.hitEnemy(e, skill);
+        this.consumeCharge();
+        break;
+      case "attack": {
+        const t = this.target;
+        if (t) this.hitEnemy(t, skill);
+        this.consumeCharge();
+        break;
       }
     }
 
-    if (this.enemyHp <= 0) {
-      this.phase = "won";
-      this.pushFloat("BATTLE WON", "#66ddff", "center");
-    }
+    this.checkWin();
     return true;
   }
 
-  private triggerBreak(): void {
-    this.breakRemain = BREAK_DURATION_MS;
-    this.breakGauge = 0;
-    this.pending = null; // ブレイク中は敵の攻撃を中断
-    this.pushFloat("BREAK!!", "#ffdd44", "enemy");
+  /** 休憩：ENを回復（攻撃はしない） */
+  rest(): void {
+    if (this.phase !== "fighting") return;
+    const before = this.playerEn;
+    this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
+    this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
   }
 
-  /** プレイヤーのガード入力 */
+  /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める */
   guard(): void {
     if (this.phase !== "fighting") return;
-    if (!this.pending || this.pending.resolved) {
-      // 空振りガード（軽いペナルティはなし、ただし演出のみ）
+    // 予兆中の敵のうち、最も着弾が近い（atkTimerが小さい）ものを対象に
+    const targets = this.enemies.filter((e) => e.inTelegraph);
+    if (targets.length === 0) {
       this.setGuard("none");
       return;
     }
-    const diff = Math.abs(this.pending.landAt - this.pending.elapsed);
+    targets.sort((a, b) => a.atkTimer - b.atkTimer);
+    const e = targets[0];
+    const diff = e.atkTimer; // 着弾までの残り時間
     let result: GuardResult;
     if (diff <= PARRY_WINDOW_MS) result = "parry";
     else if (diff <= JUST_WINDOW_MS) result = "just";
     else if (diff <= GUARD_WINDOW_MS) result = "guard";
-    else result = "none";
-
-    if (result === "none") {
-      // 早すぎ／遅すぎ：判定は確定させず空振り扱い（着弾でフルダメージ）
-      this.setGuard("none");
+    else {
+      this.setGuard("none"); // まだ早い
       return;
     }
-
-    // ガード成立：着弾を即時解決
-    this.resolveEnemyHit(result);
-    this.pending.resolved = true;
-    this.pending = null;
-    this.nextAttackIn = this.enemy.intervalMs;
+    this.resolveEnemyHit(e, result);
+    e.atkTimer = e.def.intervalMs; // 受け止めたので再充填
   }
 
-  /** 敵の攻撃が着弾したときの処理 */
-  private resolveEnemyHit(guard: GuardResult): void {
-    let dmg = this.enemy.attack;
-    this.setGuard(guard);
+  // ===== 内部処理 =====
 
+  private consumeCharge(): void {
+    this.charge = 1;
+  }
+
+  private hitEnemy(e: EnemyState, skill: Skill): void {
+    let dmg = skill.power;
+    const weak = WEAKNESS[e.def.kind] === skill.weapon;
+    if (weak) dmg *= WEAKNESS_MULTIPLIER;
+    if (e.isBroken) dmg *= BREAK_CRIT_MULT;
+    if (this.charge > 1) dmg *= this.charge;
+    dmg = Math.round(dmg);
+
+    e.hp = Math.max(0, e.hp - dmg);
+    const idx = this.enemies.indexOf(e);
+    const tag = this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
+    this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 ? "#ff5577" : "#ffffff", idx);
+
+    if (!e.isBroken) {
+      e.breakGauge += skill.breakPower;
+      if (e.breakGauge >= e.def.breakThreshold) {
+        e.breakRemain = BREAK_DURATION_MS;
+        e.breakGauge = 0;
+        this.pushFloat("BREAK!!", "#ffdd44", idx);
+      }
+    }
+  }
+
+  private resolveEnemyHit(e: EnemyState, guard: GuardResult): void {
+    let dmg = e.def.attack;
+    this.setGuard(guard);
     switch (guard) {
       case "parry":
         dmg = 0;
         this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + PARRY_HP_RECOVER);
-        this.pushFloat(`PARRY! +${PARRY_HP_RECOVER}HP`, "#66ffaa", "player");
+        this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + PARRY_EN_RECOVER);
+        this.pushFloat(`PARRY! +${PARRY_HP_RECOVER}HP +${PARRY_EN_RECOVER}EN`, "#66ffaa", "player");
         break;
       case "just":
         dmg = Math.round(dmg * JUST_DAMAGE_MULT);
@@ -167,13 +212,13 @@ export class Battle {
         break;
       case "guard":
         dmg = Math.round(dmg * GUARD_DAMAGE_MULT);
-        this.pushFloat(`GUARD ${dmg}`, "#cccccc", "player");
+        this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + GUARD_EN_RECOVER);
+        this.pushFloat(`GUARD ${dmg} +${GUARD_EN_RECOVER}EN`, "#cccccc", "player");
         break;
       case "none":
         this.pushFloat(`${dmg}`, "#ff5555", "player");
         break;
     }
-
     if (dmg > 0) {
       this.playerHp = Math.max(0, this.playerHp - dmg);
       if (this.playerHp <= 0) {
@@ -183,8 +228,14 @@ export class Battle {
     }
   }
 
+  private checkWin(): void {
+    if (this.phase === "fighting" && this.aliveEnemies.length === 0) {
+      this.phase = "won";
+      this.pushFloat("STAGE CLEAR", "#66ddff", "center");
+    }
+  }
+
   update(dtMs: number): void {
-    // 演出の更新
     for (const f of this.floats) {
       f.ttl -= dtMs;
       f.rise += dtMs * 0.03;
@@ -194,29 +245,17 @@ export class Battle {
 
     if (this.phase !== "fighting") return;
 
-    // EN自然回復
-    this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + (EN_REGEN_PER_SEC * dtMs) / 1000);
-
-    // ブレイク継続時間
-    if (this.breakRemain > 0) {
-      this.breakRemain = Math.max(0, this.breakRemain - dtMs);
-      return; // ブレイク中は敵は動かない
-    }
-
-    // 敵の攻撃進行
-    if (this.pending) {
-      this.pending.elapsed += dtMs;
-      if (this.pending.elapsed >= this.pending.landAt && !this.pending.resolved) {
-        // 時間切れ：ガード入力なし → フルダメージ
-        this.resolveEnemyHit("none");
-        this.pending.resolved = true;
-        this.pending = null;
-        this.nextAttackIn = this.enemy.intervalMs;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.breakRemain > 0) {
+        e.breakRemain = Math.max(0, e.breakRemain - dtMs);
+        continue; // ブレイク中は攻撃しない
       }
-    } else {
-      this.nextAttackIn -= dtMs;
-      if (this.nextAttackIn <= 0) {
-        this.pending = { elapsed: 0, landAt: this.enemy.telegraphMs, resolved: false };
+      e.atkTimer -= dtMs;
+      if (e.atkTimer <= 0) {
+        this.resolveEnemyHit(e, "none"); // ガードされなければフルダメージ
+        e.atkTimer = e.def.intervalMs;
+        if (this.phase !== "fighting") return;
       }
     }
   }

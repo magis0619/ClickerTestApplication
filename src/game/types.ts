@@ -7,17 +7,27 @@ export type WeaponClass = "slash" | "pierce" | "crush";
 /** 敵の種別。それぞれ弱点となる武器系統を持つ */
 export type EnemyKind = "carapace" | "phantom" | "aerial";
 
-/** プレイヤーが使えるスキル（武器系統ごとの技） */
+/** スキルの種類 */
+export type SkillKind =
+  | "attack" // 単体攻撃
+  | "aoe" // 全体攻撃（敵全体）
+  | "heal" // 自己HP回復
+  | "charge"; // ためる（次の攻撃を強化）
+
+/** プレイヤーが使えるスキル */
 export interface Skill {
   id: string;
   name: string;
   weapon: WeaponClass;
+  kind: SkillKind;
   /** 消費EN（エナジー） */
   enCost: number;
-  /** 基礎ダメージ */
+  /** 基礎ダメージ（attack/aoe） */
   power: number;
-  /** ブレイク蓄積量 */
+  /** ブレイク蓄積量（attack/aoe） */
   breakPower: number;
+  /** 回復量（heal） */
+  heal: number;
 }
 
 /** 敵データ */
@@ -30,7 +40,7 @@ export interface EnemyDef {
   attack: number;
   /** 攻撃の予兆〜着弾までの時間(ms)。短いほど反応が難しい */
   telegraphMs: number;
-  /** 攻撃と攻撃の間隔(ms) */
+  /** 攻撃と攻撃の間隔(ms)。小さいほど攻撃頻度が高い */
   intervalMs: number;
   /** ブレイクまでに必要な蓄積量 */
   breakThreshold: number;
@@ -43,19 +53,15 @@ export interface EnemyDef {
 }
 
 /**
- * 武器。各武器は1つの系統に属し、その系統スキルに補正をかける。
- * 武器を付け替えることで戦い方の個性が変わる（収集要素）。
+ * 武器。各武器は1つの系統に属し、固有のスキルを順番に繰り出す（収集要素）。
+ * 例: スキルが2つなら、攻撃ボタンを押すたびに交互に発動する。
  */
 export interface Weapon {
   id: string;
   name: string;
   weapon: WeaponClass;
-  /** ダメージ倍率（その系統スキルに乗算） */
-  powerMult: number;
-  /** 消費EN倍率（小さいほど省エネ） */
-  enMult: number;
-  /** ブレイク蓄積倍率 */
-  breakMult: number;
+  /** この武器が順番に繰り出すスキルID（ローテーション） */
+  skills: string[];
   /** フレーバー説明 */
   desc: string;
 }
