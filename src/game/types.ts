@@ -53,6 +53,8 @@ export interface WeaponInstance {
   uid: string;
   baseId: string;
   rarity: Rarity;
+  /** レアリティで付与される追加スキルID（ノーマルは無し） */
+  bonusSkillId?: string;
 }
 
 /** ステージ定義 */
@@ -66,8 +68,11 @@ export interface StageDef {
   drops: number;
 }
 
-/** ガード判定の結果段階 */
-export type GuardResult = "none" | "guard" | "just" | "parry";
+/** ガード判定の結果段階。none=失敗(被弾) / guard=通常ガード / perfect=パーフェクトガード */
+export type GuardResult = "none" | "guard" | "perfect";
+
+/** 戦闘から発火する効果音イベント（mainがフレームごとに回収して再生する） */
+export type SfxEvent = "warn" | "perfect" | "guard" | "hurt" | "break" | "die";
 
 /** 戦闘のフェーズ */
 export type BattlePhase = "fighting" | "won" | "lost";

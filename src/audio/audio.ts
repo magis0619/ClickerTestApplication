@@ -84,9 +84,9 @@ export class AudioEngine {
   }
 
   /** 即時の単発音（効果音用） */
-  private blip(freq: number, type: Wave, dur: number, vol = 0.5, slideTo?: number): void {
+  private blip(freq: number, type: Wave, dur: number, vol = 0.5, slideTo?: number, delay = 0): void {
     if (!this.ctx || !this.master) return;
-    const t = this.ctx.currentTime;
+    const t = this.ctx.currentTime + delay;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = type;
@@ -100,11 +100,69 @@ export class AudioEngine {
     osc.stop(t + dur + 0.02);
   }
 
+  /** ノイズバースト（金属音・打撃の芯に使う） */
+  private noise(dur: number, vol: number, hp = 1500, delay = 0): void {
+    if (!this.ctx || !this.master) return;
+    const t = this.ctx.currentTime + delay;
+    const frames = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = hp;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.master);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  }
+
   sfxAttack(): void {
     this.blip(330, "square", 0.09, 0.4, 180);
+    this.noise(0.05, 0.25, 2200);
   }
   sfxGuard(): void {
     this.blip(660, "triangle", 0.08, 0.5);
+  }
+  /** 通常ガード：芯のない鈍い受け止め音 */
+  sfxGuardHit(): void {
+    this.blip(300, "triangle", 0.1, 0.35, 200);
+    this.noise(0.05, 0.18, 900);
+  }
+  /** パーフェクト：澄んだ金属音の「キィン！」（弾き返しの快感） */
+  sfxPerfect(): void {
+    // 鋭いノイズの芯 + 高い金属倍音を重ねる
+    this.noise(0.06, 0.5, 4000);
+    this.blip(1760, "square", 0.18, 0.4, 2640);
+    this.blip(2640, "triangle", 0.22, 0.3);
+    this.blip(3520, "triangle", 0.16, 0.18, undefined, 0.02);
+    // 余韻のきらめき
+    this.blip(2093, "square", 0.12, 0.22, undefined, 0.09);
+  }
+  /** 攻撃予兆の警告音（緊張を煽る低い鼓動） */
+  sfxWarn(): void {
+    this.blip(180, "square", 0.12, 0.3, 120);
+  }
+  /** 被弾：鈍い痛打 */
+  sfxHurt(): void {
+    this.blip(150, "sawtooth", 0.18, 0.4, 70);
+    this.noise(0.08, 0.3, 600);
+  }
+  /** ブレイク：金属が砕けるような音 */
+  sfxBreak(): void {
+    this.blip(440, "square", 0.16, 0.35, 110);
+    this.noise(0.12, 0.3, 1200);
+  }
+  /** 敵撃破：落下するような下降音 */
+  sfxEnemyDie(): void {
+    this.blip(520, "square", 0.22, 0.35, 90);
+    this.noise(0.1, 0.2, 800, 0.02);
   }
   sfxWin(): void {
     this.blip(523.25, "square", 0.12, 0.4);

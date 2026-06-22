@@ -1,7 +1,6 @@
 import { Battle } from "./engine.ts";
 import {
-  STAGES, STAGE_COUNT, getWeapon, getSkill, effectiveSkill, rollDrops,
-  RARITY_MULT, PLAYER_MAX_HP,
+  STAGES, STAGE_COUNT, getWeapon, skillForClass, rollDrops, PLAYER_MAX_HP,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
@@ -54,14 +53,34 @@ export class Game {
     return inst ? getWeapon(inst.baseId) : undefined;
   }
 
-  /** その系統の「次に出るスキル」（レアリティ反映済み） */
+  /** インスタンスの実際のスキルローテーション（基本スキル＋レアリティ追加スキル） */
+  instanceSkillIds(inst: WeaponInstance): string[] {
+    const w = getWeapon(inst.baseId);
+    if (!w) return [];
+    return inst.bonusSkillId ? [...w.skills, inst.bonusSkillId] : [...w.skills];
+  }
+
+  /** その系統の「次に出るスキル」 */
   currentSkill(cls: WeaponClass): Skill | null {
     const inst = this.equippedInstance(cls);
     if (!inst) return null;
-    const w = getWeapon(inst.baseId);
-    if (!w || w.skills.length === 0) return null;
-    const id = w.skills[this.rotation[cls] % w.skills.length];
-    return effectiveSkill(getSkill(id), RARITY_MULT[inst.rarity]);
+    const ids = this.instanceSkillIds(inst);
+    if (ids.length === 0) return null;
+    const id = ids[this.rotation[cls] % ids.length];
+    return skillForClass(id, cls);
+  }
+
+  /** その系統のコンボ（全スキルを順番通りに） */
+  comboSkills(cls: WeaponClass): Skill[] {
+    const inst = this.equippedInstance(cls);
+    if (!inst) return [];
+    return this.instanceSkillIds(inst).map((id) => skillForClass(id, cls));
+  }
+
+  /** その系統で次に発動するコンボ段のインデックス（0始まり） */
+  comboIndex(cls: WeaponClass): number {
+    const len = this.comboSkills(cls).length;
+    return len === 0 ? 0 : this.rotation[cls] % len;
   }
 
   useWeapon(cls: WeaponClass): Skill | null {

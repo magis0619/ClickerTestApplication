@@ -13,10 +13,7 @@ export const RARITY_ORDER: Rarity[] = ["normal", "uncommon", "rare", "superrare"
 export const RARITY_LABEL: Record<Rarity, string> = {
   normal: "ノーマル", uncommon: "アンコモン", rare: "レア", superrare: "スーパーレア", ultrarare: "ウルトラレア",
 };
-/** レアリティによる武器性能の倍率（パラメータ・スキル共通） */
-export const RARITY_MULT: Record<Rarity, number> = {
-  normal: 1.0, uncommon: 1.25, rare: 1.55, superrare: 1.95, ultrarare: 2.5,
-};
+/** レアリティによる出現しにくさ（攻略に役立つ追加スキルが付く。性能倍率はかけない） */
 export const RARITY_COLOR: Record<Rarity, string> = {
   normal: "#b8b8c8", uncommon: "#6fd07f", rare: "#5fa8ff", superrare: "#c98aff", ultrarare: "#ffcf3f",
 };
@@ -47,8 +44,45 @@ export const SKILLS: Skill[] = [
   // 共通：ためる
   skill({ id: "focus_charge", name: "フォーカス（ためる）", weapon: "slash", kind: "charge", enCost: 8 }),
 ];
-const SKILL_MAP: Record<string, Skill> = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
+/**
+ * レアリティで付与される「追加スキル」のプール。
+ * 性能倍率はかけず、レアリティが上がるほど攻略に役立つレアなスキルが付く。
+ * weapon系統は装備武器に合わせて実行時に上書きされる（プレースホルダ）。
+ */
+export const BONUS_SKILLS: Skill[] = [
+  // アンコモン：ちょい便利
+  skill({ id: "b_recover", name: "リカバリ", weapon: "slash", kind: "heal", enCost: 22, heal: 30 }),
+  skill({ id: "b_quick_focus", name: "クイックフォーカス", weapon: "slash", kind: "charge", enCost: 6 }),
+  // レア：戦術の幅
+  skill({ id: "b_wide_blow", name: "ワイドブロウ（全体）", weapon: "slash", kind: "aoe", enCost: 32, power: 22, breakPower: 14 }),
+  skill({ id: "b_power_smash", name: "パワースマッシュ", weapon: "slash", kind: "attack", enCost: 28, power: 36, breakPower: 18 }),
+  // スーパーレア：強力
+  skill({ id: "b_mega_heal", name: "メガヒール", weapon: "slash", kind: "heal", enCost: 40, heal: 78 }),
+  skill({ id: "b_tempest", name: "テンペスト（全体）", weapon: "slash", kind: "aoe", enCost: 46, power: 40, breakPower: 28 }),
+  // ウルトラレア：切り札
+  skill({ id: "b_catastrophe", name: "カタストロフ（全体）", weapon: "slash", kind: "aoe", enCost: 54, power: 58, breakPower: 44 }),
+  skill({ id: "b_resurrection", name: "リザレクション", weapon: "slash", kind: "heal", enCost: 50, heal: 999 }),
+];
+
+const SKILL_MAP: Record<string, Skill> = Object.fromEntries(
+  [...SKILLS, ...BONUS_SKILLS].map((s) => [s.id, s]),
+);
 export function getSkill(id: string): Skill { return SKILL_MAP[id]; }
+export function isBonusSkill(id: string): boolean { return id.startsWith("b_"); }
+
+/** レアリティごとの追加スキル候補 */
+const BONUS_BY_RARITY: Record<Rarity, string[]> = {
+  normal: [],
+  uncommon: ["b_recover", "b_quick_focus"],
+  rare: ["b_wide_blow", "b_power_smash"],
+  superrare: ["b_mega_heal", "b_tempest"],
+  ultrarare: ["b_catastrophe", "b_resurrection"],
+};
+export function rollBonusSkill(rarity: Rarity): string | undefined {
+  const pool = BONUS_BY_RARITY[rarity];
+  if (!pool || pool.length === 0) return undefined;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 export const CHARGE_MULT = 2.3;
 
@@ -66,14 +100,9 @@ export function skillDescription(s: Skill): string {
   }
 }
 
-/** レアリティ倍率を反映した実効スキル */
-export function effectiveSkill(base: Skill, rarityMult: number): Skill {
-  return {
-    ...base,
-    power: Math.round(base.power * rarityMult),
-    breakPower: Math.round(base.breakPower * rarityMult),
-    heal: Math.round(base.heal * rarityMult),
-  };
+/** スキルを指定系統に合わせて返す（追加スキルの弱点判定を装備武器の系統に合わせる） */
+export function skillForClass(id: string, cls: WeaponClass): Skill {
+  return { ...getSkill(id), weapon: cls };
 }
 
 // ===== 武器テンプレート =====
@@ -97,7 +126,7 @@ function newUid(): string {
   return `wi_${Date.now().toString(36)}_${uidCounter}_${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 export function makeInstance(baseId: string, rarity: Rarity): WeaponInstance {
-  return { uid: newUid(), baseId, rarity };
+  return { uid: newUid(), baseId, rarity, bonusSkillId: rollBonusSkill(rarity) };
 }
 
 function weightedRarity(weights: number[]): Rarity {
@@ -161,19 +190,28 @@ export const PLAYER_MAX_EN = 100;
 
 // ===== EN回復（自動回復なし。休憩・ガード成功のみ） =====
 export const REST_EN_RECOVER = 18;
-export const GUARD_EN_RECOVER = 24;
-export const JUST_EN_RECOVER = 38;
-export const PARRY_EN_RECOVER = 46;
+// 通常ガードはわずかしか得しない。パーフェクトだけが大きく報われる。
+export const GUARD_EN_RECOVER = 12;
+export const PERFECT_EN_RECOVER = 52;
 
 // ===== ガード判定の窓 =====
-export const GUARD_WINDOW_MS = 380;
-export const JUST_WINDOW_MS = 185;
-export const PARRY_WINDOW_MS = 85;
+// 着弾までの残り時間がこの範囲ならガード成立。
+// PERFECT は着弾ギリギリ（手応えのある狭さ）、それより手前は通常ガード。
+export const PERFECT_WINDOW_MS = 140;
+export const GUARD_WINDOW_MS = 430;
 
 // ===== ガード効果 =====
-export const GUARD_DAMAGE_MULT = 0.5;
-export const JUST_DAMAGE_MULT = 0.1;
-export const PARRY_HP_RECOVER = 14;
+// 通常ガードは「軽減はするが地味」。パーフェクトは「完全無効＋HP/EN大回復」。
+export const GUARD_DAMAGE_MULT = 0.55;
+export const PERFECT_HP_RECOVER = 18;
+
+// ===== パーフェクトガードの演出・怯ませ =====
+/** パーフェクト成功時のヒットストップ（一瞬の静止）時間 */
+export const HITSTOP_MS = 110;
+/** パーフェクトで敵に与える怯み（次の攻撃を遅らせる）時間 */
+export const PERFECT_FLINCH_MS = 650;
+/** パーフェクトで敵のブレイクゲージに加算する蓄積量 */
+export const PERFECT_BREAK_BONUS = 14;
 
 // ===== ブレイク =====
 export const BREAK_DURATION_MS = 4500;

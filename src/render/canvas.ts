@@ -1,4 +1,4 @@
-import { Battle, EnemyState } from "../game/engine.ts";
+import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
 import { KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN } from "../game/data.ts";
 import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
@@ -88,11 +88,14 @@ export function render(
   // 画面シェイク（エンティティ層のみ）
   ctx.save();
   if (b.shakeT > 0) {
-    const mag = Math.min(8, b.shakeT * 0.03);
+    const mag = Math.min(b.shakeMag, b.shakeMag * (b.shakeT / 120));
     ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
   }
   drawPlayer(ctx, b);
   b.enemies.forEach((e, i) => drawEnemy(ctx, e, slots[i], i === b.targetIndex && e.alive));
+  if (b.perfectFxT > 0 && b.perfectFxIndex >= 0) {
+    drawPerfectFx(ctx, b, slots[b.perfectFxIndex]);
+  }
   drawFloats(ctx, b, slots);
   ctx.restore();
 
@@ -156,20 +159,41 @@ function drawEnemy(
   targeted: boolean,
 ): void {
   const { x, y } = pos;
-  if (!e.alive) {
-    ctx.globalAlpha = 0.18;
-  }
   const sprite = e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
   const scale = e.def.boss ? 4 : 3;
 
+  // 撃破演出（ノックバック→フェード→ドロップのきらめき）。完全に消えたら描かない
+  if (!e.alive) {
+    if (e.deathT > 0) drawDeath(ctx, e, x, y, sprite, scale);
+    return;
+  }
+
+  // === 緊張演出：着弾が近いほど「震え」、予兆では「赤く点滅」 ===
+  const danger = e.danger;
+  let trembleX = 0, trembleY = 0;
+  if (danger > 0.45 && !e.isBroken) {
+    const m = ((danger - 0.45) / 0.55) * (e.inTelegraph ? 3.2 : 2.0);
+    trembleX = (Math.random() * 2 - 1) * m;
+    trembleY = (Math.random() * 2 - 1) * m;
+  }
+
+  // パーフェクトで弾かれた怯みノックバック（奥へ押されて戻る）
+  const flinchKnock = e.flinchT > 0 ? Math.min(14, e.flinchT * 0.022) : 0;
+
   // 被弾時のけぞり（横揺れ）
   const flinch = e.hitFlash > 0 ? (Math.random() * 2 - 1) * 4 : 0;
-  if (e.alive && e.isBroken) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(Date.now() / 80);
-  const flash = e.hitFlash > 0 ? { color: "#ffffff", alpha: Math.min(0.85, e.hitFlash / 260) } : undefined;
-  drawSprite(ctx, sprite, x + flinch, y, scale, true, flash);
-  ctx.globalAlpha = 1;
+  if (e.isBroken) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(Date.now() / 80);
 
-  if (!e.alive) return;
+  // tint: 被弾は白フラッシュ優先、なければ予兆の赤点滅
+  let tint: { color: string; alpha: number } | undefined;
+  if (e.hitFlash > 0) {
+    tint = { color: "#ffffff", alpha: Math.min(0.85, e.hitFlash / 260) };
+  } else if (danger > 0.5 && !e.isBroken) {
+    const blink = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 70 : 130));
+    tint = { color: "#ff2020", alpha: ((danger - 0.5) / 0.5) * 0.6 * blink };
+  }
+  drawSprite(ctx, sprite, x + flinch + trembleX + flinchKnock, y + trembleY, scale, true, tint);
+  ctx.globalAlpha = 1;
 
   const halfW = (e.def.boss ? 28 : 20);
 
@@ -232,6 +256,84 @@ function drawEnemy(
   }
 }
 
+/** 撃破演出：ノックバックで吹き飛び、回転しながらフェード、上にドロップのきらめき */
+function drawDeath(
+  ctx: CanvasRenderingContext2D,
+  e: EnemyState,
+  x: number,
+  y: number,
+  sprite: Sprite,
+  scale: number,
+): void {
+  const p = 1 - e.deathT / DEATH_ANIM_MS; // 0→1
+  const dx = e.deathDir * p * 52;               // 奥へ吹き飛ぶ
+  const dy = -Math.sin(p * Math.PI) * 22 + p * p * 30; // 跳ねて落ちる
+  const tilt = e.deathDir * p * 0.9;            // 回転
+  const alpha = Math.max(0, 1 - p * 1.05);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x + dx, y + dy - scale * sprite.rows.length * 0.5);
+  ctx.rotate(tilt);
+  // 撃破直後は白く飛ばす
+  const flash = p < 0.25 ? { color: "#ffffff", alpha: 0.8 * (1 - p / 0.25) } : undefined;
+  drawSprite(ctx, sprite, 0, scale * sprite.rows.length * 0.5, scale, true, flash);
+  ctx.restore();
+
+  // ドロップのきらめき（上方向へ舞う金色の星）
+  ctx.globalAlpha = Math.max(0, 1 - p);
+  ctx.fillStyle = "#ffd35f";
+  ctx.textAlign = "center";
+  ctx.font = "bold 12px monospace";
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + p * 3;
+    const r = p * 26;
+    ctx.fillText("✦", x + Math.cos(a) * r, y - 20 - p * 30 + Math.sin(a) * r * 0.4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** パーフェクト弾きエフェクト：閃光リング＋放射状スパーク */
+function drawPerfectFx(
+  ctx: CanvasRenderingContext2D,
+  b: Battle,
+  pos: { x: number; y: number },
+): void {
+  const p = 1 - b.perfectFxT / 360; // 0→1
+  const { x } = pos;
+  const y = pos.y - 24;
+
+  // 中心の閃光
+  ctx.globalAlpha = Math.max(0, 1 - p) * 0.9;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x, y, 6 + p * 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 拡がるリング
+  ctx.globalAlpha = Math.max(0, 1 - p);
+  ctx.strokeStyle = "#bfefff";
+  ctx.lineWidth = 3 * (1 - p) + 0.5;
+  ctx.beginPath();
+  ctx.arc(x, y, 4 + p * 34, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 放射状スパーク
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  const spikes = 8;
+  for (let i = 0; i < spikes; i++) {
+    const a = (i / spikes) * Math.PI * 2 + 0.3;
+    const r0 = 8 + p * 18;
+    const r1 = 16 + p * 40;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+    ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   ctx.textAlign = "left";
   ctx.fillStyle = "#cfe4ff";
@@ -282,27 +384,32 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
 
 function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (b.lastGuardTtl <= 0 || b.lastGuard === "none") return;
-  const map: Record<string, [string, string]> = {
-    guard: ["GUARD", "#cccccc"],
-    just: ["JUST GUARD", "#88ddff"],
-    parry: ["PARRY", "#66ffaa"],
+  // PERFECT だけ明確に大きく・派手に。通常ガードは控えめ。
+  const map: Record<string, { text: string; color: string; size: number; perfect?: boolean }> = {
+    guard: { text: "GUARD", color: "#cccccc", size: 18 },
+    perfect: { text: "PERFECT", color: "#7dffd0", size: 30, perfect: true },
   };
   const entry = map[b.lastGuard];
   if (!entry) return;
   const age = 700 - b.lastGuardTtl;
-  const scale = age < 130 ? 1.6 - 0.6 * (age / 130) : 1;
+  const pop = age < 130 ? 1.7 - 0.7 * (age / 130) : 1;
   ctx.textAlign = "center";
-  ctx.globalAlpha = Math.min(1, b.lastGuardTtl / 700);
+  const baseAlpha = Math.min(1, b.lastGuardTtl / 700);
   ctx.save();
-  ctx.translate(W / 2, 130);
-  ctx.scale(scale, scale);
-  ctx.font = "bold 20px monospace";
+  ctx.translate(W / 2, 128);
+  ctx.scale(pop, pop);
+  // PERFECT は虹色グロー風に縁取り
+  if (entry.perfect) {
+    ctx.shadowColor = "#7dffd0";
+    ctx.shadowBlur = 16;
+  }
+  ctx.font = `bold ${entry.size}px monospace`;
+  ctx.globalAlpha = baseAlpha * 0.4;
   ctx.fillStyle = "#000000";
-  ctx.globalAlpha *= 0.4;
-  ctx.fillText(entry[0], 1.5, 1.5);
-  ctx.globalAlpha = Math.min(1, b.lastGuardTtl / 700);
-  ctx.fillStyle = entry[1];
-  ctx.fillText(entry[0], 0, 0);
+  ctx.fillText(entry.text, 2, 2);
+  ctx.globalAlpha = baseAlpha;
+  ctx.fillStyle = entry.color;
+  ctx.fillText(entry.text, 0, 0);
   ctx.restore();
   ctx.globalAlpha = 1;
 }

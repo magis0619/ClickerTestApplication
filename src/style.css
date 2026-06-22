@@ -126,6 +126,95 @@ body {
   pointer-events: none;
 }
 
+/* ===== 戦闘：武器カード（武器名を主役に／スキルはコンボ表示） ===== */
+.weapons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.weapon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 8px 10px;
+  border: 2px solid #2e2750;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #201b44, #171331);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.04s, box-shadow 0.12s, background 0.12s;
+}
+
+/* 押している実感（沈み込み＋発光） */
+.weapon-card:hover { background: linear-gradient(180deg, #272050, #1b1640); }
+.weapon-card:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18) inset;
+  filter: brightness(1.25);
+}
+
+.weapon-card.disabled { opacity: 0.45; pointer-events: none; }
+
+/* 系統ごとのアクセント色（枠と武器名） */
+.weapon-card.wclass-slash { border-color: #3a6da0; }
+.weapon-card.wclass-pierce { border-color: #4f8a45; }
+.weapon-card.wclass-crush { border-color: #a07a3a; }
+
+.wc-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+}
+.wclass-slash .wc-name { color: #9fd9ff; }
+.wclass-pierce .wc-name { color: #c2ffa8; }
+.wclass-crush .wc-name { color: #ffd98f; }
+
+.wc-kind {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #b6b0dc;
+  vertical-align: middle;
+}
+
+.wc-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wc-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  font-size: 10px;
+  color: #8e88b8;
+  background: rgba(0, 0, 0, 0.18);
+  border-left: 2px solid transparent;
+}
+
+.wc-no { font-size: 11px; opacity: 0.8; }
+.wc-sk { flex: 1; font-weight: 600; }
+.wc-en { font-size: 9px; opacity: 0.7; }
+
+/* 次に発動する段を強調（コンボの現在地） */
+.wc-step-on {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border-left-color: #ffd35f;
+  box-shadow: 0 0 6px rgba(255, 211, 95, 0.25);
+}
+.wc-step-on .wc-no { opacity: 1; color: #ffd35f; }
+
 /* ===== 結果画面 / 育成パネル ===== */
 .result-panel {
   background: var(--panel);
