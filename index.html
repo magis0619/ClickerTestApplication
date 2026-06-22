@@ -16,23 +16,23 @@
       <div class="title">✦ Stardust Clicker</div>
       <div class="balance">
         <div class="amount" id="stardust">0</div>
-        <div class="unit">スターダスト</div>
+        <div class="unit"><span class="head-ico sd" data-icon="stardust"></span>スターダスト</div>
       </div>
       <div class="rate" id="perSecond">毎秒 0</div>
     </header>
 
     <section class="tap-area">
       <button id="tapButton" class="star" aria-label="星をタップして採取">
-        <span class="star-emoji">⭐</span>
+        <span class="star-svg" data-icon="tapStar"></span>
       </button>
       <div id="floaters" class="floaters" aria-hidden="true"></div>
     </section>
 
     <div class="boost-bar">
-      <button id="boostButton" class="boost">⚡ ブースト</button>
+      <button id="boostButton" class="boost"></button>
     </div>
 
-    <button id="dailyBanner" class="daily-banner hidden">🎁 デイリーボーナスを受け取る</button>
+    <button id="dailyBanner" class="daily-banner hidden"></button>
 
     <nav class="tabs">
       <button class="tab active" data-tab="shop">ショップ</button>
@@ -43,7 +43,7 @@
 
     <section id="tab-shop" class="panel">
       <div class="upgrade-card" id="clickUpgrade">
-        <div class="up-icon">👆</div>
+        <div class="up-icon" data-icon="click"></div>
         <div class="up-body">
           <div class="up-name">クリック強化 <span class="up-level" id="clickLevel">Lv.0</span></div>
           <div class="up-desc">タップ獲得量 <strong id="perClick">1</strong></div>
@@ -61,7 +61,7 @@
 
     <section id="tab-upgrades" class="panel hidden">
       <div class="panel-head">
-        <span>🌌 ネビュラで恒久強化</span>
+        <span><span class="head-ico" data-icon="nebula"></span>ネビュラで恒久強化</span>
         <span class="panel-sub">保有: <strong id="upNebula">0</strong></span>
       </div>
       <div id="upgrades"></div>
@@ -69,7 +69,7 @@
 
     <section id="tab-achievements" class="panel hidden">
       <div class="panel-head">
-        <span>🏆 実績</span>
+        <span><span class="head-ico" data-icon="trophy"></span>実績</span>
         <span class="panel-sub"><strong id="achCount">0</strong>/<span id="achTotal">0</span>（全生産 +<span id="achBonus">0</span>%）</span>
       </div>
       <div id="achievements"></div>
@@ -77,7 +77,7 @@
 
     <section id="tab-prestige" class="panel hidden">
       <div class="prestige-box">
-        <div class="prestige-title">🌌 転生（ネビュラ）</div>
+        <div class="prestige-title"><span class="head-ico" data-icon="nebula"></span>転生（ネビュラ）</div>
         <p class="prestige-desc">
           進行をリセットする代わりに <strong>ネビュラ</strong> を獲得します。<br />
           累計ネビュラ 1 個につき全生産・タップが <strong>+2%</strong> 永続強化されます。<br />
@@ -95,8 +95,8 @@
 
     <footer class="footer">
       <div class="settings">
-        <button id="soundToggle" class="toggle" title="効果音">🔊</button>
-        <button id="vibeToggle" class="toggle" title="バイブ">📳</button>
+        <button id="soundToggle" class="toggle" title="効果音"></button>
+        <button id="vibeToggle" class="toggle" title="バイブ"></button>
       </div>
       <span id="saveStatus">—</span>
       <button id="wipeButton" class="wipe">データ消去</button>
