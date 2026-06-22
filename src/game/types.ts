@@ -38,6 +38,26 @@ export interface EnemyDef {
   reward: number;
   /** ボス敵かどうか（演出・難度用） */
   boss?: boolean;
+  /** 撃破時に入手できる武器ID（未所持なら入手） */
+  dropWeapon?: string;
+}
+
+/**
+ * 武器。各武器は1つの系統に属し、その系統スキルに補正をかける。
+ * 武器を付け替えることで戦い方の個性が変わる（収集要素）。
+ */
+export interface Weapon {
+  id: string;
+  name: string;
+  weapon: WeaponClass;
+  /** ダメージ倍率（その系統スキルに乗算） */
+  powerMult: number;
+  /** 消費EN倍率（小さいほど省エネ） */
+  enMult: number;
+  /** ブレイク蓄積倍率 */
+  breakMult: number;
+  /** フレーバー説明 */
+  desc: string;
 }
 
 /** ガード判定の結果段階 */
@@ -57,4 +77,8 @@ export interface SaveData {
   skillLevels: Record<string, number>;
   /** これまでに到達した最深ステージ番号(1始まり) */
   bestStage: number;
+  /** 所持している武器ID一覧 */
+  ownedWeapons: string[];
+  /** 系統ごとに装備中の武器ID */
+  equipped: Record<WeaponClass, string>;
 }

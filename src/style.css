@@ -76,6 +76,30 @@ body {
 .wclass-pierce .wlabel { color: #b8ff9f; }
 .wclass-crush .wlabel { color: #ffcf7f; }
 
+.wlabel .weq {
+  display: block;
+  font-size: 9px;
+  font-weight: normal;
+  color: #8e88b8;
+  margin-top: 2px;
+}
+
+/* ヘッダーのミュートボタン */
+.topbar { position: relative; }
+.mute-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #3a3466;
+  border-radius: 6px;
+  background: #1d1940;
+  color: var(--ink);
+  cursor: pointer;
+}
+.mute-btn:hover { background: #2a2456; }
+
 .skill-btn {
   display: flex;
   flex-direction: column;
@@ -125,6 +149,58 @@ body {
   font-size: 13px;
   color: #cfc9f2;
 }
+
+.r-drop {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffd35f;
+}
+
+/* 武器付け替えパネル */
+.equip-panel {
+  background: #110d28;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.eq-group { margin-bottom: 8px; }
+
+.eq-label {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.eq-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.eq-btn {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid #2a2350;
+  border-radius: 6px;
+  background: #1b1640;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.eq-btn:hover { background: #241f55; }
+
+.eq-on {
+  border-color: #5fa8ff;
+  background: #1c2c50;
+}
+
+.eq-name { font-size: 11px; font-weight: bold; }
+.eq-stat { font-size: 9px; color: #9690c4; margin-top: 2px; }
 
 .upgrade-panel {
   background: #110d28;

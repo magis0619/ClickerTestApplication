@@ -1,5 +1,39 @@
 import { Battle } from "../game/engine.ts";
 import { KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN } from "../game/data.ts";
+import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.ts";
+import type { EnemyKind } from "../game/types.ts";
+
+/** スプライトを「水平中央 cx・底辺 footY」基準で拡大描画。flipで左右反転 */
+function drawSprite(
+  ctx: CanvasRenderingContext2D,
+  sprite: Sprite,
+  cx: number,
+  footY: number,
+  scale: number,
+  flip = false,
+): void {
+  const width = sprite.rows.reduce((m, r) => Math.max(m, r.length), 0);
+  const height = sprite.rows.length;
+  const left = Math.round(cx - (width * scale) / 2);
+  const top = Math.round(footY - height * scale);
+  for (let y = 0; y < height; y++) {
+    const row = sprite.rows[y];
+    for (let x = 0; x < row.length; x++) {
+      const ch = row[x];
+      const color = sprite.palette[ch];
+      if (!color) continue; // "." や空白は透明
+      const px = flip ? width - 1 - x : x;
+      ctx.fillStyle = color;
+      ctx.fillRect(left + px * scale, top + y * scale, scale, scale);
+    }
+  }
+}
+
+const ENEMY_SPRITE: Record<EnemyKind, Sprite> = {
+  carapace: CARAPACE,
+  aerial: AERIAL,
+  phantom: PHANTOM,
+};
 
 const W = 480;
 const H = 320;
@@ -44,26 +78,19 @@ export function render(
 
 function drawPlayer(ctx: CanvasRenderingContext2D, _b: Battle): void {
   const { x, y } = PLAYER_POS;
-  // シンプルなドット調キャラ（オリジナル図形）
-  ctx.fillStyle = "#5fa8ff";
-  ctx.fillRect(x - 14, y - 36, 28, 36); // 胴
-  ctx.fillStyle = "#cfe4ff";
-  ctx.fillRect(x - 10, y - 52, 20, 18); // 頭
-  ctx.fillStyle = "#ffd35f";
-  ctx.fillRect(x + 14, y - 40, 6, 30); // 武器
+  drawSprite(ctx, WARDEN, x, y, 4); // 守人は右（敵）を向く
 }
 
 function drawEnemy(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = ENEMY_POS;
   const broken = b.isBroken;
-  // ブレイク中は点滅っぽく色を変える
-  ctx.fillStyle = broken ? "#ffe08a" : "#c45b8a";
-  ctx.fillRect(x - 26, y - 30, 52, 40); // 甲殻ボディ
-  ctx.fillStyle = broken ? "#fff3c4" : "#e07da6";
-  ctx.fillRect(x - 18, y - 44, 36, 18); // 頭部
-  ctx.fillStyle = "#1a1430";
-  ctx.fillRect(x - 10, y - 38, 6, 6); // 目
-  ctx.fillRect(x + 4, y - 38, 6, 6);
+  const sprite = b.enemy.boss ? BOSS : ENEMY_SPRITE[b.enemy.kind];
+  const scale = b.enemy.boss ? 4 : 4;
+
+  // ブレイク中は半透明＋黄味で気絶を表現
+  if (broken) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(Date.now() / 80);
+  drawSprite(ctx, sprite, x, y, scale, true); // 敵は左（プレイヤー）を向く
+  ctx.globalAlpha = 1;
 
   // 攻撃予兆
   if (b.pending && !broken) {

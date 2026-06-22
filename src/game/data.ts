@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, WeaponClass, EnemyKind } from "./types.ts";
+import type { Skill, EnemyDef, WeaponClass, EnemyKind, Weapon } from "./types.ts";
 
 // ===== オリジナルのゲームデータ =====
 
@@ -37,8 +37,42 @@ export const SKILLS: Skill[] = [
 ];
 
 /**
+ * 武器一覧（収集要素）。系統ごとに「初期武器」＋「強い/個性的なドロップ武器」を用意。
+ * 付け替えでその系統スキルの 威力 / 消費EN / ブレイク蓄積 が変化する。
+ */
+export const WEAPONS: Weapon[] = [
+  // --- 斬撃 ---
+  { id: "w_iron_edge", name: "アイアンエッジ", weapon: "slash", powerMult: 1.0, enMult: 1.0, breakMult: 1.0, desc: "標準的な片手剣。クセがない" },
+  { id: "w_storm_saber", name: "ストームセイバー", weapon: "slash", powerMult: 0.9, enMult: 0.75, breakMult: 1.1, desc: "軽量で省EN。手数で攻める" },
+  { id: "w_dragoon_blade", name: "ドラグーンブレイド", weapon: "slash", powerMult: 1.35, enMult: 1.2, breakMult: 0.9, desc: "重い大剣。一撃が重い" },
+  // --- 刺突 ---
+  { id: "w_steel_lance", name: "スチールランス", weapon: "pierce", powerMult: 1.0, enMult: 1.0, breakMult: 1.0, desc: "標準的な槍。安定" },
+  { id: "w_wind_pike", name: "ウィンドパイク", weapon: "pierce", powerMult: 0.95, enMult: 0.8, breakMult: 1.25, desc: "ブレイクを稼ぎやすい" },
+  { id: "w_void_glaive", name: "ヴォイドグレイブ", weapon: "pierce", powerMult: 1.3, enMult: 1.15, breakMult: 1.0, desc: "高威力の戦槍" },
+  // --- 打撃 ---
+  { id: "w_war_mallet", name: "ウォーマレット", weapon: "crush", powerMult: 1.0, enMult: 1.0, breakMult: 1.0, desc: "標準的な戦槌" },
+  { id: "w_quake_hammer", name: "クエイクハンマー", weapon: "crush", powerMult: 1.1, enMult: 1.05, breakMult: 1.4, desc: "ブレイク特化の大槌" },
+  { id: "w_titan_breaker", name: "タイタンブレイカー", weapon: "crush", powerMult: 1.45, enMult: 1.3, breakMult: 1.1, desc: "最重量。ロマンの一撃" },
+];
+
+/** 初期所持武器（系統ごとの標準武器） */
+export const STARTER_WEAPONS = ["w_iron_edge", "w_steel_lance", "w_war_mallet"];
+
+/** 系統ごとの初期装備 */
+export const DEFAULT_EQUIPPED: Record<WeaponClass, string> = {
+  slash: "w_iron_edge",
+  pierce: "w_steel_lance",
+  crush: "w_war_mallet",
+};
+
+export function getWeapon(id: string): Weapon | undefined {
+  return WEAPONS.find((w) => w.id === id);
+}
+
+/**
  * ダンジョンのステージ順（先頭から順に戦う）。
  * 種別を散らすことで武器相性の付け替えが意味を持つように設計。
+ * 各敵は撃破時に武器をドロップする。
  */
 export const ENEMIES: EnemyDef[] = [
   {
@@ -51,6 +85,7 @@ export const ENEMIES: EnemyDef[] = [
     intervalMs: 2700,
     breakThreshold: 55,
     reward: 18,
+    dropWeapon: "w_storm_saber",
   },
   {
     id: "wraith_feather",
@@ -62,6 +97,7 @@ export const ENEMIES: EnemyDef[] = [
     intervalMs: 2400,
     breakThreshold: 60,
     reward: 24,
+    dropWeapon: "w_wind_pike",
   },
   {
     id: "gloom_shade",
@@ -73,6 +109,7 @@ export const ENEMIES: EnemyDef[] = [
     intervalMs: 2200,
     breakThreshold: 70,
     reward: 30,
+    dropWeapon: "w_quake_hammer",
   },
   {
     id: "carapace_tyrant",
@@ -85,6 +122,7 @@ export const ENEMIES: EnemyDef[] = [
     breakThreshold: 95,
     reward: 70,
     boss: true,
+    dropWeapon: "w_titan_breaker",
   },
 ];
 
@@ -104,13 +142,17 @@ export function upgradeCost(currentLevel: number): number {
   return UPGRADE_BASE_COST * currentLevel;
 }
 
-/** 強化レベルを反映した実効スキルを返す */
-export function effectiveSkill(base: Skill, level: number): Skill {
+/** 強化レベルと装備武器を反映した実効スキルを返す */
+export function effectiveSkill(base: Skill, level: number, weapon?: Weapon): Skill {
   const lv = Math.max(1, level);
+  const pMult = weapon?.powerMult ?? 1;
+  const eMult = weapon?.enMult ?? 1;
+  const bMult = weapon?.breakMult ?? 1;
   return {
     ...base,
-    power: Math.round(base.power * (1 + SKILL_POWER_PER_LEVEL * (lv - 1))),
-    breakPower: Math.round(base.breakPower * (1 + SKILL_BREAK_PER_LEVEL * (lv - 1))),
+    power: Math.max(1, Math.round(base.power * (1 + SKILL_POWER_PER_LEVEL * (lv - 1)) * pMult)),
+    breakPower: Math.max(1, Math.round(base.breakPower * (1 + SKILL_BREAK_PER_LEVEL * (lv - 1)) * bMult)),
+    enCost: Math.max(1, Math.round(base.enCost * eMult)),
   };
 }
 
