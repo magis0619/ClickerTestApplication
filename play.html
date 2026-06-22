@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<!-- Stardust Clicker (standalone build). ダブルクリックで開くだけで遊べます。進行はこのファイルを開いたブラウザに自動保存されます。 -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1026" />
+  <meta name="description" content="星屑を集める放置クリッカーゲーム Stardust Clicker" />
+  <title>Stardust Clicker</title>
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <style>
+:root {
+  --bg: #0b1026;
+  --bg2: #131a3a;
+  --card: #1b2350;
+  --card2: #232c63;
+  --accent: #ffd24a;
+  --accent2: #7aa2ff;
+  --text: #eaeeff;
+  --muted: #9aa6d6;
+  --good: #5be37a;
+  --bad: #ff6b6b;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(1200px 800px at 50% -10%, #1a2350 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Roboto, system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+}
+
+/* ---- Top bar ---- */
+.topbar {
+  text-align: center;
+  padding: 14px 0 6px;
+}
+.title {
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--accent2);
+  font-weight: 700;
+}
+.balance .amount {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1.1;
+  text-shadow: 0 0 18px rgba(255, 210, 74, 0.4);
+}
+.balance .unit { font-size: 12px; color: var(--muted); }
+.rate { margin-top: 4px; font-size: 13px; color: var(--good); }
+
+/* ---- Tap area ---- */
+.tap-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0 10px;
+}
+.star {
+  border: none;
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, #ffb02e 60%, #ff7a18);
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 60px rgba(255, 170, 50, 0.5), inset 0 -10px 30px rgba(180, 90, 0, 0.4);
+  transition: transform 0.06s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.star:active { transform: scale(0.93); }
+.star-emoji { font-size: 86px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); pointer-events: none; }
+
+.floaters { position: absolute; inset: 0; pointer-events: none; }
+.floater {
+  position: absolute;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  animation: floatUp 0.9s ease-out forwards;
+  font-size: 20px;
+}
+.floater.crit { color: #ffd24a; font-size: 30px; text-shadow: 0 0 10px rgba(255,210,74,0.8); }
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.4); }
+}
+
+/* ---- Boost ---- */
+.boost-bar { display: flex; justify-content: center; padding: 2px 0 8px; }
+.boost {
+  background: linear-gradient(135deg, #ff8a3d, #ff4d6d);
+  color: #fff; border: none; border-radius: 999px;
+  padding: 10px 20px; font-size: 14px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 80, 100, 0.4);
+}
+.boost.active {
+  background: linear-gradient(135deg, #ffd24a, #ff8a3d);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.boost.cooldown { background: #2b346e; color: var(--muted); box-shadow: none; }
+.boost:disabled { cursor: default; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ---- Buy mode ---- */
+.buymode { display: flex; align-items: center; gap: 6px; padding: 0 2px 2px; }
+.buymode-label { font-size: 12px; color: var(--muted); margin-right: auto; }
+.bm {
+  background: var(--card); color: var(--muted);
+  border: 1px solid #2b346e; border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.bm.active { background: var(--accent2); color: #0b1026; border-color: var(--accent2); }
+
+/* ---- Tabs ---- */
+.tabs { display: flex; gap: 8px; margin: 6px 0 10px; }
+.tab {
+  flex: 1;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tab.active { color: var(--text); border-color: var(--accent2); background: var(--card2); }
+
+/* ---- Panels ---- */
+.panel { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.hidden { display: none !important; }
+
+.upgrade-card, .gen-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  border: 1px solid #2b346e;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.05s;
+}
+.upgrade-card:active, .gen-card:active { transform: scale(0.99); }
+.upgrade-card.affordable, .gen-card.affordable { background: var(--card2); border-color: var(--accent2); }
+.upgrade-card.locked, .gen-card.locked { opacity: 0.5; }
+
+.up-icon, .gen-icon { font-size: 30px; width: 40px; text-align: center; }
+.up-body, .gen-body { flex: 1; min-width: 0; }
+.up-name, .gen-name { font-size: 15px; font-weight: 700; }
+.up-level, .gen-count {
+  font-size: 12px; color: var(--accent2); margin-left: 6px;
+}
+.up-desc, .gen-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.up-cost, .gen-cost {
+  font-size: 14px; font-weight: 800; color: var(--accent);
+  white-space: nowrap; text-align: right;
+}
+.gen-cost.cant { color: var(--bad); }
+
+/* ---- Prestige ---- */
+.prestige-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid #2b346e;
+  text-align: center;
+}
+.prestige-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.prestige-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.prestige-stats { margin: 14px 0; font-size: 14px; line-height: 1.9; }
+.prestige-btn, .modal-btn {
+  background: linear-gradient(135deg, #8a5bff, #5b7aff);
+  color: #fff; border: none; border-radius: 12px;
+  padding: 14px 24px; font-size: 16px; font-weight: 800; cursor: pointer;
+  width: 100%;
+}
+.prestige-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.prestige-hint { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
+
+/* ---- Footer ---- */
+.footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 4px; margin-top: auto; font-size: 12px; color: var(--muted);
+}
+.wipe {
+  background: transparent; color: var(--bad);
+  border: 1px solid var(--bad); border-radius: 8px;
+  padding: 6px 10px; font-size: 11px; cursor: pointer;
+}
+
+/* ---- Daily banner ---- */
+.daily-banner {
+  display: block; width: 100%; margin: 0 0 8px;
+  background: linear-gradient(135deg, #ffd24a, #ff8a3d);
+  color: #3a2400; border: none; border-radius: 12px;
+  padding: 12px; font-size: 15px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 170, 50, 0.4);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* ---- Panel head ---- */
+.panel-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 14px; font-weight: 700; padding: 2px 2px 4px;
+}
+.panel-sub { font-size: 12px; color: var(--muted); }
+
+/* ---- Achievements ---- */
+.ach-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card2); border-radius: var(--radius);
+  padding: 10px 14px; border: 1px solid #2b346e;
+}
+.ach-card.locked { opacity: 0.45; filter: grayscale(0.8); }
+.ach-icon { font-size: 26px; width: 36px; text-align: center; }
+.ach-name { font-size: 15px; font-weight: 700; }
+.ach-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* ---- Toast ---- */
+.toast {
+  position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
+  background: rgba(20, 26, 58, 0.96); color: var(--text);
+  border: 1px solid var(--accent2); border-radius: 12px;
+  padding: 10px 18px; font-size: 14px; font-weight: 700; z-index: 60;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4); max-width: 90%; text-align: center;
+  animation: toastIn 0.2s ease-out;
+}
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; } }
+
+/* ---- Settings toggles ---- */
+.settings { display: flex; gap: 6px; }
+.toggle {
+  background: var(--card); border: 1px solid #2b346e; border-radius: 8px;
+  padding: 4px 8px; font-size: 14px; cursor: pointer;
+}
+.toggle.off { opacity: 0.4; }
+
+/* ---- Modal ---- */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
+}
+.modal-card {
+  background: var(--bg2); border: 1px solid var(--accent2);
+  border-radius: var(--radius); padding: 24px; max-width: 360px; text-align: center;
+}
+.modal-card h2 { margin: 0 0 12px; color: var(--accent); }
+.modal-card p { font-size: 14px; line-height: 1.6; }
+.modal-sub { color: var(--muted); font-size: 12px; }
+.modal-btn { margin-top: 16px; }
+
+</style>
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="title">✦ Stardust Clicker</div>
+      <div class="balance">
+        <div class="amount" id="stardust">0</div>
+        <div class="unit">スターダスト</div>
+      </div>
+      <div class="rate" id="perSecond">毎秒 0</div>
+    </header>
+
+    <section class="tap-area">
+      <button id="tapButton" class="star" aria-label="星をタップして採取">
+        <span class="star-emoji">⭐</span>
+      </button>
+      <div id="floaters" class="floaters" aria-hidden="true"></div>
+    </section>
+
+    <div class="boost-bar">
+      <button id="boostButton" class="boost">⚡ ブースト</button>
+    </div>
+
+    <button id="dailyBanner" class="daily-banner hidden">🎁 デイリーボーナスを受け取る</button>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="shop">ショップ</button>
+      <button class="tab" data-tab="upgrades">強化</button>
+      <button class="tab" data-tab="achievements">実績</button>
+      <button class="tab" data-tab="prestige">転生</button>
+    </nav>
+
+    <section id="tab-shop" class="panel">
+      <div class="upgrade-card" id="clickUpgrade">
+        <div class="up-icon">👆</div>
+        <div class="up-body">
+          <div class="up-name">クリック強化 <span class="up-level" id="clickLevel">Lv.0</span></div>
+          <div class="up-desc">タップ獲得量 <strong id="perClick">1</strong></div>
+        </div>
+        <div class="up-cost" id="clickCost">25</div>
+      </div>
+      <div class="buymode">
+        <span class="buymode-label">まとめ買い</span>
+        <button class="bm active" data-mode="1">×1</button>
+        <button class="bm" data-mode="10">×10</button>
+        <button class="bm" data-mode="max">Max</button>
+      </div>
+      <div id="generators"></div>
+    </section>
+
+    <section id="tab-upgrades" class="panel hidden">
+      <div class="panel-head">
+        <span>🌌 ネビュラで恒久強化</span>
+        <span class="panel-sub">保有: <strong id="upNebula">0</strong></span>
+      </div>
+      <div id="upgrades"></div>
+    </section>
+
+    <section id="tab-achievements" class="panel hidden">
+      <div class="panel-head">
+        <span>🏆 実績</span>
+        <span class="panel-sub"><strong id="achCount">0</strong>/<span id="achTotal">0</span>（全生産 +<span id="achBonus">0</span>%）</span>
+      </div>
+      <div id="achievements"></div>
+    </section>
+
+    <section id="tab-prestige" class="panel hidden">
+      <div class="prestige-box">
+        <div class="prestige-title">🌌 転生（ネビュラ）</div>
+        <p class="prestige-desc">
+          進行をリセットする代わりに <strong>ネビュラ</strong> を獲得します。<br />
+          累計ネビュラ 1 個につき全生産・タップが <strong>+2%</strong> 永続強化されます。<br />
+          ネビュラは「強化」タブで恒久アップグレードにも使えます。
+        </p>
+        <div class="prestige-stats">
+          <div>保有ネビュラ: <strong id="nebula">0</strong></div>
+          <div>累計ボーナス: +<span id="nebulaBonus">0</span>%</div>
+          <div>転生で獲得: <strong id="nebulaGain">0</strong></div>
+        </div>
+        <button id="prestigeButton" class="prestige-btn" disabled>転生する</button>
+        <p class="prestige-hint" id="prestigeHint"></p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="settings">
+        <button id="soundToggle" class="toggle" title="効果音">🔊</button>
+        <button id="vibeToggle" class="toggle" title="バイブ">📳</button>
+      </div>
+      <span id="saveStatus">—</span>
+      <button id="wipeButton" class="wipe">データ消去</button>
+    </footer>
+  </main>
+
+  <div id="welcomeModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>おかえりなさい！</h2>
+      <p>離席中に <strong id="offlineEarned">0</strong> スターダストを採取しました。</p>
+      <p class="modal-sub" id="offlineTime"></p>
+      <button id="welcomeClose" class="modal-btn">受け取る</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+/* Stardust Clicker — core logic (Vanilla JS)
+ * 市場調査で抽出したコアメカニクス F1-F7 + QoL(F8 まとめ買い / F9 ブースト)
+ * + 実績(F10) / デイリーボーナス(F11) / 演出強化(F12) / 恒久アップグレード(F13)
+ */
+(() => {
+  "use strict";
+
+  const SAVE_KEY = "stardust-clicker-save-v1";
+  const TICK_MS = 100;
+  const SAVE_INTERVAL_MS = 5000;
+  const OFFLINE_CAP_SEC = 8 * 3600;
+  const NEBULA_PER_BONUS = 0.02;   // 累計ネビュラ1個あたり +2%
+  const NEBULA_DIVISOR = 1e6;
+  const ACH_PER_BONUS = 0.01;      // 実績1個あたり +1%
+  const CRIT_CHANCE = 0.05;        // タップ時のクリティカル率
+  const CRIT_MULT = 7;
+  const DAY_MS = 86400000;
+
+  const GENERATORS = [
+    { id: "drone",   name: "探査ドローン",     icon: "🛰️", baseCost: 15,     costMul: 1.15, rate: 0.2 },
+    { id: "miner",   name: "採掘ロボ",         icon: "🤖", baseCost: 120,    costMul: 1.15, rate: 1.5 },
+    { id: "station", name: "宇宙ステーション", icon: "🛸", baseCost: 1300,   costMul: 1.16, rate: 9   },
+    { id: "warp",    name: "ワープゲート",     icon: "🌀", baseCost: 14000,  costMul: 1.17, rate: 55  },
+    { id: "dyson",   name: "ダイソン球",       icon: "☀️", baseCost: 200000, costMul: 1.18, rate: 350 },
+  ];
+
+  const CLICK_BASE_COST = 25;
+  const CLICK_COST_MUL = 1.6;
+
+  // 恒久アップグレード（ネビュラで購入）
+  const UPGRADES = [
+    { id: "click", name: "クリック増幅", icon: "👆", desc: (l) => `タップ獲得 +${l * 50}%`,   max: 10, cost: (l) => 1 + l },
+    { id: "prod",  name: "生産加速",     icon: "⚙️", desc: (l) => `自動生産 +${l * 25}%`,     max: 10, cost: (l) => 1 + l },
+    { id: "boost", name: "ブースト強化", icon: "⚡", desc: (l) => `ブースト +${l * 5}秒 / CD -${l * 5}秒`, max: 6, cost: (l) => 2 + l * 2 },
+    { id: "idle",  name: "放置の達人",   icon: "💤", desc: (l) => `放置上限 +${l}時間 / 効率 +${l * 10}%`, max: 8, cost: (l) => 2 + l * 2 },
+  ];
+
+  // ブースト
+  const BOOST_MULT = 2;
+  const BOOST_DURATION_MS = 30000;
+  const BOOST_COOLDOWN_MS = 120000;
+  let boostUntil = 0;
+  let boostCooldownUntil = 0;
+
+  // 実績（check は state を受け取り、達成なら true）
+  const ACHIEVEMENTS = [
+    { id: "tap50",     name: "はじめの一歩",     desc: "50回タップ",        check: (s) => s.lifetime.taps >= 50 },
+    { id: "tap1000",   name: "連打マスター",     desc: "1,000回タップ",     check: (s) => s.lifetime.taps >= 1000 },
+    { id: "earn1k",    name: "塵も積もれば",     desc: "累計1,000獲得",     check: (s) => s.lifetime.earned >= 1000 },
+    { id: "earn1m",    name: "スターダスト長者", desc: "累計1M獲得",        check: (s) => s.lifetime.earned >= 1e6 },
+    { id: "earn1b",    name: "銀河の支配者",     desc: "累計1B獲得",        check: (s) => s.lifetime.earned >= 1e9 },
+    { id: "gen10",     name: "自動化の芽",       desc: "ユニット合計10個",  check: (s) => totalGens(s) >= 10 },
+    { id: "gen100",    name: "量産体制",         desc: "ユニット合計100個", check: (s) => totalGens(s) >= 100 },
+    { id: "dyson1",    name: "恒星をその手に",   desc: "ダイソン球を1個",   check: (s) => countById(s, "dyson") >= 1 },
+    { id: "boost1",    name: "加速装置",         desc: "ブーストを使用",    check: (s) => s.lifetime.boostUsed },
+    { id: "prestige1", name: "生まれ変わり",     desc: "初めての転生",      check: (s) => s.lifetime.prestiges >= 1 },
+    { id: "prestige5", name: "輪廻の探究者",     desc: "5回転生",           check: (s) => s.lifetime.prestiges >= 5 },
+  ];
+
+  // ---- State ----
+  let state = newState();
+
+  function newRun() {
+    return {
+      stardust: 0,
+      runEarned: 0,
+      clickLevel: 0,
+      generators: GENERATORS.map((g) => ({ id: g.id, count: 0 })),
+    };
+  }
+
+  function newState() {
+    return Object.assign(newRun(), {
+      nebula: 0,          // 使用可能なネビュラ
+      nebulaEarned: 0,    // 累計獲得ネビュラ（恒久ボーナスの基準）
+      upgrades: { click: 0, prod: 0, boost: 0, idle: 0 },
+      achievements: {},
+      lifetime: { earned: 0, taps: 0, prestiges: 0, boostUsed: false },
+      daily: { lastClaimDay: -1, streak: 0 },
+      settings: { sound: true, vibe: true },
+      buyMode: 1,
+      lastSeen: Date.now(),
+    });
+  }
+
+  // ---- 補助 ----
+  function totalGens(s) { return s.generators.reduce((a, g) => a + g.count, 0); }
+  function countById(s, id) { const g = s.generators.find((x) => x.id === id); return g ? g.count : 0; }
+  function upLevel(id) { return state.upgrades[id] || 0; }
+  function achUnlockedCount() { return Object.keys(state.achievements).length; }
+
+  // ---- 倍率 ----
+  function nebulaMultiplier() { return 1 + state.nebulaEarned * NEBULA_PER_BONUS; }
+  function achievementMultiplier() { return 1 + achUnlockedCount() * ACH_PER_BONUS; }
+  function boostActive() { return Date.now() < boostUntil; }
+  function boostMultiplier() { return boostActive() ? BOOST_MULT : 1; }
+  function globalMultiplier() { return nebulaMultiplier() * achievementMultiplier() * boostMultiplier(); }
+
+  function clickUpgradeMult() { return 1 + upLevel("click") * 0.5; }
+  function prodUpgradeMult() { return 1 + upLevel("prod") * 0.25; }
+  function boostDuration() { return BOOST_DURATION_MS + upLevel("boost") * 5000; }
+  function boostCooldown() { return Math.max(30000, BOOST_COOLDOWN_MS - upLevel("boost") * 5000); }
+  function offlineCapSec() { return OFFLINE_CAP_SEC + upLevel("idle") * 3600; }
+  function offlineRate() { return 1 + upLevel("idle") * 0.1; }
+
+  function perClick() { return (1 + state.clickLevel) * clickUpgradeMult() * globalMultiplier(); }
+  function clickCost() { return Math.floor(CLICK_BASE_COST * Math.pow(CLICK_COST_MUL, state.clickLevel)); }
+
+  function genCostN(i, n) {
+    const def = GENERATORS[i];
+    const mul = def.costMul;
+    const first = def.baseCost * Math.pow(mul, state.generators[i].count);
+    return Math.floor((first * (Math.pow(mul, n) - 1)) / (mul - 1));
+  }
+  function maxAffordable(i) {
+    const def = GENERATORS[i];
+    const mul = def.costMul;
+    const first = def.baseCost * Math.pow(mul, state.generators[i].count);
+    const n = Math.floor(Math.log(1 + (state.stardust * (mul - 1)) / first) / Math.log(mul));
+    return Math.max(0, n);
+  }
+  function buyPlan(i) {
+    if (state.buyMode === "max") {
+      const n = maxAffordable(i);
+      return { n, cost: genCostN(i, Math.max(1, n)) };
+    }
+    const n = state.buyMode;
+    return { n, cost: genCostN(i, n) };
+  }
+
+  function perSecond() {
+    let raw = 0;
+    GENERATORS.forEach((def, i) => { raw += def.rate * state.generators[i].count; });
+    return raw * prodUpgradeMult() * globalMultiplier();
+  }
+
+  function nebulaGain() { return Math.floor(Math.sqrt(state.runEarned / NEBULA_DIVISOR)); }
+
+  // ---- 桁表記 ----
+  const SUFFIX = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
+  function fmt(n) {
+    if (n < 1000) return Number.isInteger(n) ? String(n) : n.toFixed(1);
+    let tier = Math.floor(Math.log10(n) / 3);
+    if (tier >= SUFFIX.length) tier = SUFFIX.length - 1;
+    return (n / Math.pow(10, tier * 3)).toFixed(2) + SUFFIX[tier];
+  }
+
+  function earn(amount) {
+    state.stardust += amount;
+    state.runEarned += amount;
+    state.lifetime.earned += amount;
+  }
+
+  // ---- 演出（効果音 / 触覚 / トースト） ----
+  let audioCtx = null;
+  function beep(freq, dur = 0.06, type = "sine", gain = 0.04) {
+    if (!state.settings.sound) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = type; osc.frequency.value = freq;
+      g.gain.value = gain;
+      osc.connect(g); g.connect(audioCtx.destination);
+      const t = audioCtx.currentTime;
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.start(t); osc.stop(t + dur);
+    } catch (e) { /* noop */ }
+  }
+  function vibrate(ms) {
+    if (state.settings.vibe && navigator.vibrate) navigator.vibrate(ms);
+  }
+  let toastTimer = null;
+  function toast(msg) {
+    const t = el("toast");
+    t.textContent = msg;
+    t.classList.remove("hidden");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.add("hidden"), 2600);
+  }
+
+  // ---- DOM ----
+  const el = (id) => document.getElementById(id);
+  let dom = {};
+
+  function buildGeneratorCards() {
+    dom.generators.innerHTML = "";
+    GENERATORS.forEach((def, i) => {
+      const card = document.createElement("div");
+      card.className = "gen-card";
+      card.innerHTML = `
+        <div class="gen-icon">${def.icon}</div>
+        <div class="gen-body">
+          <div class="gen-name">${def.name}<span class="gen-count" data-count="${i}">×0</span></div>
+          <div class="gen-desc">毎秒 +${fmt(def.rate)} / 個</div>
+        </div>
+        <div class="gen-cost" data-cost="${i}">${fmt(def.baseCost)}</div>`;
+      card.addEventListener("click", () => buyGenerator(i));
+      dom.generators.appendChild(card);
+    });
+  }
+
+  function buildUpgradeCards() {
+    dom.upgrades.innerHTML = "";
+    UPGRADES.forEach((u) => {
+      const card = document.createElement("div");
+      card.className = "gen-card";
+      card.innerHTML = `
+        <div class="gen-icon">${u.icon}</div>
+        <div class="gen-body">
+          <div class="gen-name">${u.name}<span class="gen-count" data-uplv="${u.id}">Lv.0</span></div>
+          <div class="gen-desc" data-updesc="${u.id}"></div>
+        </div>
+        <div class="gen-cost" data-upcost="${u.id}">🌌1</div>`;
+      card.addEventListener("click", () => buyUpgrade(u.id));
+      dom.upgrades.appendChild(card);
+    });
+  }
+
+  function buildAchievementCards() {
+    dom.achievements.innerHTML = "";
+    el("achTotal").textContent = ACHIEVEMENTS.length;
+    ACHIEVEMENTS.forEach((a) => {
+      const card = document.createElement("div");
+      card.className = "ach-card locked";
+      card.dataset.ach = a.id;
+      card.innerHTML = `
+        <div class="ach-icon">🏅</div>
+        <div class="ach-body">
+          <div class="ach-name">${a.name}</div>
+          <div class="ach-desc">${a.desc}</div>
+        </div>`;
+      dom.achievements.appendChild(card);
+    });
+  }
+
+  // ---- アクション ----
+  function tap(clientX, clientY) {
+    state.lifetime.taps += 1;
+    const crit = Math.random() < CRIT_CHANCE;
+    let gain = perClick();
+    if (crit) gain *= CRIT_MULT;
+    earn(gain);
+    spawnFloater((crit ? "💥+" : "+") + fmt(gain), clientX, clientY, crit);
+    beep(crit ? 880 : 660, crit ? 0.1 : 0.05, crit ? "square" : "sine", crit ? 0.06 : 0.035);
+    vibrate(crit ? 25 : 8);
+    checkAchievements();
+    render();
+  }
+
+  function buyClickUpgrade() {
+    const cost = clickCost();
+    if (state.stardust < cost) return;
+    state.stardust -= cost;
+    state.clickLevel += 1;
+    beep(520, 0.06, "triangle");
+    render();
+  }
+
+  function buyGenerator(i) {
+    const { n, cost } = buyPlan(i);
+    if (n < 1 || state.stardust < cost) return;
+    state.stardust -= cost;
+    state.generators[i].count += n;
+    beep(440, 0.06, "triangle");
+    checkAchievements();
+    render();
+  }
+
+  function buyUpgrade(id) {
+    const def = UPGRADES.find((u) => u.id === id);
+    const lv = upLevel(id);
+    if (lv >= def.max) return;
+    const cost = def.cost(lv);
+    if (state.nebula < cost) return;
+    state.nebula -= cost;
+    state.upgrades[id] = lv + 1;
+    beep(700, 0.08, "triangle");
+    toast(`${def.name} Lv.${lv + 1}！`);
+    render();
+  }
+
+  function setBuyMode(mode) {
+    state.buyMode = mode;
+    document.querySelectorAll(".bm").forEach((b) =>
+      b.classList.toggle("active", String(b.dataset.mode) === String(mode)));
+    render();
+  }
+
+  function activateBoost() {
+    const now = Date.now();
+    if (now < boostUntil || now < boostCooldownUntil) return;
+    boostUntil = now + boostDuration();
+    boostCooldownUntil = boostUntil + boostCooldown();
+    state.lifetime.boostUsed = true;
+    beep(990, 0.18, "sawtooth", 0.05);
+    checkAchievements();
+    render();
+  }
+
+  function doPrestige() {
+    const gain = nebulaGain();
+    if (gain <= 0) return;
+    if (!confirm(`転生して ${gain} ネビュラを獲得しますか？\n（スターダスト・ユニット・クリック強化はリセットされます。ネビュラ/強化/実績は保持）`)) return;
+    state.nebula += gain;
+    state.nebulaEarned += gain;
+    state.lifetime.prestiges += 1;
+    Object.assign(state, newRun());
+    beep(300, 0.3, "sine", 0.06);
+    checkAchievements();
+    save();
+    render();
+  }
+
+  function wipe() {
+    if (!confirm("セーブデータを完全に消去します。よろしいですか？")) return;
+    localStorage.removeItem(SAVE_KEY);
+    state = newState();
+    buildGeneratorCards();
+    render();
+  }
+
+  // ---- 実績判定 ----
+  function checkAchievements() {
+    ACHIEVEMENTS.forEach((a) => {
+      if (!state.achievements[a.id] && a.check(state)) {
+        state.achievements[a.id] = true;
+        toast(`🏆 実績解除: ${a.name}（全生産 +1%）`);
+        beep(784, 0.12, "square", 0.05);
+        setTimeout(() => beep(1047, 0.14, "square", 0.05), 90);
+      }
+    });
+  }
+
+  // ---- デイリーボーナス ----
+  function todayIndex() { return Math.floor(Date.now() / DAY_MS); }
+  function dailyAvailable() { return state.daily.lastClaimDay !== todayIndex(); }
+  function claimDaily() {
+    if (!dailyAvailable()) return;
+    const today = todayIndex();
+    state.daily.streak = state.daily.lastClaimDay === today - 1 ? state.daily.streak + 1 : 1;
+    state.daily.lastClaimDay = today;
+    const mult = Math.min(state.daily.streak, 7);
+    const reward = Math.max(100, perSecond() * 1800) * mult; // 30分相当 × 連続日数(最大7)
+    earn(reward);
+    toast(`🎁 デイリー ${state.daily.streak}日目: +${fmt(reward)}（×${mult}）`);
+    beep(660, 0.1, "triangle"); setTimeout(() => beep(880, 0.12, "triangle"), 90);
+    render();
+  }
+
+  // ---- 演出: フローティング ----
+  function spawnFloater(text, clientX, clientY, crit) {
+    const rect = dom.floaters.getBoundingClientRect();
+    const f = document.createElement("div");
+    f.className = "floater" + (crit ? " crit" : "");
+    f.textContent = text;
+    const x = (clientX ?? rect.left + rect.width / 2) - rect.left;
+    const y = (clientY ?? rect.top + rect.height / 2) - rect.top;
+    f.style.left = `${x - 16 + (Math.random() * 24 - 12)}px`;
+    f.style.top = `${y - 10}px`;
+    dom.floaters.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+  }
+
+  // ---- 描画 ----
+  function render() {
+    dom.stardust.textContent = fmt(Math.floor(state.stardust));
+    dom.perSecond.textContent = `毎秒 ${fmt(perSecond())}`;
+
+    // クリック強化
+    dom.perClick.textContent = fmt(perClick());
+    dom.clickLevel.textContent = `Lv.${state.clickLevel}`;
+    const cCost = clickCost();
+    dom.clickCost.textContent = fmt(cCost);
+    dom.clickUpgrade.classList.toggle("affordable", state.stardust >= cCost);
+
+    // 自動生産（まとめ買い）
+    GENERATORS.forEach((def, i) => {
+      const { n, cost } = buyPlan(i);
+      const affordable = n >= 1 && state.stardust >= cost;
+      const countEl = dom.generators.querySelector(`[data-count="${i}"]`);
+      const costEl = dom.generators.querySelector(`[data-cost="${i}"]`);
+      if (countEl) countEl.textContent = `×${state.generators[i].count}`;
+      if (costEl) {
+        const qty = state.buyMode === "max" ? (n >= 1 ? `×${n}  ` : "×0  ") : "";
+        costEl.textContent = qty + fmt(cost);
+        costEl.classList.toggle("cant", !affordable);
+      }
+      const card = costEl && costEl.closest(".gen-card");
+      if (card) card.classList.toggle("affordable", affordable);
+    });
+
+    // 恒久アップグレード
+    el("upNebula").textContent = fmt(state.nebula);
+    UPGRADES.forEach((u) => {
+      const lv = upLevel(u.id);
+      const lvEl = dom.upgrades.querySelector(`[data-uplv="${u.id}"]`);
+      const descEl = dom.upgrades.querySelector(`[data-updesc="${u.id}"]`);
+      const costEl = dom.upgrades.querySelector(`[data-upcost="${u.id}"]`);
+      if (lvEl) lvEl.textContent = `Lv.${lv}/${u.max}`;
+      if (descEl) descEl.textContent = u.desc(lv);
+      const maxed = lv >= u.max;
+      const cost = maxed ? 0 : u.cost(lv);
+      if (costEl) {
+        costEl.textContent = maxed ? "MAX" : `🌌${fmt(cost)}`;
+        costEl.classList.toggle("cant", !maxed && state.nebula < cost);
+      }
+      const card = costEl && costEl.closest(".gen-card");
+      if (card) card.classList.toggle("affordable", !maxed && state.nebula >= cost);
+    });
+
+    // 実績
+    const unlocked = achUnlockedCount();
+    el("achCount").textContent = unlocked;
+    el("achBonus").textContent = (unlocked * ACH_PER_BONUS * 100).toFixed(0);
+    ACHIEVEMENTS.forEach((a) => {
+      const card = dom.achievements.querySelector(`[data-ach="${a.id}"]`);
+      if (card) card.classList.toggle("locked", !state.achievements[a.id]);
+    });
+
+    // 転生
+    dom.nebula.textContent = fmt(state.nebula);
+    dom.nebulaBonus.textContent = (state.nebulaEarned * NEBULA_PER_BONUS * 100).toFixed(0);
+    const gain = nebulaGain();
+    dom.nebulaGain.textContent = fmt(gain);
+    dom.prestigeButton.disabled = gain <= 0;
+    dom.prestigeHint.textContent =
+      gain <= 0 ? `次のネビュラまで累計 ${fmt(NEBULA_DIVISOR * Math.pow(nebulaGain() + 1, 2))} の獲得が必要` : "";
+
+    // デイリー / 設定表示
+    el("dailyBanner").classList.toggle("hidden", !dailyAvailable());
+    el("soundToggle").textContent = state.settings.sound ? "🔊" : "🔇";
+    el("soundToggle").classList.toggle("off", !state.settings.sound);
+    el("vibeToggle").classList.toggle("off", !state.settings.vibe);
+
+    renderBoost();
+  }
+
+  function renderBoost() {
+    const now = Date.now();
+    const btn = dom.boostButton;
+    if (!btn) return;
+    if (now < boostUntil) {
+      btn.textContent = `⚡ ブースト中 x${BOOST_MULT}（残り${Math.ceil((boostUntil - now) / 1000)}秒）`;
+      btn.className = "boost active"; btn.disabled = true;
+    } else if (now < boostCooldownUntil) {
+      btn.textContent = `⏳ クールダウン（${Math.ceil((boostCooldownUntil - now) / 1000)}秒）`;
+      btn.className = "boost cooldown"; btn.disabled = true;
+    } else {
+      btn.textContent = `⚡ ブースト（x${BOOST_MULT} / ${boostDuration() / 1000}秒）`;
+      btn.className = "boost"; btn.disabled = false;
+    }
+  }
+
+  // ---- ループ ----
+  let acc = 0;
+  function loop() {
+    const inc = perSecond() * (TICK_MS / 1000);
+    if (inc > 0) earn(inc);
+    checkAchievements();
+    render();
+    acc += TICK_MS;
+    if (acc >= SAVE_INTERVAL_MS) { acc = 0; save(); }
+  }
+
+  // ---- セーブ / ロード ----
+  function save() {
+    state.lastSeen = Date.now();
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      dom.saveStatus.textContent = `保存済 ${new Date().toLocaleTimeString("ja-JP")}`;
+    } catch (e) { dom.saveStatus.textContent = "保存失敗"; }
+  }
+
+  function load() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    let data;
+    try { data = JSON.parse(raw); } catch (e) { return; }
+    state = Object.assign(newState(), data);
+    // 旧バージョンからの移行・欠損補完
+    state.upgrades = Object.assign({ click: 0, prod: 0, boost: 0, idle: 0 }, data.upgrades);
+    state.achievements = data.achievements || {};
+    state.lifetime = Object.assign({ earned: 0, taps: 0, prestiges: 0, boostUsed: false }, data.lifetime);
+    state.daily = Object.assign({ lastClaimDay: -1, streak: 0 }, data.daily);
+    state.settings = Object.assign({ sound: true, vibe: true }, data.settings);
+    if (data.runEarned == null && data.totalEarned != null) state.runEarned = data.totalEarned;
+    if (data.nebulaEarned == null) state.nebulaEarned = data.nebula || 0;
+    if (!data.lifetime && data.totalEarned != null) state.lifetime.earned = data.totalEarned;
+    state.generators = GENERATORS.map((g) => {
+      const found = (data.generators || []).find((x) => x.id === g.id);
+      return { id: g.id, count: found ? found.count : 0 };
+    });
+  }
+
+  function applyOfflineEarnings() {
+    const now = Date.now();
+    const dt = Math.min((now - (state.lastSeen || now)) / 1000, offlineCapSec());
+    if (dt < 5) return;
+    const earned = perSecond() * dt * offlineRate();
+    if (earned <= 0) return;
+    earn(earned);
+    el("offlineEarned").textContent = fmt(Math.floor(earned));
+    const mins = Math.floor(dt / 60);
+    el("offlineTime").textContent = `離席 ${Math.floor(mins / 60)}時間${mins % 60}分（上限${offlineCapSec() / 3600}時間 / 効率${(offlineRate() * 100).toFixed(0)}%）`;
+    el("welcomeModal").classList.remove("hidden");
+  }
+
+  // ---- イベント結線 ----
+  function bind() {
+    dom.tapButton.addEventListener("pointerdown", (e) => { e.preventDefault(); tap(e.clientX, e.clientY); });
+    dom.clickUpgrade.addEventListener("click", buyClickUpgrade);
+    dom.prestigeButton.addEventListener("click", doPrestige);
+    dom.boostButton.addEventListener("click", activateBoost);
+    el("dailyBanner").addEventListener("click", claimDaily);
+    el("wipeButton").addEventListener("click", wipe);
+    el("welcomeClose").addEventListener("click", () => el("welcomeModal").classList.add("hidden"));
+
+    el("soundToggle").addEventListener("click", () => { state.settings.sound = !state.settings.sound; if (state.settings.sound) beep(660); render(); });
+    el("vibeToggle").addEventListener("click", () => { state.settings.vibe = !state.settings.vibe; vibrate(15); render(); });
+
+    document.querySelectorAll(".bm").forEach((b) => {
+      b.addEventListener("click", () => setBuyMode(b.dataset.mode === "max" ? "max" : Number(b.dataset.mode)));
+    });
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        const name = tab.dataset.tab;
+        ["shop", "upgrades", "achievements", "prestige"].forEach((n) =>
+          el("tab-" + n).classList.toggle("hidden", n !== name));
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
+    window.addEventListener("beforeunload", save);
+  }
+
+  // ---- 起動 ----
+  function init() {
+    dom = {
+      stardust: el("stardust"), perSecond: el("perSecond"), tapButton: el("tapButton"),
+      floaters: el("floaters"), perClick: el("perClick"), clickLevel: el("clickLevel"),
+      clickCost: el("clickCost"), clickUpgrade: el("clickUpgrade"), generators: el("generators"),
+      upgrades: el("upgrades"), achievements: el("achievements"),
+      nebula: el("nebula"), nebulaBonus: el("nebulaBonus"), nebulaGain: el("nebulaGain"),
+      prestigeButton: el("prestigeButton"), prestigeHint: el("prestigeHint"),
+      saveStatus: el("saveStatus"), boostButton: el("boostButton"),
+    };
+    buildGeneratorCards();
+    buildUpgradeCards();
+    buildAchievementCards();
+    load();
+    bind();
+    setBuyMode(state.buyMode || 1);
+    applyOfflineEarnings();
+    checkAchievements();
+    render();
+    setInterval(loop, TICK_MS);
+
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+
+</script>
+</body>
+</html>
