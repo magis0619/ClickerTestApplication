@@ -25,12 +25,18 @@ const browser = await chromium.launch();
 
 // 進行後セーブデータ（ロード前に seed）
 const PROGRESS = {
-  stardust: 48230, totalEarned: 4200000, clickLevel: 6,
+  stardust: 48230, runEarned: 4200000, clickLevel: 6,
   generators: [
     { id: 'drone', count: 22 }, { id: 'miner', count: 11 },
     { id: 'station', count: 4 }, { id: 'warp', count: 1 }, { id: 'dyson', count: 0 },
   ],
-  nebula: 3, buyMode: 1, lastSeen: Date.now(),
+  nebula: 8, nebulaEarned: 12,
+  upgrades: { click: 2, prod: 3, boost: 1, idle: 0 },
+  achievements: { tap50: true, tap1000: true, earn1k: true, earn1m: true, gen10: true, gen100: true, prestige1: true },
+  lifetime: { earned: 4200000, taps: 1200, prestiges: 2, boostUsed: true },
+  daily: { lastClaimDay: -1, streak: 0 },
+  settings: { sound: true, vibe: true },
+  buyMode: 1, lastSeen: Date.now(),
 };
 
 // --- 2) 進行後（ショップ） / 3) 転生 / 4) QoL ---
@@ -56,6 +62,16 @@ const PROGRESS = {
   await page.locator('#boostButton').click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: OUT + '/04-qol.png' });
+
+  // 5) 恒久アップグレード（強化タブ）
+  await page.locator('.tab[data-tab="upgrades"]').click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: OUT + '/05-upgrades.png' });
+
+  // 6) 実績タブ
+  await page.locator('.tab[data-tab="achievements"]').click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: OUT + '/06-achievements.png' });
   await ctx.close();
 }
 

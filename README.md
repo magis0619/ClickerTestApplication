@@ -28,12 +28,20 @@
 - **F7 転生（ネビュラ）** — 進行リセットと引き換えに永続 +2%/個ブースト
 - **F8 まとめ買い** — ×1 / ×10 / Max を切替（Max は所持額で買える最大数を一括購入）
 - **F9 タップブースト** — 一定時間 全生産・タップが ×2、終了後クールダウン
+- **F10 実績** — 11種を自動判定、解除ごとに全生産 +1%（トースト通知）
+- **F11 デイリーボーナス** — 1日1回・連続日数で報酬増（最大×7）
+- **F12 演出強化** — 効果音(WebAudio)/触覚(Vibration)/クリティカル(5%で×7)・設定でON/OFF
+- **F13 恒久アップグレード** — ネビュラで4系統(クリック/生産/ブースト/放置)を強化
 
 ## スクリーンショット
 
-| 初期状態 | 進行後 | 転生タブ | QoL（Max買い＋ブースト中） |
+| 初期状態 | 進行後 | 転生 | QoL（Max買い＋ブースト） |
 |---|---|---|---|
 | ![start](docs/screenshots/01-start.png) | ![progress](docs/screenshots/02-progress.png) | ![prestige](docs/screenshots/03-prestige.png) | ![qol](docs/screenshots/04-qol.png) |
+
+| 恒久アップグレード（強化） | 実績 |
+|---|---|
+| ![upgrades](docs/screenshots/05-upgrades.png) | ![achievements](docs/screenshots/06-achievements.png) |
 
 > Chromium（iPhone 相当 390×844）で実配信・操作して撮影。
 > 撮影スクリプト: [docs/screenshots/shot.mjs](docs/screenshots/shot.mjs)（Playwright）

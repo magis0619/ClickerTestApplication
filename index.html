@@ -32,8 +32,12 @@
       <button id="boostButton" class="boost">⚡ ブースト</button>
     </div>
 
+    <button id="dailyBanner" class="daily-banner hidden">🎁 デイリーボーナスを受け取る</button>
+
     <nav class="tabs">
       <button class="tab active" data-tab="shop">ショップ</button>
+      <button class="tab" data-tab="upgrades">強化</button>
+      <button class="tab" data-tab="achievements">実績</button>
       <button class="tab" data-tab="prestige">転生</button>
     </nav>
 
@@ -55,15 +59,33 @@
       <div id="generators"></div>
     </section>
 
+    <section id="tab-upgrades" class="panel hidden">
+      <div class="panel-head">
+        <span>🌌 ネビュラで恒久強化</span>
+        <span class="panel-sub">保有: <strong id="upNebula">0</strong></span>
+      </div>
+      <div id="upgrades"></div>
+    </section>
+
+    <section id="tab-achievements" class="panel hidden">
+      <div class="panel-head">
+        <span>🏆 実績</span>
+        <span class="panel-sub"><strong id="achCount">0</strong>/<span id="achTotal">0</span>（全生産 +<span id="achBonus">0</span>%）</span>
+      </div>
+      <div id="achievements"></div>
+    </section>
+
     <section id="tab-prestige" class="panel hidden">
       <div class="prestige-box">
         <div class="prestige-title">🌌 転生（ネビュラ）</div>
         <p class="prestige-desc">
           進行をリセットする代わりに <strong>ネビュラ</strong> を獲得します。<br />
-          ネビュラ 1 個につき全生産・タップが <strong>+2%</strong> 永続強化されます。
+          累計ネビュラ 1 個につき全生産・タップが <strong>+2%</strong> 永続強化されます。<br />
+          ネビュラは「強化」タブで恒久アップグレードにも使えます。
         </p>
         <div class="prestige-stats">
-          <div>保有ネビュラ: <strong id="nebula">0</strong>（現在ボーナス +<span id="nebulaBonus">0</span>%）</div>
+          <div>保有ネビュラ: <strong id="nebula">0</strong></div>
+          <div>累計ボーナス: +<span id="nebulaBonus">0</span>%</div>
           <div>転生で獲得: <strong id="nebulaGain">0</strong></div>
         </div>
         <button id="prestigeButton" class="prestige-btn" disabled>転生する</button>
@@ -72,6 +94,10 @@
     </section>
 
     <footer class="footer">
+      <div class="settings">
+        <button id="soundToggle" class="toggle" title="効果音">🔊</button>
+        <button id="vibeToggle" class="toggle" title="バイブ">📳</button>
+      </div>
       <span id="saveStatus">—</span>
       <button id="wipeButton" class="wipe">データ消去</button>
     </footer>
@@ -85,6 +111,8 @@
       <button id="welcomeClose" class="modal-btn">受け取る</button>
     </div>
   </div>
+
+  <div id="toast" class="toast hidden"></div>
 
   <script src="game.js"></script>
 </body>
