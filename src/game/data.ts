@@ -206,8 +206,8 @@ export const GUARD_DAMAGE_MULT = 0.55;
 export const PERFECT_HP_RECOVER = 18;
 
 // ===== パーフェクトガードの演出・怯ませ =====
-/** パーフェクト成功時のヒットストップ（一瞬の静止）時間 */
-export const HITSTOP_MS = 110;
+/** パーフェクト成功時のヒットストップ（一瞬の静止）時間。長めにして弾きの手応えを強調 */
+export const HITSTOP_MS = 520;
 /** パーフェクトで敵に与える怯み（次の攻撃を遅らせる）時間 */
 export const PERFECT_FLINCH_MS = 650;
 /** パーフェクトで敵のブレイクゲージに加算する蓄積量 */

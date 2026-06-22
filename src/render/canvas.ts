@@ -4,21 +4,47 @@ import { WARDEN, CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite } from "./sprites.
 import type { EnemyKind } from "../game/types.ts";
 
 const W = 480;
-const H = 320;
-const PLAYER_POS = { x: 90, y: 215 };
+const H = 400;
+const PLAYER_POS = { x: 74, y: 352 };
+const GROUND_Y = 300;
 
-/** N体の敵の配置スロット（描画と当たり判定で共有） */
-export function enemySlots(n: number): { x: number; y: number }[] {
-  if (n <= 1) return [{ x: 360, y: 195 }];
-  if (n === 2) return [{ x: 300, y: 170 }, { x: 415, y: 205 }];
-  if (n === 3) return [{ x: 265, y: 150 }, { x: 360, y: 205 }, { x: 445, y: 150 }];
-  // 4体以上は等間隔
-  const out: { x: number; y: number }[] = [];
+/** 敵カードの配置情報（カード枠・スプライト足元位置） */
+interface EnemyLayout {
+  left: number; top: number; w: number; h: number; cx: number; footY: number;
+}
+
+/** 敵カードを横一列に並べる配置を計算 */
+function enemyLayout(n: number): EnemyLayout[] {
+  const margin = 12, gap = 10, top = 86, h = 160;
+  const maxCard = 190;
+  const cardW = Math.min(maxCard, (W - 2 * margin - (n - 1) * gap) / Math.max(1, n));
+  const totalW = cardW * n + gap * (n - 1);
+  const startX = (W - totalW) / 2;
+  const out: EnemyLayout[] = [];
   for (let i = 0; i < n; i++) {
-    out.push({ x: 250 + (i * 200) / (n - 1), y: i % 2 === 0 ? 150 : 205 });
+    const left = startX + i * (cardW + gap);
+    out.push({ left, top, w: cardW, h, cx: left + cardW / 2, footY: top + h - 30 });
   }
   return out;
 }
+
+/** N体の敵の配置スロット（当たり判定で共有：スプライト中心） */
+export function enemySlots(n: number): { x: number; y: number }[] {
+  return enemyLayout(n).map((L) => ({ x: L.cx, y: L.footY }));
+}
+
+/** 角丸矩形パス */
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+const WCLASS_COLOR: Record<string, string> = { slash: "#5fa8ff", pierce: "#7fe070", crush: "#ffb347" };
 
 const ENEMY_SPRITE: Record<EnemyKind, Sprite> = {
   carapace: CARAPACE,
@@ -76,23 +102,32 @@ export function render(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
+  // 地面のライン
   ctx.strokeStyle = "#2e2750";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(0, 255);
-  ctx.lineTo(W, 255);
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(W, GROUND_Y);
   ctx.stroke();
 
-  const slots = enemySlots(b.enemies.length);
+  const layout = enemyLayout(b.enemies.length);
+  const slots = layout.map((L) => ({ x: L.cx, y: L.footY }));
 
-  // 画面シェイク（エンティティ層のみ）
+  // 「次に攻撃する敵」（生存・非ブレイクで最も着弾が近い）を特定
+  let imminent = -1, best = Infinity;
+  b.enemies.forEach((e, i) => {
+    if (e.alive && !e.isBroken && e.flinchT <= 0 && e.atkTimer < best) { best = e.atkTimer; imminent = i; }
+  });
+
+  // 画面シェイク（ヒットストップ中はフリーズフレームにして揺らさない）
   ctx.save();
-  if (b.shakeT > 0) {
+  if (b.shakeT > 0 && b.hitstopT <= 0) {
     const mag = Math.min(b.shakeMag, b.shakeMag * (b.shakeT / 120));
     ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
   }
   drawPlayer(ctx, b);
-  b.enemies.forEach((e, i) => drawEnemy(ctx, e, slots[i], i === b.targetIndex && e.alive));
+  b.enemies.forEach((e, i) =>
+    drawEnemyCard(ctx, e, layout[i], i === imminent, i === b.targetIndex && e.alive));
   if (b.perfectFxT > 0 && b.perfectFxIndex >= 0) {
     drawPerfectFx(ctx, b, slots[b.perfectFxIndex]);
   }
@@ -101,12 +136,14 @@ export function render(
 
   drawPlayerHud(ctx, b);
   if (stage) {
-    ctx.textAlign = "center";
+    ctx.textAlign = "right";
     ctx.font = "11px monospace";
     ctx.fillStyle = "#9690c4";
-    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W / 2, 14);
+    ctx.fillText(`STAGE ${stage.index + 1} / ${stage.count}`, W - 12, 24);
   }
 
+  drawWarningBanner(ctx, b, imminent);
+  drawTargetArrows(ctx, b);
   drawGuardBadge(ctx, b);
   if (b.phase !== "fighting") drawResult(ctx, b);
 }
@@ -142,49 +179,98 @@ export function drawBackdrop(ctx: CanvasRenderingContext2D, title: string, subti
 function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const { x, y } = PLAYER_POS;
   // 攻撃時の踏み込み（前に出てから戻る）
-  const lunge = b.lungeT > 0 ? Math.sin(Math.PI * (1 - b.lungeT / 200)) * 16 : 0;
-  drawSprite(ctx, WARDEN, x + lunge, y, 4);
+  const lunge = b.lungeT > 0 ? Math.sin(Math.PI * (1 - b.lungeT / 200)) * 20 : 0;
+  drawSprite(ctx, WARDEN, x + lunge, y, 5);
   if (b.charge > 1) {
     ctx.textAlign = "center";
-    ctx.font = "bold 11px monospace";
+    ctx.font = "bold 12px monospace";
     ctx.fillStyle = "#ffd35f";
-    ctx.fillText("CHARGED", x, y - 64);
+    ctx.fillText("CHARGED", x, y - 80);
   }
 }
 
-function drawEnemy(
+/** 敵1体をカード形式で描画（枠・弱点バッジ・名前・HP・スプライト・カウント） */
+function drawEnemyCard(
   ctx: CanvasRenderingContext2D,
   e: EnemyState,
-  pos: { x: number; y: number },
+  L: EnemyLayout,
+  imminent: boolean,
   targeted: boolean,
 ): void {
-  const { x, y } = pos;
   const sprite = e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
-  const scale = e.def.boss ? 4 : 3;
+  const scale = e.def.boss ? 5 : 4;
 
-  // 撃破演出（ノックバック→フェード→ドロップのきらめき）。完全に消えたら描かない
+  // 撃破演出：カード枠は出さず、ノックバック→フェードのみ
   if (!e.alive) {
-    if (e.deathT > 0) drawDeath(ctx, e, x, y, sprite, scale);
+    if (e.deathT > 0) drawDeath(ctx, e, L.cx, L.footY, sprite, scale);
     return;
   }
 
-  // === 緊張演出：着弾が近いほど「震え」、予兆では「赤く点滅」 ===
   const danger = e.danger;
+
+  // === カード枠 ===
+  ctx.save();
+  if (imminent && danger > 0.25) {
+    // 次に攻撃する敵：赤く強調＋グロー
+    const glow = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 80 : 150));
+    ctx.shadowColor = "#ff3b3b";
+    ctx.shadowBlur = 10 + glow * 12;
+    roundRect(ctx, L.left, L.top, L.w, L.h, 10);
+    ctx.fillStyle = "rgba(60,18,24,0.55)";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = `rgba(255,80,80,${0.6 + glow * 0.4})`;
+    ctx.stroke();
+  } else {
+    roundRect(ctx, L.left, L.top, L.w, L.h, 10);
+    ctx.fillStyle = "rgba(20,16,42,0.5)";
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = targeted ? "#ffea00" : "#332c5a";
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // === 弱点バッジ（左上の丸：弱点となる武器系統） ===
+  const weak = WEAKNESS[e.def.kind];
+  const bx = L.left + 16, by = L.top + 16;
+  ctx.beginPath();
+  ctx.arc(bx, by, 12, 0, Math.PI * 2);
+  ctx.fillStyle = "#0c0a18";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = WCLASS_COLOR[weak];
+  ctx.stroke();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "bold 12px monospace";
+  ctx.fillStyle = WCLASS_COLOR[weak];
+  ctx.fillText(WEAPON_LABEL[weak][0], bx, by + 1);
+  ctx.textBaseline = "alphabetic";
+
+  // === 名前 ===
+  ctx.textAlign = "center";
+  ctx.font = "bold 10px monospace";
+  ctx.fillStyle = "#ffd0e0";
+  ctx.fillText(e.def.name, L.cx, L.top + 18);
+
+  // === HP / ブレイクゲージ ===
+  const barX = L.left + 12, barW = L.w - 24, barY = L.top + 28;
+  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#ff5d86", "#33101c");
+  const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
+  bar(ctx, barX, barY + 9, barW, 3, bg, "#ffcf3f", "#3a2f10");
+
+  // === スプライト（震え・赤点滅・怯み・被弾を反映） ===
   let trembleX = 0, trembleY = 0;
   if (danger > 0.45 && !e.isBroken) {
-    const m = ((danger - 0.45) / 0.55) * (e.inTelegraph ? 3.2 : 2.0);
+    const m = ((danger - 0.45) / 0.55) * (e.inTelegraph ? 3.6 : 2.2);
     trembleX = (Math.random() * 2 - 1) * m;
     trembleY = (Math.random() * 2 - 1) * m;
   }
-
-  // パーフェクトで弾かれた怯みノックバック（奥へ押されて戻る）
-  const flinchKnock = e.flinchT > 0 ? Math.min(14, e.flinchT * 0.022) : 0;
-
-  // 被弾時のけぞり（横揺れ）
-  const flinch = e.hitFlash > 0 ? (Math.random() * 2 - 1) * 4 : 0;
+  const flinchKnock = e.flinchT > 0 ? Math.min(16, e.flinchT * 0.024) : 0;
+  const flinch = e.hitFlash > 0 ? (Math.random() * 2 - 1) * 5 : 0;
   if (e.isBroken) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(Date.now() / 80);
-
-  // tint: 被弾は白フラッシュ優先、なければ予兆の赤点滅
   let tint: { color: string; alpha: number } | undefined;
   if (e.hitFlash > 0) {
     tint = { color: "#ffffff", alpha: Math.min(0.85, e.hitFlash / 260) };
@@ -192,68 +278,87 @@ function drawEnemy(
     const blink = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 70 : 130));
     tint = { color: "#ff2020", alpha: ((danger - 0.5) / 0.5) * 0.6 * blink };
   }
-  drawSprite(ctx, sprite, x + flinch + trembleX + flinchKnock, y + trembleY, scale, true, tint);
+  drawSprite(ctx, sprite, L.cx + flinch + trembleX + flinchKnock, L.footY + trembleY, scale, true, tint);
   ctx.globalAlpha = 1;
 
-  const halfW = (e.def.boss ? 28 : 20);
-
-  // ターゲットマーカー
-  if (targeted) {
-    ctx.fillStyle = "#ffea00";
-    ctx.beginPath();
-    ctx.moveTo(x, y + 6);
-    ctx.lineTo(x - 6, y + 16);
-    ctx.lineTo(x + 6, y + 16);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // HPバー
-  const top = y - (e.def.boss ? 48 : 36) * 1 - 16;
-  bar(ctx, x - halfW, top, halfW * 2, 5, e.hp / e.def.maxHp, "#ff5d86", "#33101c");
-  // ブレイクゲージ
-  const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
-  bar(ctx, x - halfW, top + 6, halfW * 2, 3, bg, "#ffcf3f", "#3a2f10");
-
-  // 名前
-  ctx.textAlign = "center";
-  ctx.font = "9px monospace";
-  ctx.fillStyle = "#ffd0e0";
-  ctx.fillText(e.def.name, x, top - 14);
-
-  // 攻撃カウント / 予兆（ポップ演出付き）
-  const cy = top - 4;
+  // === 攻撃カウントバッジ（カード下端中央） ===
+  const cy = L.top + L.h - 4;
   if (e.isBroken) {
+    ctx.textAlign = "center";
     ctx.fillStyle = "#ffdd44";
-    ctx.font = "bold 11px monospace";
-    ctx.fillText("BREAK", x, cy);
+    ctx.font = "bold 12px monospace";
+    ctx.fillText("BREAK", L.cx, cy);
   } else if (e.inTelegraph) {
-    // 「!!」を鼓動させる
     const pulse = 1 + 0.3 * Math.abs(Math.sin(Date.now() / 90));
     ctx.save();
-    ctx.translate(x, cy);
+    ctx.translate(L.cx, cy - 4);
     ctx.scale(pulse, pulse);
-    ctx.font = "bold 20px monospace";
+    ctx.textAlign = "center";
+    ctx.font = "bold 22px monospace";
     ctx.fillStyle = "#1a0a0a";
-    ctx.fillText("!!", 1, 1); // 影
+    ctx.fillText("!!", 1, 1);
     ctx.fillStyle = "#ff3b3b";
     ctx.fillText("!!", 0, 0);
     ctx.restore();
   } else {
-    // カウント数字を円バッジでポップ表示
     const urgent = e.count <= 1;
-    const r = 9 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2 : 0);
+    const r = 12 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2.5 : 0);
     ctx.beginPath();
-    ctx.arc(x, cy - 4, r, 0, Math.PI * 2);
+    ctx.arc(L.cx, cy - 6, r, 0, Math.PI * 2);
     ctx.fillStyle = urgent ? "#a8324a" : "#2a2350";
     ctx.fill();
+    ctx.lineWidth = 2;
     ctx.strokeStyle = urgent ? "#ff6f8a" : "#5a4fa0";
-    ctx.lineWidth = 1.5;
     ctx.stroke();
+    ctx.textAlign = "center";
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 12px monospace";
-    ctx.fillText(`${e.count}`, x, cy);
+    ctx.font = "bold 15px monospace";
+    ctx.fillText(`${e.count}`, L.cx, cy - 1);
   }
+
+  // === ターゲットマーカー（カード下に黄色い三角） ===
+  if (targeted) {
+    const ty = L.top + L.h + 8;
+    ctx.fillStyle = "#ffea00";
+    ctx.beginPath();
+    ctx.moveTo(L.cx, ty + 8);
+    ctx.lineTo(L.cx - 8, ty);
+    ctx.lineTo(L.cx + 8, ty);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** 上部の警告バナー：次に攻撃する敵が迫っているとき表示 */
+function drawWarningBanner(ctx: CanvasRenderingContext2D, b: Battle, imminent: number): void {
+  if (imminent < 0) return;
+  const e = b.enemies[imminent];
+  if (!e || e.danger < 0.45) return;
+  const tele = e.inTelegraph;
+  const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / (tele ? 80 : 160)));
+  ctx.textAlign = "center";
+  ctx.globalAlpha = pulse;
+  ctx.font = `bold ${tele ? 17 : 14}px monospace`;
+  ctx.fillStyle = tele ? "#ff4040" : "#ffb347";
+  const text = tele ? "⚠ 今だ！ ガード！" : "⚠ 敵が次に攻撃！";
+  ctx.fillText(text, W / 2, 50);
+  ctx.globalAlpha = 1;
+}
+
+/** 対象切替の左右矢印 */
+function drawTargetArrows(ctx: CanvasRenderingContext2D, b: Battle): void {
+  if (b.aliveEnemies.length <= 1) return;
+  const y = 166;
+  const pulse = 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 400));
+  ctx.fillStyle = `rgba(255,234,0,${0.45 + pulse * 0.4})`;
+  // 左
+  ctx.beginPath();
+  ctx.moveTo(14, y); ctx.lineTo(26, y - 9); ctx.lineTo(26, y + 9); ctx.closePath();
+  ctx.fill();
+  // 右
+  ctx.beginPath();
+  ctx.moveTo(W - 14, y); ctx.lineTo(W - 26, y - 9); ctx.lineTo(W - 26, y + 9); ctx.closePath();
+  ctx.fill();
 }
 
 /** 撃破演出：ノックバックで吹き飛び、回転しながらフェード、上にドロップのきらめき */

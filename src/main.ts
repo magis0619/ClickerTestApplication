@@ -3,10 +3,10 @@ import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, skillDescription, isBonusSkill,
+  getWeapon, getSkill, skillDescription, isBonusSkill, REST_EN_RECOVER,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
+import type { Skill, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
 
 const canvas = document.getElementById("screen") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -18,7 +18,23 @@ let weaponButtons: { card: HTMLButtonElement; cls: WeaponClass; steps: HTMLEleme
 let renderedScreen = "";
 
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", aoe: "✸", heal: "✚", charge: "▲" };
+const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
 const CIRCLE = ["①", "②", "③", "④", "⑤", "⑥"];
+
+const RARITY_STAR: Record<string, number> = {
+  normal: 1, uncommon: 2, rare: 3, superrare: 4, ultrarare: 5,
+};
+function rarityStars(r: string): string { return "★".repeat(RARITY_STAR[r] ?? 1); }
+
+/** スキル1段の性能を短く表す（威力/ブレイク/回復/EN） */
+function skillStatLine(s: Skill): string {
+  switch (s.kind) {
+    case "attack": return `威力 ${s.power}・ブレイク ${s.breakPower}・EN ${s.enCost}`;
+    case "aoe": return `全体 威力 ${s.power}・ブレイク ${s.breakPower}・EN ${s.enCost}`;
+    case "heal": return `回復 ${s.heal}・EN ${s.enCost}`;
+    case "charge": return `次の攻撃を強化・EN ${s.enCost}`;
+  }
+}
 
 /** 戦闘から飛んでくる効果音イベントを実際の音に割り当てる */
 function playSfx(ev: SfxEvent): void {
@@ -56,20 +72,40 @@ muteBtn.textContent = "♪ ON";
 muteBtn.addEventListener("click", () => { audio.init(); muteBtn.textContent = audio.toggleMute() ? "♪ OFF" : "♪ ON"; });
 document.querySelector(".topbar")?.appendChild(muteBtn);
 
-// ===== 敵タップで対象選択（戦闘中のみ） =====
+/** 対象を前後に切り替える（左右矢印・Tキー共通） */
+function cycleTarget(dir: number): void {
+  if (!game.battle) return;
+  const alive = game.battle.enemies.map((en, i) => ({ en, i })).filter((x) => x.en.alive);
+  if (!alive.length) return;
+  const cur = alive.findIndex((x) => x.i === game.battle!.targetIndex);
+  const ni = ((cur < 0 ? 0 : cur) + dir + alive.length) % alive.length;
+  game.battle.selectTarget(alive[ni].i);
+}
+
+// ===== 敵タップで対象選択／左右矢印で切替（戦闘中のみ） =====
 canvas.addEventListener("pointerdown", (e) => {
   if (game.screen !== "battle" || !game.battle) return;
   const rect = canvas.getBoundingClientRect();
   const cx = ((e.clientX - rect.left) / rect.width) * canvas.width;
   const cy = ((e.clientY - rect.top) / rect.height) * canvas.height;
-  const slots = enemySlots(game.battle.enemies.length);
-  let best = -1, bestD = 45 * 45;
-  slots.forEach((s, i) => {
-    if (!game.battle!.enemies[i].alive) return;
-    const d = (s.x - cx) ** 2 + (s.y - cy) ** 2;
-    if (d < bestD) { bestD = d; best = i; }
-  });
-  if (best >= 0) game.battle.selectTarget(best);
+
+  // 左右の矢印エリア（対象切替）
+  if (cy > 120 && cy < 220) {
+    if (cx < 40) { cycleTarget(-1); return; }
+    if (cx > canvas.width - 40) { cycleTarget(1); return; }
+  }
+
+  // 敵カードのある帯（y）内なら、x が最も近い生存敵を対象に
+  if (cy > 70 && cy < 262) {
+    const slots = enemySlots(game.battle.enemies.length);
+    let best = -1, bestD = 90;
+    slots.forEach((s, i) => {
+      if (!game.battle!.enemies[i].alive) return;
+      const d = Math.abs(s.x - cx);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    if (best >= 0) game.battle.selectTarget(best);
+  }
 });
 
 // ===== 画面ごとのUI =====
@@ -158,11 +194,15 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
 
   const head = document.createElement("div");
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
-  const skills = game.instanceSkillIds(inst).map((id) => getSkill(id).name).join(" → ");
+  const ids = game.instanceSkillIds(inst);
+  const skills = ids.map((id) => getSkill(id).name).join(" → ");
   head.innerHTML =
-    `<span class="wpn-rarity" style="color:${RARITY_COLOR[inst.rarity]}">●</span>` +
-    `<span class="wpn-main"><span class="wpn-name">${w.name}${equipped ? " ✔" : ""}</span>` +
-    `<span class="wpn-sub">[${RARITY_LABEL[inst.rarity]}] ${skills}</span></span>`;
+    `<span class="wpn-icon wclass-${w.weapon}">${WEAPON_ICON[w.weapon]}</span>` +
+    `<span class="wpn-main">` +
+    `<span class="wpn-name">${w.name}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
+    `<span class="wpn-stars" style="color:${RARITY_COLOR[inst.rarity]}">${rarityStars(inst.rarity)} ` +
+    `<span class="wpn-rlabel">${RARITY_LABEL[inst.rarity]}</span></span>` +
+    `<span class="wpn-sub">コンボ${ids.length}段：${skills}</span></span>`;
   card.appendChild(head);
 
   const acts = document.createElement("div");
@@ -200,9 +240,10 @@ function weaponDetail(inst: WeaponInstance): HTMLElement {
   const meta = document.createElement("div");
   meta.className = "wd-meta";
   meta.innerHTML =
+    `<div class="wd-stars" style="color:${RARITY_COLOR[inst.rarity]}">${rarityStars(inst.rarity)} ` +
+    `<span class="wd-rlabel">${RARITY_LABEL[inst.rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
     `<div>${w.desc}</div>` +
-    `<div>レアリティ: <b style="color:${RARITY_COLOR[inst.rarity]}">${RARITY_LABEL[inst.rarity]}</b>　系統: ${WEAPON_LABEL[w.weapon]}</div>` +
-    `<div class="wd-note">攻撃ボタンを押すと下のスキルを上から順番に発動します</div>`;
+    `<div class="wd-note">武器を押すたびに ①→②→… の順でコンボが発動します</div>`;
   box.appendChild(meta);
 
   const ids = game.instanceSkillIds(inst);
@@ -235,15 +276,13 @@ function buildBattle(): void {
     card.className = `weapon-card wclass-${cls}`;
     card.addEventListener("click", () => attackWith(cls));
 
-    // 武器名を主役に。系統は小さく添える
-    const name = document.createElement("div");
-    name.className = "wc-name";
-    name.textContent = w?.name ?? "（未装備）";
-    const kind = document.createElement("span");
-    kind.className = "wc-kind";
-    kind.textContent = WEAPON_LABEL[cls];
-    name.appendChild(kind);
-    card.appendChild(name);
+    // ヘッダー：系統を主役に、武器名を併記
+    const head = document.createElement("div");
+    head.className = "wc-head";
+    head.innerHTML =
+      `<span class="wc-kind">${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}</span>` +
+      `<span class="wc-name">${w?.name ?? "（未装備）"}</span>`;
+    card.appendChild(head);
 
     // スキルは「コンボ」として①②…で表示
     const combo = document.createElement("div");
@@ -254,8 +293,8 @@ function buildBattle(): void {
       step.className = "wc-step";
       step.innerHTML =
         `<span class="wc-no">${CIRCLE[i] ?? i + 1}</span>` +
-        `<span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
-        `<span class="wc-en">EN${s.enCost}</span>`;
+        `<span class="wc-body"><span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
+        `<span class="wc-stat">${skillStatLine(s)}</span></span>`;
       combo.appendChild(step);
       steps.push(step);
     });
@@ -263,19 +302,28 @@ function buildBattle(): void {
     row.appendChild(card);
     weaponButtons.push({ card, cls, steps });
   }
+  controls.appendChild(row);
+
+  // ガード／休憩（大きめのアクションボタン）
   const actions = document.createElement("div");
-  actions.className = "actions";
+  actions.className = "battle-actions";
+
   const guardBtn = document.createElement("button");
-  guardBtn.className = "guard-btn";
-  guardBtn.textContent = "ガード (Space)";
+  guardBtn.className = "act-btn guard-act";
+  guardBtn.innerHTML =
+    `<span class="act-title">🛡 ガード</span><span class="act-key">(Space)</span>` +
+    `<span class="act-sub">タイミングでEN大回復！</span>`;
   guardBtn.addEventListener("click", doGuard);
+
   const restBtn = document.createElement("button");
-  restBtn.className = "rest-btn";
-  restBtn.textContent = "休憩 (R)";
+  restBtn.className = "act-btn rest-act";
+  restBtn.innerHTML =
+    `<span class="act-title">🧘 休憩</span><span class="act-key">(R)</span>` +
+    `<span class="act-sub">EN +${REST_EN_RECOVER} 回復</span>`;
   restBtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
+
   actions.appendChild(guardBtn);
   actions.appendChild(restBtn);
-  controls.appendChild(row);
   controls.appendChild(actions);
   updateWeaponButtons();
 }
@@ -364,14 +412,7 @@ window.addEventListener("keydown", (e) => {
   if (game.screen === "battle" && game.battle) {
     if (e.code === "Space") { e.preventDefault(); doGuard(); return; }
     if (e.key === "r") { game.battle.rest(); audio.sfxGuard(); return; }
-    if (e.key === "t") {
-      const alive = game.battle.enemies.map((en, i) => ({ en, i })).filter((x) => x.en.alive);
-      if (alive.length) {
-        const cur = alive.findIndex((x) => x.i === game.battle!.targetIndex);
-        game.battle.selectTarget(alive[(cur + 1) % alive.length].i);
-      }
-      return;
-    }
+    if (e.key === "t") { cycleTarget(1); return; }
     const map: Record<string, WeaponClass> = { "1": "slash", "2": "pierce", "3": "crush" };
     if (map[e.key]) attackWith(map[e.key]);
   }

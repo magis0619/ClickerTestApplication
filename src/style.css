@@ -20,7 +20,7 @@ body {
 
 #app {
   width: 100%;
-  max-width: 520px;
+  max-width: 600px;
   padding: 12px;
 }
 
@@ -126,7 +126,7 @@ body {
   pointer-events: none;
 }
 
-/* ===== 戦闘：武器カード（武器名を主役に／スキルはコンボ表示） ===== */
+/* ===== 戦闘：武器カード（系統＋武器名のヘッダー／スキルはコンボ表示） ===== */
 .weapons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -136,10 +136,10 @@ body {
 .weapon-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 9px 8px 10px;
+  gap: 8px;
+  padding: 11px 9px 12px;
   border: 2px solid #2e2750;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(180deg, #201b44, #171331);
   color: var(--ink);
   cursor: pointer;
@@ -151,69 +151,94 @@ body {
 .weapon-card:hover { background: linear-gradient(180deg, #272050, #1b1640); }
 .weapon-card:active {
   transform: translateY(2px) scale(0.98);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18) inset;
-  filter: brightness(1.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+  filter: brightness(1.3);
 }
 
 .weapon-card.disabled { opacity: 0.45; pointer-events: none; }
 
-/* 系統ごとのアクセント色（枠と武器名） */
+/* 系統ごとのアクセント色（枠） */
 .weapon-card.wclass-slash { border-color: #3a6da0; }
 .weapon-card.wclass-pierce { border-color: #4f8a45; }
 .weapon-card.wclass-crush { border-color: #a07a3a; }
 
-.wc-name {
-  font-size: 14px;
+.wc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wc-kind {
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  line-height: 1.15;
 }
-.wclass-slash .wc-name { color: #9fd9ff; }
-.wclass-pierce .wc-name { color: #c2ffa8; }
-.wclass-crush .wc-name { color: #ffd98f; }
-
-.wc-kind {
-  display: inline-block;
-  margin-left: 5px;
-  padding: 1px 5px;
-  font-size: 9px;
-  font-weight: 600;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
+.wclass-slash .wc-kind { color: #9fd9ff; }
+.wclass-pierce .wc-kind { color: #c2ffa8; }
+.wclass-crush .wc-kind { color: #ffd98f; }
+.wc-name {
+  font-size: 11px;
   color: #b6b0dc;
-  vertical-align: middle;
 }
 
 .wc-combo {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .wc-step {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 5px;
-  border-radius: 5px;
-  font-size: 10px;
-  color: #8e88b8;
-  background: rgba(0, 0, 0, 0.18);
-  border-left: 2px solid transparent;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid transparent;
 }
-
-.wc-no { font-size: 11px; opacity: 0.8; }
-.wc-sk { flex: 1; font-weight: 600; }
-.wc-en { font-size: 9px; opacity: 0.7; }
+.wc-no { font-size: 13px; opacity: 0.75; }
+.wc-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wc-sk { font-size: 11px; font-weight: 700; color: #d7d2f4; }
+.wc-stat { font-size: 9px; color: #8e88b8; }
 
 /* 次に発動する段を強調（コンボの現在地） */
 .wc-step-on {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 211, 95, 0.14);
   border-left-color: #ffd35f;
-  box-shadow: 0 0 6px rgba(255, 211, 95, 0.25);
+  box-shadow: 0 0 8px rgba(255, 211, 95, 0.25);
 }
 .wc-step-on .wc-no { opacity: 1; color: #ffd35f; }
+.wc-step-on .wc-sk { color: #fff; }
+
+/* ===== 戦闘：ガード／休憩の大ボタン ===== */
+.battle-actions {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.act-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 16px 10px;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.04s, filter 0.1s;
+}
+.act-btn:active { transform: translateY(2px) scale(0.99); filter: brightness(1.15); }
+.act-title { font-size: 18px; font-weight: 800; letter-spacing: 1px; }
+.act-key { font-size: 11px; opacity: 0.85; }
+.act-sub { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+.guard-act { background: linear-gradient(180deg, #2f7fd0, #245aa0); box-shadow: 0 3px 0 #1a3f73; }
+.guard-act:hover { background: linear-gradient(180deg, #3a8fe0, #2c6ab8); }
+.rest-act { background: linear-gradient(180deg, #2f9d78, #237a5e); box-shadow: 0 3px 0 #19564180; }
+.rest-act:hover { background: linear-gradient(180deg, #38b489, #2a8c6c); }
 
 /* ===== 結果画面 / 育成パネル ===== */
 .result-panel {
@@ -383,30 +408,78 @@ body {
 
 /* ===== インベントリ / 武器行 ===== */
 .inv-wrap { display: flex; flex-direction: column; gap: 10px; }
-.inv-group { background: #110d28; border-radius: 8px; padding: 8px; }
-.inv-head { font-size: 12px; font-weight: bold; margin-bottom: 6px; }
-.inv-empty { font-size: 11px; color: #6a6a80; padding: 4px; }
+.inv-group { background: #110d28; border-radius: 8px; padding: 10px; }
+.inv-head { font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+.inv-empty { font-size: 12px; color: #6a6a80; padding: 6px; }
+
+/* 系統タブ */
+.inv-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.inv-tab {
+  padding: 12px 6px;
+  font-size: 14px;
+  font-weight: 800;
+  border: 2px solid #2e2750;
+  border-radius: 10px;
+  background: #1b1640;
+  color: #9690c4;
+  cursor: pointer;
+}
+.inv-tab:hover { background: #241f55; }
+.inv-tab.wclass-slash.inv-tab-on { border-color: #5fa8ff; color: #9fd9ff; background: #16294d; }
+.inv-tab.wclass-pierce.inv-tab-on { border-color: #7fe070; color: #c2ffa8; background: #163d22; }
+.inv-tab.wclass-crush.inv-tab-on { border-color: #ffb347; color: #ffd98f; background: #3d2e14; }
 
 .wpn-row, .drop-list .wpn-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 7px 8px;
-  margin-bottom: 5px;
+  padding: 10px 11px;
+  margin-bottom: 6px;
   border: 1px solid #2a2350;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #1b1640;
   color: var(--ink);
   cursor: pointer;
 }
 button.wpn-row:hover { background: #241f55; }
 .wpn-on { border-color: #5fa8ff; background: #1c2c50; }
-.wpn-rarity { font-size: 16px; line-height: 1; }
-.wpn-main { display: flex; flex-direction: column; }
-.wpn-name { font-size: 12px; font-weight: bold; }
-.wpn-sub { font-size: 9px; color: #9690c4; }
+.wpn-icon {
+  font-size: 20px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+.wpn-icon.wclass-slash { color: #9fd9ff; }
+.wpn-icon.wclass-pierce { color: #c2ffa8; }
+.wpn-icon.wclass-crush { color: #ffd98f; }
+.wpn-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wpn-name { font-size: 14px; font-weight: bold; }
+.wpn-eqtag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #7fb0ff;
+  border: 1px solid #3a6da0;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.wpn-stars { font-size: 11px; letter-spacing: 1px; }
+.wpn-rlabel { font-size: 9px; color: #9690c4; letter-spacing: 0; }
+.wpn-sub { font-size: 10px; color: #9690c4; }
 
 .drop-list { margin-bottom: 10px; }
 
@@ -434,10 +507,11 @@ button.wpn-row:hover { background: #241f55; }
 }
 .wpn-act {
   flex: 1;
-  padding: 6px;
-  font-size: 11px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 700;
   border: 1px solid #3a3466;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #241f47;
   color: var(--ink);
   cursor: pointer;
@@ -450,8 +524,11 @@ button.wpn-row:hover { background: #241f55; }
   background: #0e0b22;
   border-top: 1px solid #2a2350;
 }
-.wd-meta { font-size: 10px; color: #cfc9f2; margin-bottom: 6px; }
+.wd-meta { font-size: 11px; color: #cfc9f2; margin-bottom: 6px; }
 .wd-meta .wd-note { color: #7f7aa0; margin-top: 2px; }
+.wd-stars { font-size: 14px; letter-spacing: 1px; margin-bottom: 3px; }
+.wd-rlabel { font-size: 10px; color: #9690c4; letter-spacing: 0; }
+.wd-cls { font-size: 10px; color: #b6b0dc; }
 .wd-skill { padding: 4px 0; border-top: 1px solid #1d1940; }
 .wd-sk-head { font-size: 11px; font-weight: bold; }
 .wd-kind { color: #9690c4; font-weight: normal; font-size: 10px; }
