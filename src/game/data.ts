@@ -23,26 +23,27 @@ function skill(s: Partial<Skill> & Pick<Skill, "id" | "name" | "weapon" | "kind"
   return { power: 0, breakPower: 0, heal: 0, ...s };
 }
 
+// EN最大10に合わせ、各スキルのコストは 1〜10 に収める
 export const SKILLS: Skill[] = [
   // 斬撃
-  skill({ id: "edge_slash", name: "エッジスラッシュ", weapon: "slash", kind: "attack", enCost: 16, power: 15, breakPower: 10 }),
-  skill({ id: "cross_edge", name: "クロスエッジ（全体）", weapon: "slash", kind: "aoe", enCost: 34, power: 16, breakPower: 9 }),
-  skill({ id: "quick_slash", name: "クイックスラッシュ", weapon: "slash", kind: "attack", enCost: 11, power: 11, breakPower: 8 }),
-  skill({ id: "mend_edge", name: "メンドエッジ（回復）", weapon: "slash", kind: "heal", enCost: 28, heal: 32 }),
-  skill({ id: "heavy_slash", name: "ヘヴィスラッシュ", weapon: "slash", kind: "attack", enCost: 28, power: 30, breakPower: 14 }),
+  skill({ id: "edge_slash", name: "エッジスラッシュ", weapon: "slash", kind: "attack", enCost: 3, power: 15, breakPower: 10 }),
+  skill({ id: "cross_edge", name: "クロスエッジ（全体）", weapon: "slash", kind: "aoe", enCost: 6, power: 16, breakPower: 9 }),
+  skill({ id: "quick_slash", name: "クイックスラッシュ", weapon: "slash", kind: "attack", enCost: 2, power: 11, breakPower: 8 }),
+  skill({ id: "mend_edge", name: "メンドエッジ（回復）", weapon: "slash", kind: "heal", enCost: 5, heal: 32 }),
+  skill({ id: "heavy_slash", name: "ヘヴィスラッシュ", weapon: "slash", kind: "attack", enCost: 5, power: 30, breakPower: 14 }),
   // 刺突
-  skill({ id: "lance_thrust", name: "ランススラスト", weapon: "pierce", kind: "attack", enCost: 16, power: 14, breakPower: 9 }),
-  skill({ id: "pierce_combo", name: "ピアスコンボ", weapon: "pierce", kind: "attack", enCost: 22, power: 21, breakPower: 12 }),
-  skill({ id: "wind_thrust", name: "ウィンドスラスト", weapon: "pierce", kind: "attack", enCost: 16, power: 12, breakPower: 17 }),
-  skill({ id: "gale_pierce", name: "ゲイルピアス（全体）", weapon: "pierce", kind: "aoe", enCost: 36, power: 14, breakPower: 15 }),
-  skill({ id: "void_thrust", name: "ヴォイドスラスト", weapon: "pierce", kind: "attack", enCost: 28, power: 28, breakPower: 14 }),
+  skill({ id: "lance_thrust", name: "ランススラスト", weapon: "pierce", kind: "attack", enCost: 3, power: 14, breakPower: 9 }),
+  skill({ id: "pierce_combo", name: "ピアスコンボ", weapon: "pierce", kind: "attack", enCost: 4, power: 21, breakPower: 12 }),
+  skill({ id: "wind_thrust", name: "ウィンドスラスト", weapon: "pierce", kind: "attack", enCost: 3, power: 12, breakPower: 17 }),
+  skill({ id: "gale_pierce", name: "ゲイルピアス（全体）", weapon: "pierce", kind: "aoe", enCost: 6, power: 14, breakPower: 15 }),
+  skill({ id: "void_thrust", name: "ヴォイドスラスト", weapon: "pierce", kind: "attack", enCost: 5, power: 28, breakPower: 14 }),
   // 打撃
-  skill({ id: "mallet_smash", name: "マレットスマッシュ", weapon: "crush", kind: "attack", enCost: 18, power: 16, breakPower: 20 }),
-  skill({ id: "hammer_blow", name: "ハンマーブロウ", weapon: "crush", kind: "attack", enCost: 20, power: 18, breakPower: 24 }),
-  skill({ id: "quake_aoe", name: "クエイクウェイブ（全体）", weapon: "crush", kind: "aoe", enCost: 42, power: 18, breakPower: 20 }),
-  skill({ id: "titan_smash", name: "タイタンスマッシュ", weapon: "crush", kind: "attack", enCost: 32, power: 34, breakPower: 22 }),
+  skill({ id: "mallet_smash", name: "マレットスマッシュ", weapon: "crush", kind: "attack", enCost: 3, power: 16, breakPower: 20 }),
+  skill({ id: "hammer_blow", name: "ハンマーブロウ", weapon: "crush", kind: "attack", enCost: 4, power: 18, breakPower: 24 }),
+  skill({ id: "quake_aoe", name: "クエイクウェイブ（全体）", weapon: "crush", kind: "aoe", enCost: 7, power: 18, breakPower: 20 }),
+  skill({ id: "titan_smash", name: "タイタンスマッシュ", weapon: "crush", kind: "attack", enCost: 6, power: 34, breakPower: 22 }),
   // 共通：ためる
-  skill({ id: "focus_charge", name: "フォーカス（ためる）", weapon: "slash", kind: "charge", enCost: 8 }),
+  skill({ id: "focus_charge", name: "フォーカス（ためる）", weapon: "slash", kind: "charge", enCost: 2 }),
 ];
 /**
  * レアリティで付与される「追加スキル」のプール。
@@ -51,17 +52,17 @@ export const SKILLS: Skill[] = [
  */
 export const BONUS_SKILLS: Skill[] = [
   // アンコモン：ちょい便利
-  skill({ id: "b_recover", name: "リカバリ", weapon: "slash", kind: "heal", enCost: 22, heal: 30 }),
-  skill({ id: "b_quick_focus", name: "クイックフォーカス", weapon: "slash", kind: "charge", enCost: 6 }),
+  skill({ id: "b_recover", name: "リカバリ", weapon: "slash", kind: "heal", enCost: 4, heal: 30 }),
+  skill({ id: "b_quick_focus", name: "クイックフォーカス", weapon: "slash", kind: "charge", enCost: 1 }),
   // レア：戦術の幅
-  skill({ id: "b_wide_blow", name: "ワイドブロウ（全体）", weapon: "slash", kind: "aoe", enCost: 32, power: 22, breakPower: 14 }),
-  skill({ id: "b_power_smash", name: "パワースマッシュ", weapon: "slash", kind: "attack", enCost: 28, power: 36, breakPower: 18 }),
+  skill({ id: "b_wide_blow", name: "ワイドブロウ（全体）", weapon: "slash", kind: "aoe", enCost: 6, power: 22, breakPower: 14 }),
+  skill({ id: "b_power_smash", name: "パワースマッシュ", weapon: "slash", kind: "attack", enCost: 5, power: 36, breakPower: 18 }),
   // スーパーレア：強力
-  skill({ id: "b_mega_heal", name: "メガヒール", weapon: "slash", kind: "heal", enCost: 40, heal: 78 }),
-  skill({ id: "b_tempest", name: "テンペスト（全体）", weapon: "slash", kind: "aoe", enCost: 46, power: 40, breakPower: 28 }),
+  skill({ id: "b_mega_heal", name: "メガヒール", weapon: "slash", kind: "heal", enCost: 7, heal: 78 }),
+  skill({ id: "b_tempest", name: "テンペスト（全体）", weapon: "slash", kind: "aoe", enCost: 8, power: 40, breakPower: 28 }),
   // ウルトラレア：切り札
-  skill({ id: "b_catastrophe", name: "カタストロフ（全体）", weapon: "slash", kind: "aoe", enCost: 54, power: 58, breakPower: 44 }),
-  skill({ id: "b_resurrection", name: "リザレクション", weapon: "slash", kind: "heal", enCost: 50, heal: 999 }),
+  skill({ id: "b_catastrophe", name: "カタストロフ（全体）", weapon: "slash", kind: "aoe", enCost: 10, power: 58, breakPower: 44 }),
+  skill({ id: "b_resurrection", name: "リザレクション", weapon: "slash", kind: "heal", enCost: 9, heal: 999 }),
 ];
 
 const SKILL_MAP: Record<string, Skill> = Object.fromEntries(
@@ -151,11 +152,12 @@ export function rollDrops(stage: StageDef): WeaponInstance[] {
 
 // ===== 敵 =====
 const E: Record<string, EnemyDef> = {
-  straw_golem: { id: "straw_golem", name: "ストローゴーレム", kind: "carapace", maxHp: 80, attack: 10, telegraphMs: 1300, intervalMs: 4600, breakThreshold: 35 },
-  shell_crawler: { id: "shell_crawler", name: "シェルクローラー", kind: "carapace", maxHp: 130, attack: 16, telegraphMs: 1150, intervalMs: 4000, breakThreshold: 45 },
-  wraith_feather: { id: "wraith_feather", name: "レイスフェザー", kind: "aerial", maxHp: 150, attack: 19, telegraphMs: 1000, intervalMs: 3600, breakThreshold: 52 },
-  gloom_shade: { id: "gloom_shade", name: "グルームシェイド", kind: "phantom", maxHp: 170, attack: 22, telegraphMs: 950, intervalMs: 3300, breakThreshold: 58 },
-  carapace_tyrant: { id: "carapace_tyrant", name: "カラペイス・タイラント", kind: "carapace", maxHp: 480, attack: 32, telegraphMs: 820, intervalMs: 2500, breakThreshold: 100, boss: true },
+  // countStart で敵ごとに攻撃カウントのリズムを変える（5開始の重い敵、2開始の速い敵 など）
+  straw_golem: { id: "straw_golem", name: "ストローゴーレム", kind: "carapace", maxHp: 80, attack: 10, telegraphMs: 1300, countStart: 3, breakThreshold: 35 },
+  shell_crawler: { id: "shell_crawler", name: "シェルクローラー", kind: "carapace", maxHp: 130, attack: 16, telegraphMs: 1150, countStart: 5, breakThreshold: 45 },
+  wraith_feather: { id: "wraith_feather", name: "レイスフェザー", kind: "aerial", maxHp: 150, attack: 19, telegraphMs: 1000, countStart: 4, breakThreshold: 52 },
+  gloom_shade: { id: "gloom_shade", name: "グルームシェイド", kind: "phantom", maxHp: 170, attack: 22, telegraphMs: 950, countStart: 2, breakThreshold: 58 },
+  carapace_tyrant: { id: "carapace_tyrant", name: "カラペイス・タイラント", kind: "carapace", maxHp: 480, attack: 32, telegraphMs: 820, countStart: 3, breakThreshold: 100, boss: true },
 };
 
 // ===== ステージ（3つ） =====
@@ -186,13 +188,14 @@ export const STAGE_COUNT = STAGES.length;
 
 // ===== プレイヤー =====
 export const PLAYER_MAX_HP = 130;
-export const PLAYER_MAX_EN = 100;
+// ENは最大10のシンプルな管理に。スキルコストは1〜10。
+export const PLAYER_MAX_EN = 10;
 
 // ===== EN回復（自動回復なし。休憩・ガード成功のみ） =====
-export const REST_EN_RECOVER = 18;
+export const REST_EN_RECOVER = 3;
 // 通常ガードはわずかしか得しない。パーフェクトだけが大きく報われる。
-export const GUARD_EN_RECOVER = 12;
-export const PERFECT_EN_RECOVER = 52;
+export const GUARD_EN_RECOVER = 1;
+export const PERFECT_EN_RECOVER = 6;
 
 // ===== ガード判定の窓 =====
 // 着弾までの残り時間がこの範囲ならガード成立。

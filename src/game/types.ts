@@ -30,7 +30,8 @@ export interface EnemyDef {
   maxHp: number;
   attack: number;
   telegraphMs: number;
-  intervalMs: number;
+  /** 攻撃カウントの開始値（5なら 5→4→…→1→攻撃）。敵ごとにリズムを変える */
+  countStart: number;
   breakThreshold: number;
   boss?: boolean;
 }

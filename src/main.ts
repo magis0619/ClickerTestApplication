@@ -6,7 +6,7 @@ import {
   getWeapon, getSkill, skillDescription, isBonusSkill, REST_EN_RECOVER,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { Skill, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
+import type { SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
 
 const canvas = document.getElementById("screen") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -25,16 +25,6 @@ const RARITY_STAR: Record<string, number> = {
   normal: 1, uncommon: 2, rare: 3, superrare: 4, ultrarare: 5,
 };
 function rarityStars(r: string): string { return "★".repeat(RARITY_STAR[r] ?? 1); }
-
-/** スキル1段の性能を短く表す（威力/ブレイク/回復/EN） */
-function skillStatLine(s: Skill): string {
-  switch (s.kind) {
-    case "attack": return `威力 ${s.power}・ブレイク ${s.breakPower}・EN ${s.enCost}`;
-    case "aoe": return `全体 威力 ${s.power}・ブレイク ${s.breakPower}・EN ${s.enCost}`;
-    case "heal": return `回復 ${s.heal}・EN ${s.enCost}`;
-    case "charge": return `次の攻撃を強化・EN ${s.enCost}`;
-  }
-}
 
 /** 戦闘から飛んでくる効果音イベントを実際の音に割り当てる */
 function playSfx(ev: SfxEvent): void {
@@ -293,8 +283,8 @@ function buildBattle(): void {
       step.className = "wc-step";
       step.innerHTML =
         `<span class="wc-no">${CIRCLE[i] ?? i + 1}</span>` +
-        `<span class="wc-body"><span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
-        `<span class="wc-stat">${skillStatLine(s)}</span></span>`;
+        `<span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
+        `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span><span class="wc-cost-lbl">EN</span></span>`;
       combo.appendChild(step);
       steps.push(step);
     });

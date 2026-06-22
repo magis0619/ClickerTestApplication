@@ -22,6 +22,9 @@ import {
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
 
+/** カウント1つあたりの時間(ms)。countStart×これ＋telegraph が1サイクル */
+export const COUNT_TICK_MS = 1000;
+
 export interface FloatText {
   text: string;
   color: string;
@@ -53,7 +56,12 @@ export class EnemyState {
   constructor(def: EnemyDef) {
     this.def = def;
     this.hp = def.maxHp;
-    this.atkTimer = def.intervalMs;
+    this.atkTimer = this.cycleMs;
+  }
+
+  /** 攻撃1サイクルの長さ(ms)。telegraph ＋ カウント開始値ぶんの秒数 */
+  get cycleMs(): number {
+    return this.def.telegraphMs + this.def.countStart * COUNT_TICK_MS;
   }
 
   get alive(): boolean {
@@ -70,9 +78,9 @@ export class EnemyState {
   get inTelegraph(): boolean {
     return this.alive && !this.isBroken && this.flinchT <= 0 && this.atkTimer <= this.def.telegraphMs;
   }
-  /** 頭上に出す攻撃カウント（秒）。予兆中は0扱い */
+  /** 頭上に出す攻撃カウント。予兆中は0扱い */
   get count(): number {
-    return Math.max(0, Math.ceil((this.atkTimer - this.def.telegraphMs) / 1000));
+    return Math.max(0, Math.ceil((this.atkTimer - this.def.telegraphMs) / COUNT_TICK_MS));
   }
   /**
    * 緊張度 0..1。着弾が近いほど高い。震え・赤点滅の強さに使う。
@@ -207,7 +215,7 @@ export class Battle {
       return "none";
     }
     this.resolveEnemyHit(e, result);
-    e.atkTimer = e.def.intervalMs; // 受け止めたので再充填
+    e.atkTimer = e.cycleMs; // 受け止めたので再充填
     e.warned = false;
     return result;
   }
@@ -372,7 +380,7 @@ export class Battle {
       }
       if (e.atkTimer <= 0) {
         this.resolveEnemyHit(e, "none"); // ガードされなければフルダメージ
-        e.atkTimer = e.def.intervalMs;
+        e.atkTimer = e.cycleMs;
         e.warned = false;
         if (this.phase !== "fighting") return;
       }
