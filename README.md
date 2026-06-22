@@ -27,6 +27,15 @@
 - **F6 セーブ/ロード** — localStorage に自動保存・自動復元
 - **F7 転生（ネビュラ）** — 進行リセットと引き換えに永続 +2%/個ブースト
 
+## スクリーンショット
+
+| 初期状態 | 進行後 | 転生タブ |
+|---|---|---|
+| ![start](docs/screenshots/01-start.png) | ![progress](docs/screenshots/02-progress.png) | ![prestige](docs/screenshots/03-prestige.png) |
+
+> Chromium（iPhone 相当 390×844）で実配信・操作して撮影。
+> 撮影スクリプト: [docs/screenshots/shot.mjs](docs/screenshots/shot.mjs)（Playwright）
+
 ## 動かし方（ローカル）
 
 ビルド不要。静的配信するだけ:
