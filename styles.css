@@ -93,6 +93,35 @@ html, body {
   100% { opacity: 0; transform: translateY(-70px) scale(1.4); }
 }
 
+/* ---- Boost ---- */
+.boost-bar { display: flex; justify-content: center; padding: 2px 0 8px; }
+.boost {
+  background: linear-gradient(135deg, #ff8a3d, #ff4d6d);
+  color: #fff; border: none; border-radius: 999px;
+  padding: 10px 20px; font-size: 14px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 80, 100, 0.4);
+}
+.boost.active {
+  background: linear-gradient(135deg, #ffd24a, #ff8a3d);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.boost.cooldown { background: #2b346e; color: var(--muted); box-shadow: none; }
+.boost:disabled { cursor: default; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ---- Buy mode ---- */
+.buymode { display: flex; align-items: center; gap: 6px; padding: 0 2px 2px; }
+.buymode-label { font-size: 12px; color: var(--muted); margin-right: auto; }
+.bm {
+  background: var(--card); color: var(--muted);
+  border: 1px solid #2b346e; border-radius: 8px;
+  padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.bm.active { background: var(--accent2); color: #0b1026; border-color: var(--accent2); }
+
 /* ---- Tabs ---- */
 .tabs { display: flex; gap: 8px; margin: 6px 0 10px; }
 .tab {

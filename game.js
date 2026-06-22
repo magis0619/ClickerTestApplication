@@ -24,6 +24,13 @@
   const CLICK_BASE_COST = 25;
   const CLICK_COST_MUL = 1.6;
 
+  // QoL: まとめ買い / タップブースト
+  const BOOST_MULT = 2;                  // ブースト中の倍率
+  const BOOST_DURATION_MS = 30000;       // ブースト持続
+  const BOOST_COOLDOWN_MS = 120000;      // 再使用までのクールダウン
+  let boostUntil = 0;                    // ブースト終了時刻（保存しない）
+  let boostCooldownUntil = 0;            // クールダウン終了時刻（保存しない）
+
   // ---- State ----
   let state = newState();
 
@@ -34,24 +41,51 @@
       clickLevel: 0,
       generators: GENERATORS.map((g) => ({ id: g.id, count: 0 })),
       nebula: 0,
+      buyMode: 1,        // 1 | 10 | "max"
       lastSeen: Date.now(),
     };
   }
 
   // ---- 派生値 ----
   function nebulaMultiplier() { return 1 + state.nebula * NEBULA_PER_BONUS; }
-  function perClick() { return (1 + state.clickLevel) * nebulaMultiplier(); }
+  function boostActive() { return Date.now() < boostUntil; }
+  function boostMultiplier() { return boostActive() ? BOOST_MULT : 1; }
+  function globalMultiplier() { return nebulaMultiplier() * boostMultiplier(); }
+
+  function perClick() { return (1 + state.clickLevel) * globalMultiplier(); }
   function clickCost() { return Math.floor(CLICK_BASE_COST * Math.pow(CLICK_COST_MUL, state.clickLevel)); }
 
-  function genCost(i) {
+  // i 番目のユニットを現在の所持数から n 個買うときの合計コスト（等比数列の和）
+  function genCostN(i, n) {
     const def = GENERATORS[i];
-    return Math.floor(def.baseCost * Math.pow(def.costMul, state.generators[i].count));
+    const mul = def.costMul;
+    const first = def.baseCost * Math.pow(mul, state.generators[i].count);
+    return Math.floor((first * (Math.pow(mul, n) - 1)) / (mul - 1));
+  }
+
+  // 現在の所持スターダストで i 番目を最大何個買えるか
+  function maxAffordable(i) {
+    const def = GENERATORS[i];
+    const mul = def.costMul;
+    const first = def.baseCost * Math.pow(mul, state.generators[i].count);
+    const n = Math.floor(Math.log(1 + (state.stardust * (mul - 1)) / first) / Math.log(mul));
+    return Math.max(0, n);
+  }
+
+  // 現在の buyMode に応じた「購入数」と「合計コスト」
+  function buyPlan(i) {
+    if (state.buyMode === "max") {
+      const n = maxAffordable(i);
+      return { n, cost: genCostN(i, Math.max(1, n)) };
+    }
+    const n = state.buyMode;
+    return { n, cost: genCostN(i, n) };
   }
 
   function perSecond() {
     let raw = 0;
     GENERATORS.forEach((def, i) => { raw += def.rate * state.generators[i].count; });
-    return raw * nebulaMultiplier();
+    return raw * globalMultiplier();
   }
 
   function nebulaGain() {
@@ -92,6 +126,7 @@
     prestigeButton: el("prestigeButton"),
     prestigeHint: el("prestigeHint"),
     saveStatus: el("saveStatus"),
+    boostButton: el("boostButton"),
   };
 
   // 生成: 自動生産ユニットのカード
@@ -129,10 +164,25 @@
   }
 
   function buyGenerator(i) {
-    const cost = genCost(i);
-    if (state.stardust < cost) return;
+    const { n, cost } = buyPlan(i);
+    if (n < 1 || state.stardust < cost) return;
     state.stardust -= cost;
-    state.generators[i].count += 1;
+    state.generators[i].count += n;
+    render();
+  }
+
+  function setBuyMode(mode) {
+    state.buyMode = mode;
+    document.querySelectorAll(".bm").forEach((b) =>
+      b.classList.toggle("active", String(b.dataset.mode) === String(mode)));
+    render();
+  }
+
+  function activateBoost() {
+    const now = Date.now();
+    if (now < boostUntil || now < boostCooldownUntil) return;
+    boostUntil = now + BOOST_DURATION_MS;
+    boostCooldownUntil = boostUntil + BOOST_COOLDOWN_MS;
     render();
   }
 
@@ -180,19 +230,23 @@
     dom.clickCost.textContent = fmt(cCost);
     dom.clickUpgrade.classList.toggle("affordable", state.stardust >= cCost);
 
-    // 自動生産
+    // 自動生産（まとめ買い対応）
     GENERATORS.forEach((def, i) => {
-      const cost = genCost(i);
+      const { n, cost } = buyPlan(i);
+      const affordable = n >= 1 && state.stardust >= cost;
       const countEl = dom.generators.querySelector(`[data-count="${i}"]`);
       const costEl = dom.generators.querySelector(`[data-cost="${i}"]`);
       if (countEl) countEl.textContent = `×${state.generators[i].count}`;
       if (costEl) {
-        costEl.textContent = fmt(cost);
-        costEl.classList.toggle("cant", state.stardust < cost);
+        const qty = state.buyMode === "max" ? (n >= 1 ? `×${n}  ` : "×0  ") : "";
+        costEl.textContent = qty + fmt(cost);
+        costEl.classList.toggle("cant", !affordable);
       }
       const card = costEl && costEl.closest(".gen-card");
-      if (card) card.classList.toggle("affordable", state.stardust >= cost);
+      if (card) card.classList.toggle("affordable", affordable);
     });
+
+    renderBoost();
 
     // 転生
     dom.nebula.textContent = fmt(state.nebula);
@@ -202,6 +256,27 @@
     dom.prestigeButton.disabled = gain <= 0;
     dom.prestigeHint.textContent =
       gain <= 0 ? `次のネビュラまで累計 ${fmt(NEBULA_DIVISOR * Math.pow(state.nebula + 1, 2))} の獲得が必要` : "";
+  }
+
+  function renderBoost() {
+    const now = Date.now();
+    const btn = dom.boostButton;
+    if (!btn) return;
+    if (now < boostUntil) {
+      const s = Math.ceil((boostUntil - now) / 1000);
+      btn.textContent = `⚡ ブースト中 x${BOOST_MULT}（残り${s}秒）`;
+      btn.className = "boost active";
+      btn.disabled = true;
+    } else if (now < boostCooldownUntil) {
+      const s = Math.ceil((boostCooldownUntil - now) / 1000);
+      btn.textContent = `⏳ クールダウン（${s}秒）`;
+      btn.className = "boost cooldown";
+      btn.disabled = true;
+    } else {
+      btn.textContent = `⚡ ブースト（x${BOOST_MULT} / ${BOOST_DURATION_MS / 1000}秒）`;
+      btn.className = "boost";
+      btn.disabled = false;
+    }
   }
 
   // ---- ゲームループ ----
@@ -270,6 +345,15 @@
     });
     dom.clickUpgrade.addEventListener("click", buyClickUpgrade);
     dom.prestigeButton.addEventListener("click", doPrestige);
+    dom.boostButton.addEventListener("click", activateBoost);
+
+    // まとめ買いモード
+    document.querySelectorAll(".bm").forEach((b) => {
+      b.addEventListener("click", () => {
+        const m = b.dataset.mode === "max" ? "max" : Number(b.dataset.mode);
+        setBuyMode(m);
+      });
+    });
     el("wipeButton").addEventListener("click", wipe);
     el("welcomeClose").addEventListener("click", () =>
       el("welcomeModal").classList.add("hidden"));
@@ -295,6 +379,7 @@
     buildGeneratorCards();
     load();
     bind();
+    setBuyMode(state.buyMode || 1);
     applyOfflineEarnings();
     render();
     setInterval(loop, TICK_MS);

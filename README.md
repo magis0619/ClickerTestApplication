@@ -26,12 +26,14 @@
 - **F5 桁表記** — K / M / B / T … のサフィックス
 - **F6 セーブ/ロード** — localStorage に自動保存・自動復元
 - **F7 転生（ネビュラ）** — 進行リセットと引き換えに永続 +2%/個ブースト
+- **F8 まとめ買い** — ×1 / ×10 / Max を切替（Max は所持額で買える最大数を一括購入）
+- **F9 タップブースト** — 一定時間 全生産・タップが ×2、終了後クールダウン
 
 ## スクリーンショット
 
-| 初期状態 | 進行後 | 転生タブ |
-|---|---|---|
-| ![start](docs/screenshots/01-start.png) | ![progress](docs/screenshots/02-progress.png) | ![prestige](docs/screenshots/03-prestige.png) |
+| 初期状態 | 進行後 | 転生タブ | QoL（Max買い＋ブースト中） |
+|---|---|---|---|
+| ![start](docs/screenshots/01-start.png) | ![progress](docs/screenshots/02-progress.png) | ![prestige](docs/screenshots/03-prestige.png) | ![qol](docs/screenshots/04-qol.png) |
 
 > Chromium（iPhone 相当 390×844）で実配信・操作して撮影。
 > 撮影スクリプト: [docs/screenshots/shot.mjs](docs/screenshots/shot.mjs)（Playwright）
