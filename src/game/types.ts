@@ -142,4 +142,6 @@ export interface SaveData {
   bestStage: number;
   /** 所持ゴールド（ショップで使用） */
   gold: number;
+  /** ショップで購入済みの武器baseId（売り切れ表示に使う） */
+  purchased: string[];
 }

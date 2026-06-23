@@ -19,8 +19,11 @@ const ctx = canvas.getContext("2d")!;
 const controls = document.getElementById("controls") as HTMLDivElement;
 
 const game = new Game();
-/** 戦闘中の武器カード（カード本体＋コンボ各段の要素を保持） */
-let weaponButtons: { card: HTMLButtonElement; cls: WeaponClass; steps: HTMLElement[] }[] = [];
+/** 戦闘中の武器カード（カード本体＋コンボ各段＋移動するフォーカス枠を保持） */
+let weaponButtons: {
+  card: HTMLButtonElement; cls: WeaponClass; steps: HTMLElement[];
+  focus: HTMLElement; focusIdx: number;
+}[] = [];
 /** 戦闘中のHP/ENバー（攻撃ボタンの上に配置。毎フレーム更新する） */
 let battleHud: {
   root: HTMLElement; hpFill: HTMLElement; hpText: HTMLElement; enFill: HTMLElement; enText: HTMLElement;
@@ -197,8 +200,10 @@ function buildShop(): void {
 
 /** ショップの1商品（武器画像＋情報＋価格/購入ボタン） */
 function shopRow(item: ShopItem, w: Weapon): HTMLElement {
+  const sold = game.isSoldOut(item.baseId);
   const card = document.createElement("div");
   card.className = ("shop-card wclass-" + w.weapon + " " + rarityGlowClass(w.rarity)).trim();
+  if (sold) card.classList.add("shop-sold");
 
   const icon = document.createElement("div");
   icon.className = "shop-icon";
@@ -216,14 +221,23 @@ function shopRow(item: ShopItem, w: Weapon): HTMLElement {
 
   const buy = document.createElement("button");
   buy.className = "shop-buy";
-  buy.disabled = game.gold < item.price;
-  buy.innerHTML =
-    `<span class="shop-price">${item.price.toLocaleString()} G</span>` +
-    `<span class="shop-buy-lbl">購入</span>`;
+  buy.disabled = sold || game.gold < item.price;
+  buy.innerHTML = sold
+    ? `<span class="shop-buy-lbl">売切</span>`
+    : `<span class="shop-price">${item.price.toLocaleString()} G</span>` +
+      `<span class="shop-buy-lbl">購入</span>`;
   buy.addEventListener("click", () => {
     if (game.buyWeapon(item.baseId, item.price)) { audio.sfxPerfect(); buildControls(); }
   });
   card.appendChild(buy);
+
+  // 売り切れの帯（カード上部に SOLD OUT）
+  if (sold) {
+    const banner = document.createElement("div");
+    banner.className = "shop-sold-banner";
+    banner.textContent = "SOLD OUT";
+    card.appendChild(banner);
+  }
   return card;
 }
 
@@ -296,15 +310,16 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const rarity = instRarity(inst);
   const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
-  // 左：大きめの武器ドット絵 ／ 右：名前・レアリティ・攻撃力・スキル
+  // 左：武器ドット絵＋名前・レアリティ ／ 右（中央より右）：攻撃力・スキルを大きく
   head.innerHTML =
     `<span class="wpn-icon wclass-${w.weapon}"></span>` +
-    `<span class="wpn-main">` +
+    `<span class="wpn-left">` +
     `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
     `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
-    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
+    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span></span>` +
+    `<span class="wpn-right">` +
     `<span class="wpn-atk">⚔ 攻撃力 <b>${w.attack}</b>${w.critChance ? `　会心 ${w.critChance}%` : ""}</span>` +
-    `<span class="wpn-skills">スキル: ${skillNames || "なし"}</span></span>`;
+    `<span class="wpn-skills">${skillNames || "スキルなし"}</span></span>`;
   // 系統の絵文字に代えて、武器ごとのドット絵を表示
   head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
   card.appendChild(head);
@@ -436,7 +451,7 @@ function buildBattle(): void {
     }
     card.appendChild(head);
 
-    // スキルは「コンボ」として①②…で表示
+    // スキルは「コンボ」として順番に表示
     const combo = document.createElement("div");
     combo.className = "wc-combo";
     const steps: HTMLElement[] = [];
@@ -450,9 +465,13 @@ function buildBattle(): void {
       combo.appendChild(step);
       steps.push(step);
     });
+    // 次に出るスキルへ「ぬるっと」移動するフォーカス枠
+    const focus = document.createElement("div");
+    focus.className = "wc-focus";
+    combo.appendChild(focus);
     card.appendChild(combo);
     row.appendChild(card);
-    weaponButtons.push({ card, cls, steps });
+    weaponButtons.push({ card, cls, steps, focus, focusIdx: -1 });
   }
   controls.appendChild(row);
 
@@ -519,7 +538,8 @@ function updateWeaponButtons(): void {
   if (!game.battle) return;
   updateBattleHud();
   const last = game.battle.lastSkill;
-  for (const { card, cls, steps } of weaponButtons) {
+  for (const entry of weaponButtons) {
+    const { card, cls, steps, focus } = entry;
     const active = game.comboIndex(cls);
     const cur = game.currentSkill(cls);
     // 次に出る段をハイライト
@@ -531,6 +551,18 @@ function updateWeaponButtons(): void {
     const combo = cur && !broke ? matchCombo(last, cur.kind, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
     steps.forEach((step, i) => step.classList.toggle("wc-combo-on", !!combo && i === active));
+    // フォーカス枠を次に出る段へ「ぬるっと」移動（位置が変わった時だけ更新）
+    const target = steps[active];
+    if (target) {
+      if (entry.focusIdx !== active) {
+        focus.style.transform = `translateY(${target.offsetTop}px)`;
+        focus.style.height = `${target.offsetHeight}px`;
+        entry.focusIdx = active;
+      }
+      focus.classList.add("on");
+    } else {
+      focus.classList.remove("on");
+    }
   }
 }
 

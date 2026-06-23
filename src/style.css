@@ -203,19 +203,18 @@ button {
 .battle-hud.focus .bh-en .bh-fill { background: linear-gradient(180deg, #ffd95f, #dca31c); }
 .battle-hud.focus .bh-en .bh-text { color: #fff7df; }
 
-/* ===== 戦闘：武器カード（1列・横長。左に系統＋武器ドット絵、右にスキル） ===== */
+/* ===== 戦闘：武器カード（1行に3ボタン。系統＋武器ドット絵／スキルはコンボ表示） ===== */
 .weapons {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
 .weapon-card {
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 10px;
-  padding: 9px 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 9px 13px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 16px;
   background: linear-gradient(180deg, #2a2356, #1b1640);
@@ -256,20 +255,17 @@ button {
 .weapon-card.wclass-pierce:active { box-shadow: 0 1px 0 #1d5e2f; }
 .weapon-card.wclass-crush:active { box-shadow: 0 1px 0 #8a4f14; }
 
-/* 左ブロック：系統ラベル＋武器ドット絵（カードの左端を使う） */
 .wc-head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 96px;
-  flex-shrink: 0;
-  padding-right: 10px;
-  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 .wc-kind {
-  font-size: 15px;
+  align-self: stretch;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: #fff;
@@ -287,33 +283,50 @@ button {
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 9px;
-  padding: 2px 8px;
+  padding: 3px 8px;
 }
-.wc-img-wrap .wpn-sprite { height: 38px; width: auto; }
+.wc-img-wrap .wpn-sprite { height: 40px; width: auto; }
 .wpn-sprite { image-rendering: pixelated; display: block; }
 
-/* 右ブロック：スキル（残り幅をすべて使う） */
 .wc-combo {
-  flex: 1;
+  position: relative; /* 移動フォーカス枠の基準 */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  min-width: 0;
+  gap: 4px;
 }
 
 .wc-step {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 7px 8px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.46);
   border: 1px solid rgba(0, 0, 0, 0.5);
   border-left: 3px solid rgba(255, 255, 255, 0.25);
 }
 .wc-no { font-size: 13px; opacity: 0.9; color: #fff; }
-.wc-sk { flex: 1; font-size: 15px; font-weight: 800; color: #fff; min-width: 0; }
+.wc-sk { flex: 1; font-size: 13px; font-weight: 800; color: #fff; min-width: 0; }
+
+/* 次のスキルへ「ぬるっと」移動するフォーカス枠（半透明で文字は透けて見える） */
+.wc-focus {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  z-index: 2;
+  border-radius: 8px;
+  background: rgba(255, 210, 90, 0.2);
+  border: 2px solid #ffe27a;
+  box-shadow: 0 0 10px rgba(255, 210, 90, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.24s cubic-bezier(0.34, 1.4, 0.5, 1), height 0.18s ease, opacity 0.18s ease;
+}
+.wc-focus.on { opacity: 1; }
 
 /* コスト：数字を大きく、暗いピルで囲んでコントラストを上げる */
 .wc-cost {
@@ -335,14 +348,8 @@ button {
 }
 .wc-cost-lbl { font-size: 9px; font-weight: 800; color: rgba(255, 255, 255, 0.8); }
 
-/* 次に発動する段を強調（コンボの現在地） */
-.wc-step-on {
-  background: rgba(255, 211, 95, 0.14);
-  border-left-color: #ffd35f;
-  box-shadow: 0 0 8px rgba(255, 211, 95, 0.25);
-}
+/* 次に発動する段の強調（静的ハイライトは移動フォーカス枠に任せ、文字だけ強調） */
 .wc-step-on .wc-no { opacity: 1; color: #ffd35f; }
-.wc-step-on .wc-sk { color: #fff; }
 .wc-step-on .wc-cost-num { color: #ffd35f; }
 
 /* ===== スキル連携（連携技）の通知 ===== */
@@ -869,6 +876,7 @@ button.wpn-row:hover { background: #241f55; }
 /* ===== ショップ ===== */
 .shop-list { display: flex; flex-direction: column; gap: 10px; }
 .shop-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -876,10 +884,38 @@ button.wpn-row:hover { background: #241f55; }
   border: 2px solid #2e2750;
   border-radius: 12px;
   background: linear-gradient(180deg, #201b44, #171331);
+  overflow: hidden;
 }
 .shop-card.wclass-slash { border-color: #3a6da0; }
 .shop-card.wclass-pierce { border-color: #4f8a45; }
 .shop-card.wclass-crush { border-color: #a07a3a; }
+
+/* 売り切れ：中身を暗くして、上に SOLD OUT の帯（帯は明るいまま） */
+.shop-card.shop-sold {
+  border-color: #2a2a3a !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+.shop-card.shop-sold .shop-icon,
+.shop-card.shop-sold .shop-info,
+.shop-card.shop-sold .shop-buy {
+  filter: grayscale(0.7) brightness(0.45);
+}
+.shop-sold-banner {
+  position: absolute;
+  z-index: 3;
+  top: 9px;
+  left: -34px;
+  transform: rotate(-18deg);
+  background: #c0303a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 3px 40px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
 .shop-icon {
   flex-shrink: 0;
   width: 56px;
@@ -935,9 +971,20 @@ button.wpn-row:hover { background: #241f55; }
 .result-gold-total { font-size: 11px; color: #b6b0dc; font-weight: 600; }
 
 /* ===== インベントリ：攻撃力・スキル（武器画像の右） ===== */
-.wpn-atk { font-size: 11px; color: #d7d2f4; }
-.wpn-atk b { color: #ffd35f; font-size: 13px; }
-.wpn-skills { font-size: 10px; color: #9690c4; }
+/* インベントリ：左ブロック（名前・レアリティ）と右ブロック（攻撃力・スキル＝中央より右） */
+.wpn-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.wpn-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 50%;
+  flex-shrink: 0;
+  padding-left: 10px;
+  border-left: 1px solid #2a2350;
+}
+.wpn-atk { font-size: 14px; color: #e7e3ff; line-height: 1.2; }
+.wpn-atk b { color: #ffd35f; font-size: 19px; }
+.wpn-skills { font-size: 12px; color: #cfc9f2; line-height: 1.25; }
 
 /* ===== レアリティ発光（エピック以上。武器カード/ショップ共通） ===== */
 .glow-epic { border-color: #b96bff; box-shadow: 0 0 12px rgba(185, 107, 255, 0.55); }

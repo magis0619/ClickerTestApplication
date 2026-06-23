@@ -35,11 +35,17 @@ export class Game {
   /** 所持ゴールド */
   get gold(): number { return this.save.gold; }
 
-  /** ショップで武器を購入。成功でtrue（ゴールド不足/不正ID時はfalse） */
+  /** その武器が購入済み（売り切れ）か */
+  isSoldOut(baseId: string): boolean {
+    return this.save.purchased.includes(baseId);
+  }
+
+  /** ショップで武器を購入。成功でtrue（ゴールド不足/売切/不正ID時はfalse） */
   buyWeapon(baseId: string, price: number): boolean {
-    if (this.save.gold < price || !getWeapon(baseId)) return false;
+    if (this.save.gold < price || !getWeapon(baseId) || this.isSoldOut(baseId)) return false;
     this.save.gold -= price;
     this.save.inventory.push(makeInstance(baseId));
+    this.save.purchased.push(baseId);
     writeSave(this.save);
     return true;
   }
