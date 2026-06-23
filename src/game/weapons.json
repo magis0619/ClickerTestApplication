@@ -1,14 +1,21 @@
 [
-  { "id": "w_iron_edge",      "name": "アイアンエッジ",     "weapon": "slash",  "rarity": "common",   "attack": 16, "critChance": 0,  "breakPower": 8,  "desc": "標準的な片手剣。バランス型" },
-  { "id": "w_storm_saber",    "name": "ストームセイバー",   "weapon": "slash",  "rarity": "rare",     "attack": 24, "critChance": 10, "breakPower": 9,  "desc": "素早い斬撃で畳みかける" },
-  { "id": "w_dragoon_blade",  "name": "ドラグーンブレイド", "weapon": "slash",  "rarity": "epic",     "attack": 30, "critChance": 12, "breakPower": 12, "desc": "竜騎士の大剣。高い火力" },
-  { "id": "w_astral_edge",    "name": "アストラルエッジ",   "weapon": "slash",  "rarity": "astral",   "attack": 44, "critChance": 25, "breakPower": 16, "desc": "星の力を宿す伝説の刃" },
+  { "id": "w_iron_edge",       "name": "アイアンエッジ",     "weapon": "slash",  "rarity": "common",   "attack": 16, "critChance": 0,  "breakPower": 8,  "desc": "標準的な片手剣。バランス型" },
+  { "id": "w_shadow_blade",    "name": "シャドウブレイド",   "weapon": "slash",  "rarity": "uncommon", "attack": 20, "critChance": 8,  "breakPower": 9,  "desc": "影の刃。高い会心率を持つ" },
+  { "id": "w_storm_saber",     "name": "ストームセイバー",   "weapon": "slash",  "rarity": "rare",     "attack": 24, "critChance": 10, "breakPower": 9,  "desc": "素早い斬撃で畳みかける" },
+  { "id": "w_dragoon_blade",   "name": "ドラグーンブレイド", "weapon": "slash",  "rarity": "epic",     "attack": 30, "critChance": 12, "breakPower": 12, "desc": "竜騎士の大剣。高い火力" },
+  { "id": "w_flame_sword",     "name": "フレイムソード",     "weapon": "slash",  "rarity": "legend",   "attack": 40, "critChance": 18, "breakPower": 13, "desc": "炎をまとう伝説の大剣" },
+  { "id": "w_astral_edge",     "name": "アストラルエッジ",   "weapon": "slash",  "rarity": "astral",   "attack": 44, "critChance": 25, "breakPower": 16, "desc": "星の力を宿す伝説の刃" },
 
-  { "id": "w_steel_lance",    "name": "スチールランス",     "weapon": "pierce", "rarity": "common",   "attack": 15, "critChance": 0,  "breakPower": 9,  "desc": "扱いやすい鋼の槍" },
-  { "id": "w_wind_pike",      "name": "ウィンドパイク",     "weapon": "pierce", "rarity": "uncommon", "attack": 19, "critChance": 5,  "breakPower": 14, "desc": "風を切るブレイク型の槍" },
-  { "id": "w_void_glaive",    "name": "ヴォイドグレイヴ",   "weapon": "pierce", "rarity": "legend",   "attack": 36, "critChance": 15, "breakPower": 16, "desc": "虚空をうがつ戦槍" },
+  { "id": "w_steel_lance",     "name": "スチールランス",     "weapon": "pierce", "rarity": "common",   "attack": 15, "critChance": 0,  "breakPower": 9,  "desc": "扱いやすい鋼の槍" },
+  { "id": "w_wind_pike",       "name": "ウィンドパイク",     "weapon": "pierce", "rarity": "uncommon", "attack": 19, "critChance": 5,  "breakPower": 14, "desc": "風を切るブレイク型の槍" },
+  { "id": "w_ice_needle",      "name": "アイスニードル",     "weapon": "pierce", "rarity": "rare",     "attack": 22, "critChance": 12, "breakPower": 18, "desc": "凍てつく細針槍。ブレイク重視" },
+  { "id": "w_thunder_spear",   "name": "サンダースピア",     "weapon": "pierce", "rarity": "epic",     "attack": 32, "critChance": 10, "breakPower": 14, "desc": "雷をまとう電撃の槍" },
+  { "id": "w_void_glaive",     "name": "ヴォイドグレイヴ",   "weapon": "pierce", "rarity": "legend",   "attack": 36, "critChance": 15, "breakPower": 16, "desc": "虚空をうがつ戦槍" },
 
-  { "id": "w_war_mallet",     "name": "ウォーマレット",     "weapon": "crush",  "rarity": "common",   "attack": 18, "critChance": 0,  "breakPower": 14, "desc": "重い一撃の戦槌" },
-  { "id": "w_quake_hammer",   "name": "クエイクハンマー",   "weapon": "crush",  "rarity": "rare",     "attack": 24, "critChance": 8,  "breakPower": 22, "desc": "地を砕くブレイク特化の大槌" },
-  { "id": "w_titan_breaker",  "name": "タイタンブレイカー", "weapon": "crush",  "rarity": "legend",   "attack": 38, "critChance": 5,  "breakPower": 24, "desc": "巨人をも砕く最大火力" }
+  { "id": "w_war_mallet",      "name": "ウォーマレット",     "weapon": "crush",  "rarity": "common",   "attack": 18, "critChance": 0,  "breakPower": 14, "desc": "重い一撃の戦槌" },
+  { "id": "w_stone_mace",      "name": "ストーンメイス",     "weapon": "crush",  "rarity": "uncommon", "attack": 20, "critChance": 0,  "breakPower": 18, "desc": "石造りの鈍器。ブレイク特化" },
+  { "id": "w_quake_hammer",    "name": "クエイクハンマー",   "weapon": "crush",  "rarity": "rare",     "attack": 24, "critChance": 8,  "breakPower": 22, "desc": "地を砕くブレイク特化の大槌" },
+  { "id": "w_earth_crusher",   "name": "アースクラッシャー", "weapon": "crush",  "rarity": "epic",     "attack": 28, "critChance": 5,  "breakPower": 26, "desc": "大地を割る重鎚。最高のブレイク力" },
+  { "id": "w_titan_breaker",   "name": "タイタンブレイカー", "weapon": "crush",  "rarity": "legend",   "attack": 38, "critChance": 5,  "breakPower": 24, "desc": "巨人をも砕く最大火力" },
+  { "id": "w_mjolnir",         "name": "ミョルニル",         "weapon": "crush",  "rarity": "astral",   "attack": 46, "critChance": 15, "breakPower": 30, "desc": "神話の戦鎚。究極の打撃と破壊力" }
 ]

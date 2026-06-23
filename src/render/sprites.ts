@@ -363,10 +363,14 @@ export const WEAPON_SPRITES: Record<string, Sprite> = {
   // --- 斬撃：剣 ---
   w_iron_edge: wpnSprite(SWORD_ROWS,
     { o: OUT, B: "#eef2ff", b: "#aeb8cc", g: "#caa14a", h: "#6b4a2a", p: "#9a7d4a" }),
+  w_shadow_blade: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#d8c0ff", b: "#7a4ab0", g: "#3a1a5a", h: "#200c30", p: "#9a68cc" }),
   w_storm_saber: wpnSprite(SWORD_ROWS,
     { o: OUT, B: "#e6fbff", b: "#6fd3f0", g: "#cdd6e6", h: "#2a5a8a", p: "#7fb0ff" }),
   w_dragoon_blade: wpnSprite(SWORD_ROWS,
     { o: OUT, B: "#ecdcff", b: "#b08af0", g: "#ffd35f", h: "#4a2a6a", p: "#caa14a" }),
+  w_flame_sword: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#fff0a0", b: "#ff8030", g: "#cc3010", h: "#7a1808", p: "#ffd35f" }),
   w_astral_edge: wpnSprite(SWORD_ROWS,
     { o: OUT, B: "#ffffff", b: "#ff9ee6", g: "#7fe0ff", h: "#9a5ad0", p: "#ffd35f" }),
   // --- 刺突：槍 ---
@@ -374,15 +378,25 @@ export const WEAPON_SPRITES: Record<string, Sprite> = {
     { o: OUT, H: "#cfd8e8", s: "#7a5630", P: "#9a7d4a" }),
   w_wind_pike: wpnSprite(SPEAR_ROWS,
     { o: OUT, H: "#cdeccf", s: "#5a8a45", P: "#9ff0a8" }),
+  w_ice_needle: wpnSprite(SPEAR_ROWS,
+    { o: OUT, H: "#d8f4ff", s: "#4a9ab8", P: "#a0e8ff" }),
+  w_thunder_spear: wpnSprite(SPEAR_ROWS,
+    { o: OUT, H: "#ffffa0", s: "#8a6800", P: "#ffd35f" }),
   w_void_glaive: wpnSprite(SPEAR_ROWS,
     { o: OUT, H: "#b394e6", s: "#3a2a55", P: "#b96bff" }),
   // --- 打撃：戦槌 ---
   w_war_mallet: wpnSprite(HAMMER_ROWS,
     { o: OUT, H: "#aab2c4", s: "#6b4a2a", p: "#9a7d4a" }),
+  w_stone_mace: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#c0b8b0", s: "#5a5050", p: "#908888" }),
   w_quake_hammer: wpnSprite(HAMMER_ROWS,
     { o: OUT, H: "#e0a050", s: "#7a5a2a", p: "#caa14a" }),
+  w_earth_crusher: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#d07840", s: "#6a3818", p: "#b05a28" }),
   w_titan_breaker: wpnSprite(HAMMER_ROWS,
     { o: OUT, H: "#ffcf5f", s: "#5a3a1a", p: "#ffd35f" }),
+  w_mjolnir: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#ffffff", s: "#4a6a9a", p: "#7fbfff" }),
 };
 
 /** 武器IDからドット絵を取得（未定義なら undefined） */

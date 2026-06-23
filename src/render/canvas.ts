@@ -665,13 +665,13 @@ function drawPlayerLog(ctx: CanvasRenderingContext2D, b: Battle): void {
     const f = logs[i];
     const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
     ctx.globalAlpha = alpha;
-    ctx.font = "900 15px monospace";
-    ctx.lineWidth = 4;
+    ctx.font = "900 22px monospace";
+    ctx.lineWidth = 5;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     ctx.strokeText(f.text, x, y);
     ctx.fillStyle = f.color;
     ctx.fillText(f.text, x, y);
-    y -= 20;
+    y -= 28;
   }
   ctx.globalAlpha = 1;
 }

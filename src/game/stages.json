@@ -3,8 +3,8 @@
     "name": "始まりの森",
     "desc": "3戦を勝ち抜こう。最後はボスが待つ",
     "waves": [
-      ["straw_golem"],
-      ["straw_golem", "dust_imp"],
+      ["sand_crab", "bone_ghost"],
+      ["sand_crab", "sky_moth", "bone_ghost"],
       ["shell_warden"]
     ]
   },
@@ -12,9 +12,9 @@
     "name": "双影の回廊",
     "desc": "弱点の異なる敵が増える。3戦目はボス",
     "waves": [
-      ["wraith_feather", "dust_imp"],
-      ["gloom_shade", "venom_lurker"],
-      ["wraith_monarch", "ember_hound"]
+      ["sky_moth", "shadow_lurker"],
+      ["mud_beetle", "thunder_hawk"],
+      ["wraith_monarch", "shadow_lurker"]
     ]
   },
   {
@@ -22,9 +22,9 @@
     "desc": "強敵が連戦で襲う。最深部に獣王",
     "recommendLv": 15,
     "waves": [
-      ["stone_sentinel", "shell_crawler"],
-      ["ember_hound", "venom_lurker", "gloom_shade"],
-      ["carapace_tyrant", "wraith_feather", "gloom_shade"]
+      ["iron_tortoise", "mud_beetle"],
+      ["vile_specter", "thunder_hawk", "shadow_lurker"],
+      ["carapace_tyrant", "vile_specter"]
     ]
   },
   {
@@ -33,8 +33,8 @@
     "recommendLv": 20,
     "waves": [
       ["ice_crawler", "frost_imp"],
-      ["frost_drake", "frost_imp", "ice_crawler"],
-      ["frost_dragon", "ice_crawler"]
+      ["frost_drake", "storm_wyvern"],
+      ["frost_dragon", "iron_tortoise"]
     ]
   },
   {

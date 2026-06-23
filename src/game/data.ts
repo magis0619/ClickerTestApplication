@@ -143,14 +143,21 @@ export function rollEnemyGold(def: EnemyDef): number {
 // ===== ショップ（ゴールドで武器を購入） =====
 /** ショップの品揃え。購入時はレアリティに応じてスキルが抽選される */
 export const SHOP_ITEMS: ShopItem[] = [
-  { baseId: "w_iron_edge", price: 120 },
-  { baseId: "w_steel_lance", price: 120 },
-  { baseId: "w_war_mallet", price: 140 },
-  { baseId: "w_wind_pike", price: 280 },
-  { baseId: "w_storm_saber", price: 560 },
-  { baseId: "w_quake_hammer", price: 560 },
+  { baseId: "w_iron_edge",     price: 120 },
+  { baseId: "w_steel_lance",   price: 120 },
+  { baseId: "w_war_mallet",    price: 140 },
+  { baseId: "w_shadow_blade",  price: 240 },
+  { baseId: "w_stone_mace",    price: 200 },
+  { baseId: "w_wind_pike",     price: 280 },
+  { baseId: "w_storm_saber",   price: 560 },
+  { baseId: "w_ice_needle",    price: 560 },
+  { baseId: "w_quake_hammer",  price: 560 },
   { baseId: "w_dragoon_blade", price: 1500 },
-  { baseId: "w_void_glaive", price: 3400 },
+  { baseId: "w_thunder_spear", price: 1200 },
+  { baseId: "w_earth_crusher", price: 1500 },
+  { baseId: "w_flame_sword",   price: 3200 },
+  { baseId: "w_void_glaive",   price: 3400 },
+  { baseId: "w_mjolnir",       price: 4000 },
 ];
 
 // ===== 敵（enemies.json から読み込み） =====
@@ -179,7 +186,7 @@ export const STAGE_COUNT = STAGES.length;
 export function stageDropPreview(stageIndex: number): string[] {
   const st = STAGES[stageIndex];
   if (!st) return [];
-  if (st.endless) return ["w_storm_saber", "w_quake_hammer", "w_wind_pike", "w_void_glaive", "w_dragoon_blade"];
+  if (st.endless) return ["w_mjolnir", "w_void_glaive", "w_flame_sword", "w_astral_edge", "w_earth_crusher", "w_thunder_spear"];
   const ids: string[] = [];
   for (const wave of st.waves) {
     for (const e of wave) if (e.dropWeaponId && !ids.includes(e.dropWeaponId)) ids.push(e.dropWeaponId);
@@ -189,10 +196,15 @@ export function stageDropPreview(stageIndex: number): string[] {
 
 // ===== 無限の回廊：階層ごとにランダムな敵を生成（階が深いほど強い） =====
 const ENDLESS_POOL = [
+  "sand_crab", "bone_ghost", "sky_moth",
   "shell_crawler", "wraith_feather", "gloom_shade", "venom_lurker",
+  "mud_beetle", "shadow_lurker", "thunder_hawk",
   "ember_hound", "stone_sentinel", "ice_crawler", "frost_drake", "frost_imp",
+  "iron_tortoise", "vile_specter", "storm_wyvern",
 ];
-const ENDLESS_BOSSES = ["shell_warden", "wraith_monarch", "carapace_tyrant", "frost_dragon"];
+const ENDLESS_BOSSES = [
+  "shell_warden", "wraith_monarch", "carapace_tyrant", "frost_dragon", "shadow_tyrant",
+];
 const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 
 /** floor階の敵編成を生成。5階ごとにボス。HP/攻撃/Breakを階層で強化 */
