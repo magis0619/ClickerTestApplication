@@ -170,49 +170,64 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 11px 9px 12px;
-  border: 2px solid #2e2750;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #201b44, #171331);
-  color: var(--ink);
+  padding: 11px 9px 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #2a2356, #1b1640);
+  color: #fff;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.04s, box-shadow 0.12s, background 0.12s;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.04s, box-shadow 0.12s, background 0.12s, filter 0.1s;
 }
 
-/* 押している実感（沈み込み＋発光） */
-.weapon-card:hover { background: linear-gradient(180deg, #272050, #1b1640); }
+/* 押している実感（キャンディボタン風に沈み込む） */
+.weapon-card:hover { filter: brightness(1.08); }
 .weapon-card:active {
-  transform: translateY(2px) scale(0.98);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2) inset;
-  filter: brightness(1.3);
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  filter: brightness(1.2);
 }
 
 .weapon-card.disabled { opacity: 0.45; pointer-events: none; }
 
-/* 系統ごとのアクセント色（枠） */
-.weapon-card.wclass-slash { border-color: #3a6da0; }
-.weapon-card.wclass-pierce { border-color: #4f8a45; }
-.weapon-card.wclass-crush { border-color: #a07a3a; }
+/* 系統ごとのアクセント色（ポップな塗り＋立体的な影） */
+.weapon-card.wclass-slash {
+  background: linear-gradient(180deg, #4aa6ff, #2168cc);
+  border-color: #bfe2ff;
+  box-shadow: 0 5px 0 #15407e;
+}
+.weapon-card.wclass-pierce {
+  background: linear-gradient(180deg, #56c66f, #2f9047);
+  border-color: #c7f7cf;
+  box-shadow: 0 5px 0 #1d5e2f;
+}
+.weapon-card.wclass-crush {
+  background: linear-gradient(180deg, #ffae42, #df861f);
+  border-color: #ffe1ab;
+  box-shadow: 0 5px 0 #8a4f14;
+}
+.weapon-card.wclass-slash:active { box-shadow: 0 1px 0 #15407e; }
+.weapon-card.wclass-pierce:active { box-shadow: 0 1px 0 #1d5e2f; }
+.weapon-card.wclass-crush:active { box-shadow: 0 1px 0 #8a4f14; }
 
 .wc-head {
   display: flex;
   flex-direction: column;
   gap: 1px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
 }
 .wc-kind {
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 900;
   letter-spacing: 0.5px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
 }
-.wclass-slash .wc-kind { color: #9fd9ff; }
-.wclass-pierce .wc-kind { color: #c2ffa8; }
-.wclass-crush .wc-kind { color: #ffd98f; }
 .wc-name {
   font-size: 11px;
-  color: #b6b0dc;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .wc-combo {
@@ -225,13 +240,13 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 7px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
   border-left: 3px solid transparent;
 }
-.wc-no { font-size: 13px; opacity: 0.75; }
-.wc-sk { flex: 1; font-size: 12px; font-weight: 700; color: #d7d2f4; min-width: 0; }
+.wc-no { font-size: 13px; opacity: 0.85; }
+.wc-sk { flex: 1; font-size: 12px; font-weight: 800; color: #fff; min-width: 0; }
 
 /* コスト：数字を大きく、見やすく */
 .wc-cost {
@@ -240,8 +255,14 @@ button {
   gap: 1px;
   flex-shrink: 0;
 }
-.wc-cost-num { font-size: 22px; font-weight: 900; line-height: 1; color: #6fd0ff; }
-.wc-cost-lbl { font-size: 9px; font-weight: 700; color: #6a8fb0; }
+.wc-cost-num {
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.wc-cost-lbl { font-size: 9px; font-weight: 800; color: rgba(255, 255, 255, 0.75); }
 
 /* 次に発動する段を強調（コンボの現在地） */
 .wc-step-on {
