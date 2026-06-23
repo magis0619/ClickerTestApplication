@@ -353,16 +353,21 @@ button {
 .wc-step-on .wc-cost-num { color: #ffd35f; }
 
 /* ===== スキル連携（連携技）の通知 ===== */
-/* 連携バッジ（⚡連携）：通常は隠し、連携可能なときだけ点滅表示 */
+/* 連携バッジ（⚡連携）：レイアウトを崩さないよう絶対配置でスキル欄からはみ出す */
 .wc-link {
   display: none;
-  flex-shrink: 0;
+  position: absolute;
+  top: -10px;
+  right: -4px;
+  z-index: 3;
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 900;
   color: #1a1206;
   background: linear-gradient(180deg, #ffe27a, #ffb43a);
   border-radius: 5px;
-  padding: 1px 5px;
+  padding: 2px 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 /* 連携が成立する段：金色に強く発光させる */
 .wc-combo-on {
@@ -371,7 +376,7 @@ button {
 }
 .wc-combo-on .wc-sk { color: #fff; }
 .wc-combo-on .wc-link {
-  display: inline-block;
+  display: block;
   animation: combo-flash 0.5s steps(1) infinite;
 }
 @keyframes combo-flash { 50% { opacity: 0.35; } }
@@ -711,7 +716,7 @@ button {
   gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 10px 11px;
+  padding: 14px 12px;
   margin-bottom: 6px;
   border: 1px solid #2a2350;
   border-radius: 8px;
@@ -984,7 +989,7 @@ button.wpn-row:hover { background: #241f55; }
 }
 .wpn-atk { font-size: 14px; color: #e7e3ff; line-height: 1.2; }
 .wpn-atk b { color: #ffd35f; font-size: 19px; }
-.wpn-skills { font-size: 12px; color: #cfc9f2; line-height: 1.25; }
+.wpn-skills { font-size: 15px; font-weight: 700; color: #d7d2f4; line-height: 1.35; }
 
 /* ===== レアリティ発光（エピック以上。武器カード/ショップ共通） ===== */
 .glow-epic { border-color: #b96bff; box-shadow: 0 0 12px rgba(185, 107, 255, 0.55); }

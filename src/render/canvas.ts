@@ -644,11 +644,11 @@ function drawPlayerLog(ctx: CanvasRenderingContext2D, b: Battle): void {
   const logs = b.floats.filter((f) => f.anchor === "player");
   if (logs.length === 0) return;
   const x = W - 12;
-  let y = H - 60;
+  let y = H - 12; // バトル枠の一番下から上へ積む
   ctx.textAlign = "right";
   ctx.textBaseline = "alphabetic";
   ctx.lineJoin = "round";
-  // 新しいもの（配列末尾）を味方に近い下側に、古いものを上へ積む（最大6件）
+  // 新しいもの（配列末尾）を一番下に、古いものを上へ積む（最大6件）
   for (let i = logs.length - 1; i >= 0 && i >= logs.length - 6; i--) {
     const f = logs[i];
     const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
@@ -659,7 +659,7 @@ function drawPlayerLog(ctx: CanvasRenderingContext2D, b: Battle): void {
     ctx.strokeText(f.text, x, y);
     ctx.fillStyle = f.color;
     ctx.fillText(f.text, x, y);
-    y -= 21;
+    y -= 20;
   }
   ctx.globalAlpha = 1;
 }
