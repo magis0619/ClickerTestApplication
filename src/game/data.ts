@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef,
+  LastSkill, ComboDef, ShopItem,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -131,6 +131,27 @@ export function rollEnemyDrop(def: EnemyDef): WeaponInstance | undefined {
   if (Math.random() * 100 >= def.dropRate) return undefined;
   return makeInstance(def.dropWeaponId);
 }
+
+/** 敵が落とすゴールド。強い敵（HP・攻撃力が高い／ボス）ほど多い。±10%のゆらぎ */
+export function rollEnemyGold(def: EnemyDef): number {
+  const base = def.maxHp * 0.4 + def.attack * 2;
+  const boss = def.boss ? 1.8 : 1;
+  const jitter = 0.9 + Math.random() * 0.2;
+  return Math.max(1, Math.round(base * boss * jitter));
+}
+
+// ===== ショップ（ゴールドで武器を購入） =====
+/** ショップの品揃え。購入時はレアリティに応じてスキルが抽選される */
+export const SHOP_ITEMS: ShopItem[] = [
+  { baseId: "w_iron_edge", price: 120 },
+  { baseId: "w_steel_lance", price: 120 },
+  { baseId: "w_war_mallet", price: 140 },
+  { baseId: "w_wind_pike", price: 280 },
+  { baseId: "w_storm_saber", price: 560 },
+  { baseId: "w_quake_hammer", price: 560 },
+  { baseId: "w_dragoon_blade", price: 1500 },
+  { baseId: "w_void_glaive", price: 3400 },
+];
 
 // ===== 敵（enemies.json から読み込み） =====
 interface RawEnemy {

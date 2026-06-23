@@ -28,6 +28,7 @@ import {
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
+  rollEnemyGold,
 } from "./data.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
@@ -147,6 +148,8 @@ export class Battle {
   freeNextEn = false;
   /** 直近に発動したスキル（連携＝コンボ判定に使う） */
   lastSkill: LastSkill | null = null;
+  /** この戦闘で敵を倒して得たゴールド合計 */
+  goldEarned = 0;
   /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
@@ -392,7 +395,10 @@ export class Battle {
     e.breakTurns = 0;
     e.flinchT = 0;
     e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり）
+    const gold = rollEnemyGold(e.def); // 強い敵ほど多い
+    this.goldEarned += gold;
     this.pushFloat(e.drop ? "ドロップ!" : "撃破!", "#ffd35f", idx);
+    this.pushFloat(`+${gold} G`, "#ffe27a", idx);
     this.shake(220, 5);
     this.sfx.push("die");
   }

@@ -11,7 +11,7 @@ export function defaultSave(): SaveData {
     const w = getWeapon(it.baseId);
     if (w && !equipped[w.weapon]) equipped[w.weapon] = it.uid;
   }
-  return { inventory: inv, equipped, bestStage: 0 };
+  return { inventory: inv, equipped, bestStage: 0, gold: 0 };
 }
 
 /** 装備が無効（売却・データ不整合）な系統を、所持品から補完する */
@@ -37,6 +37,7 @@ export function loadSave(): SaveData {
       inventory,
       equipped: { slash: "", pierce: "", crush: "", ...(parsed.equipped ?? {}) },
       bestStage: typeof parsed.bestStage === "number" ? parsed.bestStage : 0,
+      gold: typeof parsed.gold === "number" ? parsed.gold : 0,
     };
     fixEquipped(save);
     return save;

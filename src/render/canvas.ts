@@ -627,17 +627,19 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
       drawDamageBurst(ctx, x, y, f.text, f.tag ?? "", !!f.big, pop, alpha);
       continue;
     }
-    // 通常テキスト
+    // 通常テキスト（味方の回復/効果なども相手のダメージ表記くらい大きく）
     const scale = age < 140 ? 1.8 - 0.8 * (age / 140) : 1;
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
     ctx.textAlign = "center";
-    ctx.font = "bold 13px monospace";
-    ctx.fillStyle = "#000000";
-    ctx.globalAlpha = alpha * 0.5;
-    ctx.fillText(f.text, 1, 1);
+    ctx.textBaseline = "middle";
+    ctx.font = "900 19px monospace";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 4.5;
     ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "rgba(0,0,0,0.8)";
+    ctx.strokeText(f.text, 0, 0);
     ctx.fillStyle = f.color;
     ctx.fillText(f.text, 0, 0);
     ctx.restore();

@@ -5,10 +5,10 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo,
-  PLAYER_MAX_HP, PLAYER_MAX_EN,
+  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
+import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem } from "./game/types.ts";
 
 /** インスタンスの武器名・レアリティ（テンプレートから取得） */
 function instName(inst: WeaponInstance): string { return getWeapon(inst.baseId)?.name ?? "???"; }
@@ -151,17 +151,80 @@ function buildControls(): void {
     case "title": buildTitle(); break;
     case "stageSelect": buildStageSelect(); break;
     case "inventory": buildInventory(); break;
+    case "shop": buildShop(); break;
     case "battle": buildBattle(); break;
     case "result": buildResult(); break;
   }
 }
 
 function buildTitle(): void {
+  controls.appendChild(goldBadge());
   const menu = document.createElement("div");
   menu.className = "menu";
   menu.appendChild(bigButton("⚔ ステージ選択", () => { game.goStageSelect(); buildControls(); }));
   menu.appendChild(bigButton("🎒 インベントリ", () => { game.goInventory(); buildControls(); }));
+  menu.appendChild(bigButton("🛒 ショップ", () => { game.goShop(); buildControls(); }));
   controls.appendChild(menu);
+}
+
+/** 所持ゴールドの表示バッジ */
+function goldBadge(): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "gold-badge";
+  el.innerHTML = `<span class="gold-amt">${game.gold.toLocaleString()}</span><span class="gold-unit">G</span>`;
+  return el;
+}
+
+/** レアリティに応じた発光クラス（エピック以上のみ光らせる） */
+function rarityGlowClass(r: Rarity): string {
+  if (r === "astral") return "glow-astral";
+  if (r === "legend") return "glow-legend";
+  if (r === "epic") return "glow-epic";
+  return "";
+}
+
+function buildShop(): void {
+  controls.appendChild(goldBadge());
+  const list = document.createElement("div");
+  list.className = "shop-list";
+  for (const item of SHOP_ITEMS) {
+    const w = getWeapon(item.baseId);
+    if (w) list.appendChild(shopRow(item, w));
+  }
+  controls.appendChild(list);
+  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+}
+
+/** ショップの1商品（武器画像＋情報＋価格/購入ボタン） */
+function shopRow(item: ShopItem, w: Weapon): HTMLElement {
+  const card = document.createElement("div");
+  card.className = ("shop-card wclass-" + w.weapon + " " + rarityGlowClass(w.rarity)).trim();
+
+  const icon = document.createElement("div");
+  icon.className = "shop-icon";
+  icon.appendChild(weaponSpriteEl(item.baseId, w.weapon, 3));
+  card.appendChild(icon);
+
+  const info = document.createElement("div");
+  info.className = "shop-info";
+  info.innerHTML =
+    `<div class="shop-name">${w.name}</div>` +
+    `<div ${rarityAttr(w.rarity, "shop-stars")}>${rarityStars(w.rarity)} ` +
+    `<span class="shop-rlabel">${RARITY_LABEL[w.rarity]}・${WEAPON_LABEL[w.weapon]}</span></div>` +
+    `<div class="shop-stat">⚔ 攻撃力 ${w.attack}${w.critChance ? `　会心 ${w.critChance}%` : ""}　Break ${w.breakPower}</div>`;
+  card.appendChild(info);
+
+  const buy = document.createElement("button");
+  buy.className = "shop-buy";
+  buy.disabled = game.gold < item.price;
+  buy.innerHTML =
+    `<span class="shop-price">${item.price.toLocaleString()} G</span>` +
+    `<span class="shop-buy-lbl">購入</span>`;
+  buy.addEventListener("click", () => {
+    if (game.buyWeapon(item.baseId, item.price)) { audio.sfxPerfect(); buildControls(); }
+  });
+  card.appendChild(buy);
+  return card;
 }
 
 function buildStageSelect(): void {
@@ -226,19 +289,22 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   const w = getWeapon(inst.baseId)!;
   const equipped = game.save.equipped[w.weapon] === inst.uid;
   const card = document.createElement("div");
-  card.className = "wpn-card";
+  // エピック以上はカード自体をレアリティ色で発光
+  card.className = ("wpn-card " + rarityGlowClass(w.rarity)).trim();
 
   const head = document.createElement("div");
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const rarity = instRarity(inst);
   const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
+  // 左：大きめの武器ドット絵 ／ 右：名前・レアリティ・攻撃力・スキル
   head.innerHTML =
     `<span class="wpn-icon wclass-${w.weapon}"></span>` +
     `<span class="wpn-main">` +
     `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
     `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
     `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
-    `<span class="wpn-sub">⚔${w.attack}${w.critChance ? `　会心${w.critChance}%` : ""}　${skillNames || "スキルなし"}</span></span>`;
+    `<span class="wpn-atk">⚔ 攻撃力 <b>${w.attack}</b>${w.critChance ? `　会心 ${w.critChance}%` : ""}</span>` +
+    `<span class="wpn-skills">スキル: ${skillNames || "なし"}</span></span>`;
   // 系統の絵文字に代えて、武器ごとのドット絵を表示
   head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
   card.appendChild(head);
@@ -550,6 +616,12 @@ function buildResultPanel(): void {
       ? `🎁 入手した宝箱（${game.lastDrops.length}個）`
       : "🗡 入手した武器はありませんでした";
     panel.appendChild(head);
+    const goldLine = document.createElement("div");
+    goldLine.className = "result-gold";
+    goldLine.innerHTML =
+      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G 獲得</span>` +
+      `<span class="result-gold-total">（所持 ${game.gold.toLocaleString()} G）</span>`;
+    panel.appendChild(goldLine);
     if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
   } else {
     const info = document.createElement("p");
@@ -633,6 +705,7 @@ function loop(now: number): void {
     case "title": drawBackdrop(ctx, "ASTRAL WARDEN", "タイミングアクションRPG"); break;
     case "stageSelect": drawBackdrop(ctx, "ステージ選択"); break;
     case "inventory": drawBackdrop(ctx, "インベントリ"); break;
+    case "shop": drawBackdrop(ctx, "ショップ", "ゴールドで武器を購入"); break;
     case "battle":
     case "result":
       if (game.battle) {

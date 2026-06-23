@@ -124,7 +124,13 @@ export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" 
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "title" | "stageSelect" | "inventory" | "battle" | "result";
+export type Screen = "title" | "stageSelect" | "inventory" | "shop" | "battle" | "result";
+
+/** ショップで購入できる武器とその価格 */
+export interface ShopItem {
+  baseId: string;
+  price: number;
+}
 
 /** セーブデータ */
 export interface SaveData {
@@ -134,4 +140,6 @@ export interface SaveData {
   equipped: Record<WeaponClass, string>;
   /** これまでにクリアした最深ステージ番号(1始まり、0=未クリア) */
   bestStage: number;
+  /** 所持ゴールド（ショップで使用） */
+  gold: number;
 }
