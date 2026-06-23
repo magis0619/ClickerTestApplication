@@ -402,18 +402,22 @@ function drawEnemyCard(
     ctx.restore();
   } else {
     const urgent = e.count <= 1;
-    const r = 12 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2.5 : 0);
+    const ccy = cy - 9;
+    const r = 16 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2.5 : 0);
     ctx.beginPath();
-    ctx.arc(L.cx, cy - 6, r, 0, Math.PI * 2);
+    ctx.arc(L.cx, ccy, r, 0, Math.PI * 2);
     ctx.fillStyle = urgent ? "#a8324a" : "#2a2350";
     ctx.fill();
     ctx.lineWidth = 2;
     ctx.strokeStyle = urgent ? "#ff6f8a" : "#5a4fa0";
     ctx.stroke();
+    // カウント数値：太字で、味方スキルのコスト表示くらい大きく
     ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 15px monospace";
-    ctx.fillText(`${e.count}`, L.cx, cy - 1);
+    ctx.font = "900 23px monospace";
+    ctx.fillText(`${e.count}`, L.cx, ccy + 1);
+    ctx.textBaseline = "alphabetic";
   }
 
   // === ターゲットマーカー（カード下に黄色い三角） ===

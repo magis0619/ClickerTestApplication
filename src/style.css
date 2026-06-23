@@ -296,8 +296,8 @@ button {
 }
 
 .wc-step {
+  /* z-indexは付けない：付けると子の連携バッジがフォーカス枠より下に潜るため */
   position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;

@@ -1,5 +1,5 @@
 import "./style.css";
-import { render, drawBackdrop, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
+import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
 import { SHIELD, SLEEP, getWeaponSprite, chestSprite } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
@@ -150,6 +150,8 @@ function buildControls(): void {
   weaponButtons = [];
   battleHud = null;
   renderedScreen = game.screen;
+  // バトル枠（canvas）は戦闘・リザルトのみ表示し、メニュー系画面では隠す
+  canvas.style.display = (game.screen === "battle" || game.screen === "result") ? "block" : "none";
   switch (game.screen) {
     case "title": buildTitle(); break;
     case "stageSelect": buildStageSelect(); break;
@@ -733,21 +735,15 @@ function loop(now: number): void {
   }
   if (game.screen !== renderedScreen) buildControls();
 
-  switch (game.screen) {
-    case "title": drawBackdrop(ctx, "ASTRAL WARDEN", "タイミングアクションRPG"); break;
-    case "stageSelect": drawBackdrop(ctx, "ステージ選択"); break;
-    case "inventory": drawBackdrop(ctx, "インベントリ"); break;
-    case "shop": drawBackdrop(ctx, "ショップ", "ゴールドで武器を購入"); break;
-    case "battle":
-    case "result":
-      if (game.battle) {
-        if (game.screen === "battle") updateWeaponButtons();
-        render(ctx, game.battle, {
-          index: game.stageIndex, count: STAGE_COUNT,
-          wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
-        });
-      }
-      break;
+  // バトル枠（canvas）は戦闘・リザルトのみ。メニュー系画面では描画しない
+  if (game.screen === "battle" || game.screen === "result") {
+    if (game.battle) {
+      if (game.screen === "battle") updateWeaponButtons();
+      render(ctx, game.battle, {
+        index: game.stageIndex, count: STAGE_COUNT,
+        wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
+      });
+    }
   }
   requestAnimationFrame(loop);
 }
