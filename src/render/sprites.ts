@@ -300,3 +300,92 @@ export const SLEEP: Sprite = {
     "zzzzz.......",
   ],
 };
+
+// ===== 武器アイコン（武器名に見合うドット絵。系統ごとの形＋武器ごとの配色） =====
+// 斬撃＝剣（斜めの刃）/ 刺突＝槍 / 打撃＝戦槌。配色で各武器の個性を表現する。
+const SWORD_ROWS = [
+  "............oo",
+  "...........oBo",
+  "..........oBbo",
+  ".........oBbo.",
+  "........oBbo..",
+  ".......oBbo...",
+  "......oBbo....",
+  ".....oBbo.....",
+  "....oBbo......",
+  "..ogggggo.....",
+  "...ohhho......",
+  "..ohhho.......",
+  ".ohho.........",
+  ".oppo.........",
+];
+const SPEAR_ROWS = [
+  "............o.",
+  "...........oHo",
+  "..........oHHo",
+  ".........oHHo.",
+  "........oHo...",
+  ".......oso....",
+  "......oso.....",
+  ".....oso......",
+  "....oso.......",
+  "...oso........",
+  "..oso.........",
+  ".oso..........",
+  "oso...........",
+  "Po............",
+];
+const HAMMER_ROWS = [
+  "..............",
+  ".....oHHHHo...",
+  ".....oHHHHo...",
+  ".....oHHHHo...",
+  ".....oHHHHo...",
+  "......oso.....",
+  ".....oso......",
+  "....oso.......",
+  "...oso........",
+  "..oso.........",
+  ".oso..........",
+  "oso...........",
+  "po............",
+  "..............",
+];
+
+function wpnSprite(rows: string[], palette: Record<string, string>): Sprite {
+  return { rows, palette };
+}
+
+const OUT = "#0c0a18";
+
+/** 武器IDごとのドット絵。weapons.json の id と対応 */
+export const WEAPON_SPRITES: Record<string, Sprite> = {
+  // --- 斬撃：剣 ---
+  w_iron_edge: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#eef2ff", b: "#aeb8cc", g: "#caa14a", h: "#6b4a2a", p: "#9a7d4a" }),
+  w_storm_saber: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#e6fbff", b: "#6fd3f0", g: "#cdd6e6", h: "#2a5a8a", p: "#7fb0ff" }),
+  w_dragoon_blade: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#ecdcff", b: "#b08af0", g: "#ffd35f", h: "#4a2a6a", p: "#caa14a" }),
+  w_astral_edge: wpnSprite(SWORD_ROWS,
+    { o: OUT, B: "#ffffff", b: "#ff9ee6", g: "#7fe0ff", h: "#9a5ad0", p: "#ffd35f" }),
+  // --- 刺突：槍 ---
+  w_steel_lance: wpnSprite(SPEAR_ROWS,
+    { o: OUT, H: "#cfd8e8", s: "#7a5630", P: "#9a7d4a" }),
+  w_wind_pike: wpnSprite(SPEAR_ROWS,
+    { o: OUT, H: "#cdeccf", s: "#5a8a45", P: "#9ff0a8" }),
+  w_void_glaive: wpnSprite(SPEAR_ROWS,
+    { o: OUT, H: "#b394e6", s: "#3a2a55", P: "#b96bff" }),
+  // --- 打撃：戦槌 ---
+  w_war_mallet: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#aab2c4", s: "#6b4a2a", p: "#9a7d4a" }),
+  w_quake_hammer: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#e0a050", s: "#7a5a2a", p: "#caa14a" }),
+  w_titan_breaker: wpnSprite(HAMMER_ROWS,
+    { o: OUT, H: "#ffcf5f", s: "#5a3a1a", p: "#ffd35f" }),
+};
+
+/** 武器IDからドット絵を取得（未定義なら undefined） */
+export function getWeaponSprite(id: string): Sprite | undefined {
+  return WEAPON_SPRITES[id];
+}

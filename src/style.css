@@ -214,21 +214,35 @@ button {
 .wc-head {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  align-items: center;
+  gap: 4px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 .wc-kind {
+  align-self: stretch;
   font-size: 17px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 .wc-name {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
 }
+/* 武器ドット絵（バトルカードのヘッダー） */
+.wc-img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9px;
+  padding: 3px 8px;
+}
+.wc-img-wrap .wpn-sprite { height: 40px; width: auto; }
+.wpn-sprite { image-rendering: pixelated; display: block; }
 
 .wc-combo {
   display: flex;
@@ -242,27 +256,32 @@ button {
   gap: 6px;
   padding: 6px 7px;
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-left: 3px solid transparent;
+  background: rgba(0, 0, 0, 0.46);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-left: 3px solid rgba(255, 255, 255, 0.25);
 }
-.wc-no { font-size: 13px; opacity: 0.85; }
+.wc-no { font-size: 13px; opacity: 0.9; color: #fff; }
 .wc-sk { flex: 1; font-size: 12px; font-weight: 800; color: #fff; min-width: 0; }
 
-/* コスト：数字を大きく、見やすく */
+/* コスト：数字を大きく、暗いピルで囲んでコントラストを上げる */
 .wc-cost {
   display: flex;
   align-items: baseline;
   gap: 1px;
   flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .wc-cost-num {
   font-size: 23px;
   font-weight: 900;
   line-height: 1;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  color: #ffe27a;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
 }
-.wc-cost-lbl { font-size: 9px; font-weight: 800; color: rgba(255, 255, 255, 0.75); }
+.wc-cost-lbl { font-size: 9px; font-weight: 800; color: rgba(255, 255, 255, 0.8); }
 
 /* 次に発動する段を強調（コンボの現在地） */
 .wc-step-on {
@@ -591,6 +610,8 @@ button.wpn-row:hover { background: #241f55; }
 .wpn-icon.wclass-slash { color: #9fd9ff; }
 .wpn-icon.wclass-pierce { color: #c2ffa8; }
 .wpn-icon.wclass-crush { color: #ffd98f; }
+.wpn-icon .wpn-sprite { height: 30px; width: auto; }
+.wpn-emoji { font-size: 20px; line-height: 1; }
 .wpn-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .wpn-name { font-size: 14px; font-weight: bold; }
 .wpn-eqtag {

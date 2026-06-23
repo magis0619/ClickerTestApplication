@@ -1,6 +1,6 @@
 import "./style.css";
 import { render, drawBackdrop, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
-import { SHIELD, SLEEP } from "./render/sprites.ts";
+import { SHIELD, SLEEP, getWeaponSprite } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
@@ -228,12 +228,14 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   const rarity = instRarity(inst);
   const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
   head.innerHTML =
-    `<span class="wpn-icon wclass-${w.weapon}">${WEAPON_ICON[w.weapon]}</span>` +
+    `<span class="wpn-icon wclass-${w.weapon}"></span>` +
     `<span class="wpn-main">` +
     `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
     `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
     `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
     `<span class="wpn-sub">⚔${w.attack}${w.critChance ? `　会心${w.critChance}%` : ""}　${skillNames || "スキルなし"}</span></span>`;
+  // 系統の絵文字に代えて、武器ごとのドット絵を表示
+  head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
   card.appendChild(head);
 
   const acts = document.createElement("div");
@@ -328,12 +330,24 @@ function buildBattle(): void {
     card.addEventListener("click", () => attackWith(cls));
     pressFx(card);
 
-    // ヘッダー：系統を主役に、武器名（＋ボーナス）を併記
+    // ヘッダー：系統ラベル＋武器のドット絵（武器名の代わりに絵を表示）
     const head = document.createElement("div");
     head.className = "wc-head";
-    head.innerHTML =
-      `<span class="wc-kind">${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}</span>` +
-      `<span class="wc-name">${inst ? instName(inst) : "（未装備）"}</span>`;
+    const kind = document.createElement("span");
+    kind.className = "wc-kind";
+    kind.textContent = `${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}`;
+    head.appendChild(kind);
+    if (inst) {
+      const wrap = document.createElement("div");
+      wrap.className = "wc-img-wrap";
+      wrap.appendChild(weaponSpriteEl(inst.baseId, cls, 3));
+      head.appendChild(wrap);
+    } else {
+      const nm = document.createElement("span");
+      nm.className = "wc-name";
+      nm.textContent = "（未装備）";
+      head.appendChild(nm);
+    }
     card.appendChild(head);
 
     // スキルは「コンボ」として①②…で表示
@@ -384,6 +398,20 @@ function actionIcon(sprite: Parameters<typeof makeSpriteCanvas>[0]): HTMLCanvasE
   const icon = makeSpriteCanvas(sprite, 4);
   icon.className = "act-icon";
   return icon;
+}
+
+/** 武器のドット絵要素を作る（無ければ系統の絵文字でフォールバック） */
+function weaponSpriteEl(baseId: string, cls: WeaponClass, scale: number): HTMLElement {
+  const sprite = getWeaponSprite(baseId);
+  if (sprite) {
+    const cv = makeSpriteCanvas(sprite, scale);
+    cv.className = "wpn-sprite";
+    return cv;
+  }
+  const span = document.createElement("span");
+  span.className = "wpn-emoji";
+  span.textContent = WEAPON_ICON[cls];
+  return span;
 }
 
 function updateWeaponButtons(): void {
