@@ -2,6 +2,7 @@ import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstanc
 import {
   matchCombo,
   FLOAT_TTL,
+  DAMAGE_TTL,
   GUARD_BADGE_MS,
   WEAKNESS,
   WEAKNESS_MULTIPLIER,
@@ -41,6 +42,14 @@ export interface FloatText {
   /** 出現位置（enemyの場合はインデックス） */
   anchor: "player" | "center" | number;
   rise: number;
+  /** 表示種別。damage=爆発エフェクト付きの数値 / text=通常テキスト */
+  kind?: "damage" | "text";
+  /** ダメージの修飾（会心!・弱点! など。爆発の上に小さく出す） */
+  tag?: string;
+  /** ダメージ強調（会心/弱点/渾身）＝爆発を大きく赤く */
+  big?: boolean;
+  /** 横方向のばらつき(px)。連続ヒットの数値が重ならないように */
+  dx?: number;
 }
 
 /** 戦闘中の敵1体の状態 */
@@ -357,8 +366,9 @@ export class Battle {
     e.hp = Math.max(0, e.hp - dmg);
     e.hitFlash = 260;
     const idx = this.enemies.indexOf(e);
-    const tag = crit ? " 会心!" : this.charge > 1 ? " 渾身!" : weak ? " 弱点!" : e.isBroken ? " 会心!" : "";
-    this.pushFloat(`${dmg}${tag}`, weak || e.isBroken || this.charge > 1 || crit ? "#ff5577" : "#ffffff", idx);
+    const tag = crit ? "会心!" : this.charge > 1 ? "渾身!" : weak ? "弱点!" : e.isBroken ? "会心!" : "";
+    const big = crit || weak || e.isBroken || this.charge > 1;
+    this.pushDamage(dmg, tag, idx, big);
 
     if (!e.isBroken) {
       e.breakGauge += (mods?.breakPower ?? 0) * skill.breakMult;
@@ -540,6 +550,15 @@ export class Battle {
 
   private pushFloat(text: string, color: string, anchor: FloatText["anchor"]): void {
     this.floats.push({ text, color, ttl: FLOAT_TTL, max: FLOAT_TTL, anchor, rise: 0 });
+  }
+
+  /** ダメージ数値（爆発エフェクト付き）。長めに残して手応えを出す */
+  private pushDamage(dmg: number, tag: string, anchor: FloatText["anchor"], big: boolean): void {
+    this.floats.push({
+      text: dmg.toLocaleString(), color: "", kind: "damage", tag, big,
+      anchor, rise: 0, ttl: DAMAGE_TTL, max: DAMAGE_TTL,
+      dx: (Math.random() * 2 - 1) * 26,
+    });
   }
 
   /** ウェーブ開始など、画面中央に大きく告知する */

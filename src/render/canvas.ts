@@ -610,22 +610,29 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
 }
 
 function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
-  ctx.textAlign = "center";
   for (const f of b.floats) {
     let pos: { x: number; y: number };
     if (f.anchor === "player") pos = PLAYER_POS;
     else if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
     else pos = slots[f.anchor] ?? { x: W / 2, y: H / 2 };
-    // 出現直後に大きく→通常サイズへ縮むポップ
     const age = f.max - f.ttl;
-    const scale = age < 140 ? 1.8 - 0.8 * (age / 140) : 1;
-    const px = pos.x;
-    const py = pos.y - 50 - f.rise;
-    // 消える直前(FLOAT_FADE_MS)までは不透明を保ち、1秒ほど読みやすく残す
+    const x = pos.x + (f.dx ?? 0);
+    const y = pos.y - 50 - f.rise;
+    // 消える直前(FLOAT_FADE_MS)までは不透明を保つ
     const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
+
+    if (f.kind === "damage") {
+      // 出現時に大きく弾けてから定位置へ
+      const pop = age < 160 ? 1.75 - 0.75 * (age / 160) : 1;
+      drawDamageBurst(ctx, x, y, f.text, f.tag ?? "", !!f.big, pop, alpha);
+      continue;
+    }
+    // 通常テキスト
+    const scale = age < 140 ? 1.8 - 0.8 * (age / 140) : 1;
     ctx.save();
-    ctx.translate(px, py);
+    ctx.translate(x, y);
     ctx.scale(scale, scale);
+    ctx.textAlign = "center";
     ctx.font = "bold 13px monospace";
     ctx.fillStyle = "#000000";
     ctx.globalAlpha = alpha * 0.5;
@@ -636,6 +643,76 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+}
+
+/** ダメージ数値を「赤いギザギザ爆発」の上に大きく描く（会心/弱点はより大きく赤く） */
+function drawDamageBurst(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, num: string, tag: string, big: boolean, pop: number, alpha: number,
+): void {
+  const fontSize = big ? 27 : 21;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  ctx.scale(pop, pop);
+
+  // 数値の幅に合わせて爆発の大きさを決める
+  ctx.font = `900 ${fontSize}px monospace`;
+  const tw = ctx.measureText(num).width;
+  const rx = tw / 2 + 16;
+  const ry = fontSize * 0.95;
+
+  // ギザギザの爆発（外側→内側を交互に結ぶ星形）
+  const spikes = big ? 14 : 12;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const ang = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 === 0 ? 1 : 0.64;
+    const sx = Math.cos(ang) * rx * rr;
+    const sy = Math.sin(ang) * ry * rr;
+    if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, Math.max(rx, ry));
+  if (big) {
+    grad.addColorStop(0, "#fff3a0");
+    grad.addColorStop(0.5, "#ff8a2a");
+    grad.addColorStop(1, "#e01d1d");
+  } else {
+    grad.addColorStop(0, "#fff2cf");
+    grad.addColorStop(0.6, "#ffb23a");
+    grad.addColorStop(1, "#ff7a1e");
+  }
+  ctx.fillStyle = grad;
+  ctx.shadowColor = big ? "rgba(255,60,40,0.6)" : "rgba(255,140,40,0.5)";
+  ctx.shadowBlur = 10;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = big ? "#5a0a06" : "#6a2e08";
+  ctx.stroke();
+
+  // 数値（白＋濃い縁取り）
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 4.5;
+  ctx.strokeStyle = big ? "#6a0c06" : "#7a3410";
+  ctx.strokeText(num, 0, 1);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(num, 0, 1);
+
+  // 修飾（会心! 弱点! 渾身!）を爆発の上に小さく
+  if (tag) {
+    ctx.font = "900 12px monospace";
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = "#5a0a06";
+    ctx.strokeText(tag, 0, -ry - 5);
+    ctx.fillStyle = "#ffe680";
+    ctx.fillText(tag, 0, -ry - 5);
+  }
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
 }
 
 function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
