@@ -389,3 +389,51 @@ export const WEAPON_SPRITES: Record<string, Sprite> = {
 export function getWeaponSprite(id: string): Sprite | undefined {
   return WEAPON_SPRITES[id];
 }
+
+// ===== 宝箱（リザルトの開封演出用。レアリティ色で塗る） =====
+const CHEST_CLOSED_ROWS = [
+  "..............",
+  "...ooooooooo..",
+  "..oRRRRRRRRo..",
+  "..orrrrrrrro..",
+  "..oddddddddo..",
+  "..orrrrrrrro..",
+  "..orrryyyrro..",
+  "..orrryyyrro..",
+  "..orrrrrrrro..",
+  "..oddddddddo..",
+  "...ooooooooo..",
+  "..............",
+];
+const CHEST_OPEN_ROWS = [
+  ".....oooo.....",
+  "....odddddo...",
+  "...orrrrrro...",
+  "....oooooo....",
+  "..L........L..",
+  "..oLLLLLLLLo..",
+  "..oLLLLLLLLo..",
+  "..orrrrrrrro..",
+  "..orrryyyrro..",
+  "..orrrrrrrro..",
+  "..oddddddddo..",
+  "...ooooooooo..",
+  "..............",
+];
+
+/** 16進色を係数で明暗調整（f<1で暗く、f>1で明るく） */
+function shade(hex: string, f: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.round(((n >> 16) & 255) * f));
+  const g = Math.min(255, Math.round(((n >> 8) & 255) * f));
+  const b = Math.min(255, Math.round((n & 255) * f));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** レアリティ色で塗った宝箱スプライト（open=trueで開封フレーム） */
+export function chestSprite(color: string, open = false): Sprite {
+  const palette: Record<string, string> = {
+    o: "#0c0a18", r: color, R: shade(color, 1.4), d: shade(color, 0.5), y: "#ffd35f", L: "#fff6c8",
+  };
+  return { rows: open ? CHEST_OPEN_ROWS : CHEST_CLOSED_ROWS, palette };
+}

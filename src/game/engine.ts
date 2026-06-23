@@ -548,16 +548,25 @@ export class Battle {
     this.lastGuardTtl = GUARD_BADGE_MS;
   }
 
+  /** 同じ位置に出ている表記の数。新しいものを上にずらして重なりを防ぐ */
+  private stackOffset(anchor: FloatText["anchor"], step: number): number {
+    return this.floats.filter((f) => f.anchor === anchor).length * step;
+  }
+
   private pushFloat(text: string, color: string, anchor: FloatText["anchor"]): void {
-    this.floats.push({ text, color, ttl: FLOAT_TTL, max: FLOAT_TTL, anchor, rise: 0 });
+    this.floats.push({
+      text, color, ttl: FLOAT_TTL, max: FLOAT_TTL, anchor,
+      rise: this.stackOffset(anchor, 20),
+    });
   }
 
   /** ダメージ数値（爆発エフェクト付き）。長めに残して手応えを出す */
   private pushDamage(dmg: number, tag: string, anchor: FloatText["anchor"], big: boolean): void {
     this.floats.push({
       text: dmg.toLocaleString(), color: "", kind: "damage", tag, big,
-      anchor, rise: 0, ttl: DAMAGE_TTL, max: DAMAGE_TTL,
-      dx: (Math.random() * 2 - 1) * 26,
+      anchor, ttl: DAMAGE_TTL, max: DAMAGE_TTL,
+      rise: this.stackOffset(anchor, 30),
+      dx: (Math.random() * 2 - 1) * 22,
     });
   }
 

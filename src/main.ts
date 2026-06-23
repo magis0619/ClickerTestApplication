@@ -1,6 +1,6 @@
 import "./style.css";
 import { render, drawBackdrop, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
-import { SHIELD, SLEEP, getWeaponSprite } from "./render/sprites.ts";
+import { SHIELD, SLEEP, getWeaponSprite, chestSprite } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
@@ -469,6 +469,73 @@ function updateWeaponButtons(): void {
 }
 
 function buildResult(): void {
+  buildResultPanel();
+}
+
+/** ドロップ武器の中身（ドット絵＋名前＋レアリティ）の小カード */
+function rewardCard(inst: WeaponInstance): HTMLElement {
+  const w = getWeapon(inst.baseId)!;
+  const r = instRarity(inst);
+  const el = document.createElement("div");
+  el.className = "reward";
+  const img = weaponSpriteEl(inst.baseId, w.weapon, 3);
+  img.classList.add("reward-img");
+  el.appendChild(img);
+  const nm = document.createElement("div");
+  nm.className = "reward-name";
+  nm.textContent = instName(inst);
+  el.appendChild(nm);
+  const st = document.createElement("div");
+  st.innerHTML = `<span ${rarityAttr(r, "reward-stars")}>${rarityStars(r)}</span>`;
+  el.appendChild(st);
+  return el;
+}
+
+/** 宝箱を並べて順番に開封する演出を作る */
+function buildChestReveal(drops: WeaponInstance[]): HTMLElement {
+  const stage = document.createElement("div");
+  stage.className = "chest-stage";
+  drops.forEach((inst, i) => {
+    const rarity = instRarity(inst);
+    const color = isRainbowRarity(rarity) ? "#ff7de9" : RARITY_COLOR[rarity];
+    const slot = document.createElement("div");
+    slot.className = "chest-slot";
+
+    const chest = document.createElement("div");
+    chest.className = "chest-img";
+    chest.appendChild(makeSpriteCanvas(chestSprite(color, false), 5));
+    slot.appendChild(chest);
+
+    const reward = rewardCard(inst);
+    slot.appendChild(reward);
+    stage.appendChild(slot);
+
+    // 0.7秒間隔で順番に開封
+    window.setTimeout(() => openChest(chest, reward, color), 500 + i * 750);
+  });
+  return stage;
+}
+
+/** 1つの宝箱を開封：揺れ → 光って開く → 中身がポップ */
+function openChest(chest: HTMLElement, reward: HTMLElement, color: string): void {
+  if (!chest.isConnected) return;
+  chest.classList.add("shake");
+  window.setTimeout(() => {
+    if (!chest.isConnected) return;
+    // 開封フレームに差し替え＋発光
+    chest.innerHTML = "";
+    chest.appendChild(makeSpriteCanvas(chestSprite(color, true), 5));
+    chest.classList.remove("shake");
+    chest.classList.add("burst");
+    audio.sfxPerfect();
+    window.setTimeout(() => {
+      chest.classList.add("gone");
+      reward.classList.add("show");
+    }, 200);
+  }, 460);
+}
+
+function buildResultPanel(): void {
   const panel = document.createElement("div");
   panel.className = "result-panel";
   const title = document.createElement("h2");
@@ -479,12 +546,11 @@ function buildResult(): void {
   if (game.lastWon) {
     const head = document.createElement("div");
     head.className = "u-head";
-    head.textContent = `🗡 入手した武器（${game.lastDrops.length}本）`;
+    head.textContent = game.lastDrops.length > 0
+      ? `🎁 入手した宝箱（${game.lastDrops.length}個）`
+      : "🗡 入手した武器はありませんでした";
     panel.appendChild(head);
-    const drops = document.createElement("div");
-    drops.className = "drop-list";
-    for (const inst of game.lastDrops) drops.appendChild(weaponRow(inst, false));
-    panel.appendChild(drops);
+    if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
   } else {
     const info = document.createElement("p");
     info.className = "r-info";
