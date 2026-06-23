@@ -1,6 +1,8 @@
 import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef } from "./types.ts";
 import {
   matchCombo,
+  FLOAT_TTL,
+  GUARD_BADGE_MS,
   WEAKNESS,
   WEAKNESS_MULTIPLIER,
   PLAYER_MAX_HP,
@@ -34,6 +36,8 @@ export interface FloatText {
   text: string;
   color: string;
   ttl: number;
+  /** 生成時の寿命(ms)。フェード・出現アニメの基準に使う */
+  max: number;
   /** 出現位置（enemyの場合はインデックス） */
   anchor: "player" | "center" | number;
   rise: number;
@@ -531,16 +535,16 @@ export class Battle {
 
   private setGuard(result: GuardResult): void {
     this.lastGuard = result;
-    this.lastGuardTtl = 700;
+    this.lastGuardTtl = GUARD_BADGE_MS;
   }
 
   private pushFloat(text: string, color: string, anchor: FloatText["anchor"]): void {
-    this.floats.push({ text, color, ttl: 900, anchor, rise: 0 });
+    this.floats.push({ text, color, ttl: FLOAT_TTL, max: FLOAT_TTL, anchor, rise: 0 });
   }
 
   /** ウェーブ開始など、画面中央に大きく告知する */
   announce(text: string, color: string): void {
-    this.floats.push({ text, color, ttl: 1300, anchor: "center", rise: 0 });
+    this.floats.push({ text, color, ttl: 1600, max: 1600, anchor: "center", rise: 0 });
     this.whiteFlashT = 120;
   }
 }

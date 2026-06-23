@@ -1,7 +1,8 @@
 import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
 import {
-  KIND_LABEL, WEAKNESS, WEAPON_LABEL, PLAYER_MAX_HP, PLAYER_MAX_EN,
+  KIND_LABEL, WEAKNESS, WEAPON_LABEL,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
+  FLOAT_FADE_MS, GUARD_BADGE_MS,
 } from "../game/data.ts";
 import {
   WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
@@ -332,14 +333,18 @@ function drawEnemyCard(
   ctx.fillText(WEAPON_LABEL[weak][0], bx, by + 1);
   ctx.textBaseline = "alphabetic";
 
-  // === 名前 ===
+  // === 名前（大きく・読みやすく：濃い縁取り付き） ===
   ctx.textAlign = "center";
-  ctx.font = "bold 10px monospace";
-  ctx.fillStyle = "#ffd0e0";
-  ctx.fillText(e.def.name, L.cx, L.top + 18);
+  ctx.font = "bold 13px monospace";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.strokeText(e.def.name, L.cx, L.top + 20);
+  ctx.fillStyle = "#ffe3ee";
+  ctx.fillText(e.def.name, L.cx, L.top + 20);
 
   // === HP / ブレイクゲージ ===
-  const barX = L.left + 12, barW = L.w - 24, barY = L.top + 28;
+  const barX = L.left + 12, barW = L.w - 24, barY = L.top + 32;
   bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#ff5d86", "#33101c");
   const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
   bar(ctx, barX, barY + 9, barW, 3, bg, "#ffcf3f", "#3a2f10");
@@ -593,62 +598,14 @@ function drawPerfectFx(
 }
 
 function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
-  const M = 10;            // 左右マージン
-  const fullW = W - M * 2; // 画面いっぱいの幅
-
-  // ラベル行（左:WARDEN）
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#cfe4ff";
-  ctx.font = "bold 11px monospace";
-  ctx.fillText("WARDEN", M, 14);
-
-  // === HP：左右いっぱいのバー（数値を大きく） ===
-  const hpY = 18, hpH = 20;
-  bar(ctx, M, hpY, fullW, hpH, b.playerHp / PLAYER_MAX_HP, "#3ad27a", "#10331f");
-  const hpText = `HP ${Math.ceil(b.playerHp)} / ${PLAYER_MAX_HP}`;
-  ctx.textAlign = "center";
-  ctx.font = "bold 16px monospace";
-  ctx.fillStyle = "rgba(0,0,0,0.55)"; // 読みやすさのための影
-  ctx.fillText(hpText, W / 2 + 1, hpY + 16);
-  ctx.fillStyle = "#eafff2";
-  ctx.fillText(hpText, W / 2, hpY + 15);
-
-  // === EN：左右いっぱい＋1ずつの区切り ===
-  // 「集中」発動中は次の行動が無償＝ゲージが金色に光る
-  const enY = 44, enH = 16, n = PLAYER_MAX_EN, gap = 3;
-  const cw = (fullW - gap * (n - 1)) / n;
-  const en = Math.floor(b.playerEn);
-  const focus = b.freeNextEn;
-  const glow = focus ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 200)) : 0;
-  for (let i = 0; i < n; i++) {
-    const x = M + i * (cw + gap);
-    ctx.fillStyle = "#102a3a";
-    ctx.fillRect(x, enY, cw, enH);
-    if (i < en) {
-      if (focus) { ctx.shadowColor = "#ffd35f"; ctx.shadowBlur = 8 * glow; }
-      ctx.fillStyle = focus ? "#ffd35f" : "#46b6ff";
-      ctx.fillRect(x, enY, cw, enH);
-      ctx.shadowBlur = 0;
-    }
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 0.5, enY + 0.5, cw - 1, enH - 1);
-  }
-  const enText = focus ? `EN ${en}/${n}（次0!）` : `EN ${en}/${n}`;
-  ctx.textAlign = "right";
-  ctx.font = "bold 14px monospace";
-  ctx.fillStyle = "rgba(0,0,0,0.55)"; // 読みやすさのための影
-  ctx.fillText(enText, W - M + 1, enY + 14);
-  ctx.fillStyle = focus ? "#ffe49a" : "#dff1ff";
-  ctx.fillText(enText, W - M, enY + 13);
-
-  // 対象敵の弱点ヒント
+  const M = 10; // 左右マージン
+  // HP/ENは攻撃ボタンの上（DOM側）へ移動。ここでは対象敵の弱点ヒントのみ表示。
   const t = b.enemies[b.targetIndex];
   if (t && t.alive) {
     ctx.textAlign = "left";
     ctx.font = "11px monospace";
-    ctx.fillStyle = "#7f7aa0";
-    ctx.fillText(`対象: ${t.def.name}（${KIND_LABEL[t.def.kind]}） 弱点:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, H - 10);
+    ctx.fillStyle = "#9690c4";
+    ctx.fillText(`対象: ${t.def.name}（${KIND_LABEL[t.def.kind]}） 弱点:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, 14);
   }
 }
 
@@ -660,19 +617,20 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
     else if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
     else pos = slots[f.anchor] ?? { x: W / 2, y: H / 2 };
     // 出現直後に大きく→通常サイズへ縮むポップ
-    const age = 900 - f.ttl;
+    const age = f.max - f.ttl;
     const scale = age < 140 ? 1.8 - 0.8 * (age / 140) : 1;
     const px = pos.x;
     const py = pos.y - 50 - f.rise;
-    ctx.globalAlpha = Math.max(0, Math.min(1, f.ttl / 900));
+    // 消える直前(FLOAT_FADE_MS)までは不透明を保ち、1秒ほど読みやすく残す
+    const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
     ctx.save();
     ctx.translate(px, py);
     ctx.scale(scale, scale);
     ctx.font = "bold 13px monospace";
     ctx.fillStyle = "#000000";
-    ctx.globalAlpha *= 0.5;
+    ctx.globalAlpha = alpha * 0.5;
     ctx.fillText(f.text, 1, 1);
-    ctx.globalAlpha = Math.max(0, Math.min(1, f.ttl / 900));
+    ctx.globalAlpha = alpha;
     ctx.fillStyle = f.color;
     ctx.fillText(f.text, 0, 0);
     ctx.restore();
@@ -690,11 +648,12 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   };
   const entry = map[b.lastGuard];
   if (!entry) return;
-  const age = 700 - b.lastGuardTtl;
+  const age = GUARD_BADGE_MS - b.lastGuardTtl;
   // 大きく飛び出して手前に来る → 弾むように定位置へ
   const pop = age < 170 ? 2.7 - 1.7 * (age / 170) : 1 + 0.12 * Math.max(0, Math.sin((age - 170) / 60));
   ctx.textAlign = "center";
-  const baseAlpha = Math.min(1, b.lastGuardTtl / 700);
+  // 消える直前まで不透明を保ち、1秒ほどはっきり残す
+  const baseAlpha = Math.min(1, b.lastGuardTtl / FLOAT_FADE_MS);
   ctx.save();
   ctx.translate(W / 2, 150);
   ctx.scale(pop, pop);

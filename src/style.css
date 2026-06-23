@@ -159,7 +159,49 @@ button {
   pointer-events: none;
 }
 
-/* ===== 戦闘：武器カード（系統＋武器名のヘッダー／スキルはコンボ表示） ===== */
+/* ===== 戦闘：HP/ENバー（攻撃ボタンの上） ===== */
+.battle-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.bh-bar {
+  position: relative;
+  height: 24px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #0e1018;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.bh-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  transition: width 0.18s ease;
+}
+.bh-hp .bh-fill { background: linear-gradient(180deg, #4ee08a, #25a258); }
+.bh-en .bh-fill { background: linear-gradient(180deg, #57c0ff, #2c78cc); }
+.bh-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+/* 「集中」発動中はENバーを金色に */
+.battle-hud.focus .bh-en .bh-fill { background: linear-gradient(180deg, #ffd95f, #dca31c); }
+.battle-hud.focus .bh-en .bh-text { color: #fff7df; }
+
+/* ===== 戦闘：武器カード（系統ラベル＋武器ドット絵／スキルはコンボ表示） ===== */
 .weapons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

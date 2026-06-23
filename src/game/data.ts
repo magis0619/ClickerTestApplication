@@ -191,6 +191,14 @@ export const PERFECT_FLINCH_MS = 650;
 /** パーフェクトで敵のブレイクゲージに加算する蓄積量 */
 export const PERFECT_BREAK_BONUS = 14;
 
+// ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
+/** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
+export const FLOAT_TTL = 1300;
+/** 浮遊テキスト/バッジが消える直前のフェード時間(ms)。これより前は不透明で読みやすい */
+export const FLOAT_FADE_MS = 350;
+/** PERFECT/JUST/GUARD バッジの表示時間(ms) */
+export const GUARD_BADGE_MS = 1100;
+
 // ===== ブレイク =====
 // ブレイクは「ターン制」。この間プレイヤーはENを消費せず行動でき、敵は攻撃しない。
 export const BREAK_TURNS = 3;

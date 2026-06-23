@@ -5,6 +5,7 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo,
+  PLAYER_MAX_HP, PLAYER_MAX_EN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
@@ -20,6 +21,10 @@ const controls = document.getElementById("controls") as HTMLDivElement;
 const game = new Game();
 /** 戦闘中の武器カード（カード本体＋コンボ各段の要素を保持） */
 let weaponButtons: { card: HTMLButtonElement; cls: WeaponClass; steps: HTMLElement[] }[] = [];
+/** 戦闘中のHP/ENバー（攻撃ボタンの上に配置。毎フレーム更新する） */
+let battleHud: {
+  root: HTMLElement; hpFill: HTMLElement; hpText: HTMLElement; enFill: HTMLElement; enText: HTMLElement;
+} | null = null;
 let renderedScreen = "";
 
 // ===== 画面遷移の暗転オーバーレイ =====
@@ -39,7 +44,6 @@ function withFade(action: () => void): void {
 
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", charge: "▲", focus: "◎" };
 const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
-const CIRCLE = ["①", "②", "③", "④", "⑤", "⑥"];
 
 const RARITY_STAR: Record<string, number> = {
   common: 1, uncommon: 2, rare: 3, epic: 4, legend: 5, astral: 6,
@@ -141,6 +145,7 @@ canvas.addEventListener("pointerdown", (e) => {
 function buildControls(): void {
   controls.innerHTML = "";
   weaponButtons = [];
+  battleHud = null;
   renderedScreen = game.screen;
   switch (game.screen) {
     case "title": buildTitle(); break;
@@ -321,6 +326,21 @@ function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
 }
 
 function buildBattle(): void {
+  // HP/EN（攻撃ボタンの上に配置）
+  const hud = document.createElement("div");
+  hud.className = "battle-hud";
+  hud.innerHTML =
+    `<div class="bh-bar bh-hp"><div class="bh-fill"></div><span class="bh-text"></span></div>` +
+    `<div class="bh-bar bh-en"><div class="bh-fill"></div><span class="bh-text"></span></div>`;
+  controls.appendChild(hud);
+  battleHud = {
+    root: hud,
+    hpFill: hud.querySelector(".bh-hp .bh-fill") as HTMLElement,
+    hpText: hud.querySelector(".bh-hp .bh-text") as HTMLElement,
+    enFill: hud.querySelector(".bh-en .bh-fill") as HTMLElement,
+    enText: hud.querySelector(".bh-en .bh-text") as HTMLElement,
+  };
+
   const row = document.createElement("div");
   row.className = "weapons";
   for (const cls of CLASSES) {
@@ -354,14 +374,13 @@ function buildBattle(): void {
     const combo = document.createElement("div");
     combo.className = "wc-combo";
     const steps: HTMLElement[] = [];
-    game.comboSkills(cls).forEach((s, i) => {
+    game.comboSkills(cls).forEach((s) => {
       const step = document.createElement("div");
       step.className = "wc-step";
       step.innerHTML =
-        `<span class="wc-no">${CIRCLE[i] ?? i + 1}</span>` +
         `<span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
         `<span class="wc-link">⚡連携</span>` +
-        `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span><span class="wc-cost-lbl">EN</span></span>`;
+        `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span></span>`;
       combo.appendChild(step);
       steps.push(step);
     });
@@ -414,8 +433,25 @@ function weaponSpriteEl(baseId: string, cls: WeaponClass, scale: number): HTMLEl
   return span;
 }
 
+/** HP/ENバー（攻撃ボタン上）を現在値で更新する */
+function updateBattleHud(): void {
+  if (!battleHud || !game.battle) return;
+  const b = game.battle;
+  const hp = Math.ceil(b.playerHp);
+  battleHud.hpFill.style.width = `${Math.max(0, Math.min(100, (b.playerHp / PLAYER_MAX_HP) * 100))}%`;
+  battleHud.hpText.textContent = `HP ${hp} / ${PLAYER_MAX_HP}`;
+  const en = Math.floor(b.playerEn);
+  battleHud.enFill.style.width = `${Math.max(0, Math.min(100, (en / PLAYER_MAX_EN) * 100))}%`;
+  const focus = b.freeNextEn;
+  battleHud.enText.textContent = focus
+    ? `EN ${en} / ${PLAYER_MAX_EN}（次0!）`
+    : `EN ${en} / ${PLAYER_MAX_EN}`;
+  battleHud.root.classList.toggle("focus", focus);
+}
+
 function updateWeaponButtons(): void {
   if (!game.battle) return;
+  updateBattleHud();
   const last = game.battle.lastSkill;
   for (const { card, cls, steps } of weaponButtons) {
     const active = game.comboIndex(cls);
