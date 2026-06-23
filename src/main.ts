@@ -1,10 +1,10 @@
 import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
-import { SHIELD, SLEEP, getWeaponSprite, chestSprite } from "./render/sprites.ts";
+import { SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
-  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo,
+  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL, RARITY_ORDER,
+  getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview,
   PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
@@ -97,8 +97,12 @@ function doGuard(): void {
 const expandedWeapons = new Set<string>();
 /** 削除確認中の武器UID（2タップ目で確定） */
 let pendingDeleteUid: string | null = null;
-/** インベントリで表示中の系統タブ */
-let invClass: WeaponClass = "slash";
+/** インベントリ：レアリティフィルタ（all=すべて） */
+let invRarity: Rarity | "all" = "all";
+/** インベントリ：レア度の並び（true=降順） */
+let invSortDesc = true;
+/** インベントリ：ロック中のみ表示 */
+let invLockedOnly = false;
 
 // ===== オーディオ =====
 window.addEventListener("pointerdown", () => audio.init());
@@ -163,21 +167,50 @@ function buildControls(): void {
 }
 
 function buildTitle(): void {
-  controls.appendChild(goldBadge());
-  const menu = document.createElement("div");
-  menu.className = "menu";
-  menu.appendChild(bigButton("⚔ ステージ選択", () => { game.goStageSelect(); buildControls(); }));
-  menu.appendChild(bigButton("🎒 インベントリ", () => { game.goInventory(); buildControls(); }));
-  menu.appendChild(bigButton("🛒 ショップ", () => { game.goShop(); buildControls(); }));
-  controls.appendChild(menu);
+  controls.appendChild(topBar());
+  const hero = document.createElement("div");
+  hero.className = "title-hero";
+  const spr = makeSpriteCanvas(WARDEN, 6);
+  spr.className = "title-sprite";
+  hero.appendChild(spr);
+  const cap = document.createElement("div");
+  cap.innerHTML = `<div class="title-logo">ASTRAL WARDEN</div><div class="title-sub">タイミングアクションRPG</div>`;
+  hero.appendChild(cap);
+  controls.appendChild(hero);
+  controls.appendChild(bigButton("⚔ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
+  controls.appendChild(bottomNav());
 }
 
-/** 所持ゴールドの表示バッジ */
-function goldBadge(): HTMLElement {
-  const el = document.createElement("div");
-  el.className = "gold-badge";
-  el.innerHTML = `<span class="gold-amt">${game.gold.toLocaleString()}</span><span class="gold-unit">G</span>`;
-  return el;
+/** 上部の情報バー（戦闘力＋所持ゴールド） */
+function topBar(): HTMLElement {
+  const bar = document.createElement("div");
+  bar.className = "top-bar";
+  const power = (["slash", "pierce", "crush"] as WeaponClass[])
+    .reduce((s, c) => s + (game.equippedWeapon(c)?.attack ?? 0), 0);
+  bar.innerHTML =
+    `<span class="tb-power">⚔ 戦闘力 <b>${power}</b></span>` +
+    `<span class="tb-gold"><span class="gold-amt">${game.gold.toLocaleString()}</span><span class="gold-unit">G</span></span>`;
+  return bar;
+}
+
+/** 下部ナビゲーション（ホーム/ダンジョン/インベントリ/ショップ） */
+function bottomNav(): HTMLElement {
+  const nav = document.createElement("div");
+  nav.className = "bottom-nav";
+  const items: [string, string, string, () => void][] = [
+    ["🏠", "ホーム", "title", () => game.goTitle()],
+    ["🗺️", "ダンジョン", "stageSelect", () => game.goStageSelect()],
+    ["🎒", "インベントリ", "inventory", () => game.goInventory()],
+    ["🛒", "ショップ", "shop", () => game.goShop()],
+  ];
+  for (const [icon, label, scr, act] of items) {
+    const b = document.createElement("button");
+    b.className = "nav-item" + (game.screen === scr ? " nav-on" : "");
+    b.innerHTML = `<span class="nav-ico">${icon}</span><span class="nav-lbl">${label}</span>`;
+    b.addEventListener("click", () => { act(); buildControls(); });
+    nav.appendChild(b);
+  }
+  return nav;
 }
 
 /** レアリティに応じた発光クラス（エピック以上のみ光らせる） */
@@ -189,7 +222,11 @@ function rarityGlowClass(r: Rarity): string {
 }
 
 function buildShop(): void {
-  controls.appendChild(goldBadge());
+  controls.appendChild(topBar());
+  const head = document.createElement("h2");
+  head.className = "screen-title";
+  head.textContent = "🛒 ショップ";
+  controls.appendChild(head);
   const list = document.createElement("div");
   list.className = "shop-list";
   for (const item of SHOP_ITEMS) {
@@ -197,7 +234,7 @@ function buildShop(): void {
     if (w) list.appendChild(shopRow(item, w));
   }
   controls.appendChild(list);
-  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+  controls.appendChild(bottomNav());
 }
 
 /** ショップの1商品（武器画像＋情報＋価格/購入ボタン） */
@@ -243,61 +280,158 @@ function shopRow(item: ShopItem, w: Weapon): HTMLElement {
   return card;
 }
 
+const STAGE_EMOJI = ["🌲", "🏛️", "👑", "❄️", "♾️", "🔥", "⚔️"];
+
 function buildStageSelect(): void {
+  controls.appendChild(topBar());
+  const head = document.createElement("h2");
+  head.className = "screen-title";
+  head.textContent = "⚔ ステージ選択";
+  controls.appendChild(head);
+
   const list = document.createElement("div");
   list.className = "stage-list";
   STAGES.forEach((s, i) => {
     const unlocked = game.stageUnlocked(i);
     const cleared = game.save.bestStage > i;
-    const card = document.createElement("button");
+    const diff = Math.min(5, i + 2);
+    const card = document.createElement("div");
     card.className = "stage-card" + (unlocked ? "" : " locked");
-    card.disabled = !unlocked;
-    const bossName = s.waves[s.waves.length - 1].find((e) => e.boss)?.name
-      ?? s.waves[s.waves.length - 1][0]?.name ?? "";
-    card.innerHTML =
-      `<div class="st-title">STAGE ${i + 1}: ${s.name} ${cleared ? "✔" : ""}${unlocked ? "" : " 🔒"}</div>` +
+
+    // サムネイル
+    const thumb = document.createElement("div");
+    thumb.className = "st-thumb";
+    thumb.textContent = STAGE_EMOJI[i] ?? "⚔️";
+    card.appendChild(thumb);
+
+    // 情報
+    const info = document.createElement("div");
+    info.className = "st-info";
+    const bossName = s.endless
+      ? "" : s.waves[s.waves.length - 1]?.find((e) => e.boss)?.name ?? s.waves[s.waves.length - 1]?.[0]?.name ?? "";
+    const sub = s.endless
+      ? `最高到達 <b>${game.save.bestFloor}</b> 階　/　敵はランダム出現`
+      : `ボス: ${bossName}`;
+    info.innerHTML =
+      `<div class="st-no">STAGE ${i + 1}</div>` +
+      `<div class="st-name">${s.name}</div>` +
+      `<div class="st-meta"><span class="st-stars">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` +
+      `<span class="st-lv">推奨Lv ${s.recommendLv ?? (i + 1) * 5}</span></div>` +
       `<div class="st-desc">${s.desc}</div>` +
-      `<div class="st-enemy">${s.waves.length}連戦 / BOSS: ${bossName}</div>`;
-    if (unlocked) card.addEventListener("click", () => withFade(() => game.startStage(i)));
+      `<div class="st-sub">${sub}</div>`;
+    // ドロップ可能性のある武器を画像で表示
+    const drops = stageDropPreview(i);
+    if (drops.length && unlocked) {
+      const dropRow = document.createElement("div");
+      dropRow.className = "st-drops";
+      const label = document.createElement("span");
+      label.className = "st-drops-label";
+      label.textContent = "ドロップ";
+      dropRow.appendChild(label);
+      for (const id of drops.slice(0, 5)) {
+        const w = getWeapon(id);
+        if (!w) continue;
+        const slot = document.createElement("span");
+        slot.className = "st-drop";
+        slot.appendChild(weaponSpriteEl(id, w.weapon, 2));
+        dropRow.appendChild(slot);
+      }
+      info.appendChild(dropRow);
+    }
+    card.appendChild(info);
+
+    // 右上バッジ（CLEAR / 未解放）
+    if (cleared) {
+      const badge = document.createElement("div");
+      badge.className = "st-badge st-clear";
+      badge.textContent = "CLEAR!";
+      card.appendChild(badge);
+    } else if (!unlocked) {
+      const badge = document.createElement("div");
+      badge.className = "st-badge st-locked";
+      badge.textContent = "🔒 未解放";
+      card.appendChild(badge);
+    }
+
+    // 挑戦ボタン
+    if (unlocked) {
+      const go = document.createElement("button");
+      go.className = "st-go";
+      go.textContent = "挑戦 ▶";
+      go.addEventListener("click", () => withFade(() => game.startStage(i)));
+      card.appendChild(go);
+    }
     list.appendChild(card);
   });
   controls.appendChild(list);
-  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+  controls.appendChild(bottomNav());
 }
 
 function buildInventory(): void {
-  // 系統タブ
-  const tabs = document.createElement("div");
-  tabs.className = "inv-tabs";
-  for (const cls of CLASSES) {
-    const t = document.createElement("button");
-    t.className = "inv-tab wclass-" + cls + (invClass === cls ? " inv-tab-on" : "");
-    t.textContent = WEAPON_LABEL[cls];
-    t.addEventListener("click", () => { invClass = cls; buildControls(); });
-    tabs.appendChild(t);
-  }
-  controls.appendChild(tabs);
+  controls.appendChild(topBar());
 
-  // 選択中の系統だけを表示
+  const head = document.createElement("div");
+  head.className = "inv-titlebar";
+  head.innerHTML =
+    `<h2 class="screen-title">🗡 インベントリ</h2>` +
+    `<span class="inv-count">所持 ${game.save.inventory.length} / 100</span>`;
+  controls.appendChild(head);
+
+  // フィルタ/ソートのツールバー
+  const tools = document.createElement("div");
+  tools.className = "inv-tools";
+  const sortBtn = document.createElement("button");
+  sortBtn.className = "inv-tool";
+  sortBtn.textContent = invSortDesc ? "レア度 降順 ▼" : "レア度 昇順 ▲";
+  sortBtn.addEventListener("click", () => { invSortDesc = !invSortDesc; buildControls(); });
+  const lockBtn = document.createElement("button");
+  lockBtn.className = "inv-tool" + (invLockedOnly ? " inv-tool-on" : "");
+  lockBtn.textContent = invLockedOnly ? "🔒 ロックのみ" : "🔓 すべて表示";
+  lockBtn.addEventListener("click", () => { invLockedOnly = !invLockedOnly; buildControls(); });
+  tools.appendChild(sortBtn);
+  tools.appendChild(lockBtn);
+  controls.appendChild(tools);
+
+  // レアリティのフィルタチップ
+  const chips = document.createElement("div");
+  chips.className = "inv-chips";
+  chips.appendChild(rarityChip("all", "すべて"));
+  for (const r of [...RARITY_ORDER].reverse()) chips.appendChild(rarityChip(r, rarityStars(r)));
+  controls.appendChild(chips);
+
+  // 一覧（全武器を対象にフィルタ＋ソート）
+  let items = game.save.inventory.slice();
+  if (invRarity !== "all") items = items.filter((it) => instRarity(it) === invRarity);
+  if (invLockedOnly) items = items.filter((it) => game.isLocked(it.uid));
+  items.sort((a, b) => (invSortDesc ? rarityDesc(a, b) : -rarityDesc(a, b)));
+
   const group = document.createElement("div");
   group.className = "inv-group";
-  const head = document.createElement("div");
-  head.className = `inv-head wclass-${invClass}`;
-  const eqInst = game.equippedInstance(invClass);
-  head.textContent = `${WEAPON_LABEL[invClass]}　装備中: ${eqInst ? instName(eqInst) : "なし"}`;
-  group.appendChild(head);
-
-  const items = game.inventoryOf(invClass).slice().sort(rarityDesc);
   if (items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "inv-empty";
-    empty.textContent = "（この系統の武器はまだありません）";
+    empty.textContent = "（該当する武器はありません）";
     group.appendChild(empty);
   }
   for (const inst of items) group.appendChild(weaponRow(inst, true));
   controls.appendChild(group);
 
-  controls.appendChild(backRow(() => { game.goTitle(); buildControls(); }));
+  controls.appendChild(bottomNav());
+}
+
+/** レアリティ絞り込みチップ */
+function rarityChip(r: Rarity | "all", label: string): HTMLElement {
+  const b = document.createElement("button");
+  const on = invRarity === r;
+  b.className = "inv-chip" + (on ? " inv-chip-on" : "");
+  if (r !== "all") {
+    b.classList.add("rarity-chip");
+    if (isRainbowRarity(r)) b.classList.add("rainbow-text");
+    else b.style.color = RARITY_COLOR[r];
+  }
+  b.textContent = label;
+  b.addEventListener("click", () => { invRarity = r; buildControls(); });
+  return b;
 }
 
 /** 武器1本のカード（ヘッダー＋装備/詳細ボタン＋展開する詳細） */
@@ -311,8 +445,9 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   const head = document.createElement("div");
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const rarity = instRarity(inst);
+  const locked = game.isLocked(inst.uid);
   const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
-  // 左：武器ドット絵＋名前・レアリティ ／ 右（中央より右）：攻撃力・スキルを大きく
+  // 左：大きい武器ドット絵 ／ 右（中央より右）：攻撃力・スキルを大きく
   head.innerHTML =
     `<span class="wpn-icon wclass-${w.weapon}"></span>` +
     `<span class="wpn-left">` +
@@ -321,9 +456,10 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
     `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span></span>` +
     `<span class="wpn-right">` +
     `<span class="wpn-atk">⚔ 攻撃力 <b>${w.attack}</b>${w.critChance ? `　会心 ${w.critChance}%` : ""}</span>` +
-    `<span class="wpn-skills">${skillNames || "スキルなし"}</span></span>`;
-  // 系統の絵文字に代えて、武器ごとのドット絵を表示
-  head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
+    `<span class="wpn-skills">${skillNames || "スキルなし"}</span></span>` +
+    `<span class="wpn-lock${locked ? " on" : ""}">${locked ? "🔒" : ""}</span>`;
+  // 系統の絵文字に代えて、武器ごとのドット絵を大きく表示
+  head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 4));
   card.appendChild(head);
 
   const acts = document.createElement("div");
@@ -347,7 +483,17 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   });
   acts.appendChild(det);
 
-  // 削除（インベントリのみ・装備中は不可・2タップ確認）
+  // 削除ロックの切替（インベントリのみ）
+  if (equippable) {
+    const lock = document.createElement("button");
+    const locked = game.isLocked(inst.uid);
+    lock.className = "wpn-act wpn-lockbtn" + (locked ? " on" : "");
+    lock.textContent = locked ? "🔒 ロック中" : "🔓 ロック";
+    lock.addEventListener("click", () => { game.toggleLock(inst.uid); buildControls(); });
+    acts.appendChild(lock);
+  }
+
+  // 削除（インベントリのみ・装備中/ロック中は不可・2タップ確認）
   if (equippable && game.canDelete(inst.uid)) {
     const del = document.createElement("button");
     del.className = "wpn-act wpn-del";
@@ -638,12 +784,27 @@ function openChest(chest: HTMLElement, reward: HTMLElement, color: string): void
 function buildResultPanel(): void {
   const panel = document.createElement("div");
   panel.className = "result-panel";
+  const endless = game.isEndless;
   const title = document.createElement("h2");
-  title.textContent = game.lastWon ? `STAGE ${game.stageIndex + 1} CLEAR` : "DEFEATED";
-  title.className = game.lastWon ? "r-win" : "r-lose";
+  title.textContent = endless
+    ? `${game.lastFloor} 階 到達`
+    : (game.lastWon ? `STAGE ${game.stageIndex + 1} CLEAR` : "DEFEATED");
+  title.className = (endless || game.lastWon) ? "r-win" : "r-lose";
   panel.appendChild(title);
 
-  if (game.lastWon) {
+  if (endless) {
+    const info = document.createElement("div");
+    info.className = "u-head";
+    info.textContent = `最高到達 ${game.save.bestFloor} 階　/　この回廊で稼いだ宝箱 ${game.lastDrops.length} 個`;
+    panel.appendChild(info);
+    const goldLine = document.createElement("div");
+    goldLine.className = "result-gold";
+    goldLine.innerHTML =
+      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G 獲得</span>` +
+      `<span class="result-gold-total">（所持 ${game.gold.toLocaleString()} G）</span>`;
+    panel.appendChild(goldLine);
+    if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
+  } else if (game.lastWon) {
     const head = document.createElement("div");
     head.className = "u-head";
     head.textContent = game.lastDrops.length > 0
@@ -697,12 +858,6 @@ function secondaryButton(text: string, onClick: () => void): HTMLButtonElement {
   b.addEventListener("click", onClick);
   return b;
 }
-function backRow(onClick: () => void): HTMLDivElement {
-  const row = document.createElement("div");
-  row.className = "actions";
-  row.appendChild(secondaryButton("← タイトルへ戻る", onClick));
-  return row;
-}
 
 // ===== キーボード =====
 window.addEventListener("keydown", (e) => {
@@ -742,6 +897,7 @@ function loop(now: number): void {
       render(ctx, game.battle, {
         index: game.stageIndex, count: STAGE_COUNT,
         wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
+        floor: game.isEndless ? game.endlessFloor : undefined,
       });
     }
   }

@@ -164,14 +164,53 @@ const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(
 );
 export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id]; }
 
-// ===== ステージ（stages.json から読み込み。各ステージは3戦の waves を持つ） =====
-interface RawStage { name: string; desc: string; waves: string[][]; }
+// ===== ステージ（stages.json から読み込み） =====
+interface RawStage { name: string; desc: string; waves: string[][]; endless?: boolean; recommendLv?: number; }
 export const STAGES: StageDef[] = (stagesJson as RawStage[]).map((s) => ({
   name: s.name,
   desc: s.desc,
   waves: s.waves.map((wave) => wave.map((id) => ENEMY_MAP[id]).filter(Boolean)),
+  endless: s.endless,
+  recommendLv: s.recommendLv,
 }));
 export const STAGE_COUNT = STAGES.length;
+
+/** 選択画面で見せる「ドロップしうる武器」一覧（重複なし） */
+export function stageDropPreview(stageIndex: number): string[] {
+  const st = STAGES[stageIndex];
+  if (!st) return [];
+  if (st.endless) return ["w_storm_saber", "w_quake_hammer", "w_wind_pike", "w_void_glaive", "w_dragoon_blade"];
+  const ids: string[] = [];
+  for (const wave of st.waves) {
+    for (const e of wave) if (e.dropWeaponId && !ids.includes(e.dropWeaponId)) ids.push(e.dropWeaponId);
+  }
+  return ids;
+}
+
+// ===== 無限の回廊：階層ごとにランダムな敵を生成（階が深いほど強い） =====
+const ENDLESS_POOL = [
+  "shell_crawler", "wraith_feather", "gloom_shade", "venom_lurker",
+  "ember_hound", "stone_sentinel", "ice_crawler", "frost_drake", "frost_imp",
+];
+const ENDLESS_BOSSES = ["shell_warden", "wraith_monarch", "carapace_tyrant", "frost_dragon"];
+const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
+
+/** floor階の敵編成を生成。5階ごとにボス。HP/攻撃/Breakを階層で強化 */
+export function endlessFloorEnemies(floor: number): EnemyDef[] {
+  const scale = 1 + (floor - 1) * 0.13;
+  const buff = (id: string): EnemyDef => {
+    const b = ENEMY_MAP[id];
+    return {
+      ...b,
+      maxHp: Math.round(b.maxHp * scale),
+      attack: Math.round(b.attack * scale),
+      breakThreshold: Math.round(b.breakThreshold * scale),
+    };
+  };
+  if (floor % 5 === 0) return [buff(pick(ENDLESS_BOSSES))];
+  const count = floor < 3 ? 1 : floor < 7 ? 2 : 3;
+  return Array.from({ length: count }, () => buff(pick(ENDLESS_POOL)));
+}
 
 // ===== プレイヤー =====
 export const PLAYER_MAX_HP = 130;

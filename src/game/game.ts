@@ -1,6 +1,6 @@
 import { Battle } from "./engine.ts";
 import {
-  STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance,
+  STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
@@ -20,6 +20,10 @@ export class Game {
   lastDrops: WeaponInstance[] = [];
   /** この冒険で得たゴールド合計（result画面用） */
   lastGold = 0;
+  /** 無限の回廊：現在の階 */
+  endlessFloor = 1;
+  /** 無限の回廊：今回到達した階（result表示用） */
+  lastFloor = 0;
   private rotation: Record<WeaponClass, number> = { slash: 0, pierce: 0, crush: 0 };
 
   constructor() {
@@ -61,8 +65,15 @@ export class Game {
     this.waveIndex = 0;
     this.lastDrops = [];
     this.lastGold = 0;
+    this.lastFloor = 0;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
-    this.battle = new Battle(this.currentStage.waves[0]);
+    if (this.isEndless) {
+      this.endlessFloor = 1;
+      this.battle = new Battle(endlessFloorEnemies(1));
+      this.battle.announce("1階", "#9fd9ff");
+    } else {
+      this.battle = new Battle(this.currentStage.waves[0]);
+    }
     this.screen = "battle";
   }
 
@@ -73,6 +84,8 @@ export class Game {
   get waveCount(): number { return this.currentStage.waves.length; }
   /** 現在の戦闘がボス戦か */
   get isBossWave(): boolean { return this.waveIndex === this.waveCount - 1; }
+  /** 無限の回廊か */
+  get isEndless(): boolean { return !!this.currentStage.endless; }
 
   // ===== 武器・装備（インスタンスベース） =====
   equippedInstance(cls: WeaponClass): WeaponInstance | undefined {
@@ -137,12 +150,24 @@ export class Game {
     return true;
   }
 
-  /** 装備中でない武器を削除する（装備中は不可） */
+  /** 削除ロック中か */
+  isLocked(uid: string): boolean {
+    return this.save.locked.includes(uid);
+  }
+  /** 削除ロックの切替 */
+  toggleLock(uid: string): boolean {
+    if (this.isLocked(uid)) this.save.locked = this.save.locked.filter((u) => u !== uid);
+    else this.save.locked.push(uid);
+    writeSave(this.save);
+    return this.isLocked(uid);
+  }
+
+  /** 装備中・ロック中でない武器を削除できる */
   canDelete(uid: string): boolean {
     const inst = this.save.inventory.find((it) => it.uid === uid);
     const w = inst ? getWeapon(inst.baseId) : undefined;
     if (!inst || !w) return false;
-    return this.save.equipped[w.weapon] !== uid;
+    return this.save.equipped[w.weapon] !== uid && !this.isLocked(uid);
   }
   deleteWeapon(uid: string): boolean {
     if (!this.canDelete(uid)) return false;
@@ -162,6 +187,25 @@ export class Game {
 
   private onWin(): void {
     if (!this.battle) return;
+
+    // 無限の回廊：1階クリアごとに報酬を即確定し、次の階へ（HP/EN引き継ぎ）
+    if (this.isEndless) {
+      const drops = this.battle.collectedDrops();
+      this.save.inventory.push(...drops);
+      this.save.gold += this.battle.goldEarned;
+      this.lastDrops.push(...drops);
+      this.lastGold += this.battle.goldEarned;
+      if (this.endlessFloor > this.save.bestFloor) this.save.bestFloor = this.endlessFloor;
+      writeSave(this.save);
+      const hp = this.battle.playerHp;
+      const en = this.battle.playerEn;
+      this.endlessFloor += 1;
+      this.rotation = { slash: 0, pierce: 0, crush: 0 };
+      this.battle = new Battle(endlessFloorEnemies(this.endlessFloor), hp, en);
+      this.battle.announce(`${this.endlessFloor}階`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
+      return;
+    }
+
     // この戦闘のドロップ・ゴールドを蓄積
     this.lastDrops.push(...this.battle.collectedDrops());
     this.lastGold += this.battle.goldEarned;
@@ -192,7 +236,12 @@ export class Game {
 
   private onLose(): void {
     this.lastWon = false;
-    this.lastDrops = [];
+    if (this.isEndless) {
+      // 回廊では各階の報酬は確定済み。到達階を記録して結果へ
+      this.lastFloor = this.endlessFloor;
+    } else {
+      this.lastDrops = [];
+    }
     this.screen = "result";
   }
 

@@ -125,7 +125,7 @@ export function makeSpriteCanvas(sprite: Sprite, scale: number): HTMLCanvasEleme
 export function render(
   ctx: CanvasRenderingContext2D,
   b: Battle,
-  stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean },
+  stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number },
 ): void {
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, "#1a1430");
@@ -173,11 +173,19 @@ export function render(
     ctx.textAlign = "right";
     ctx.font = "bold 11px monospace";
     ctx.fillStyle = "#9690c4";
-    let label = `STAGE ${stage.index + 1} / ${stage.count}`;
-    if (stage.wave != null && stage.waves != null) {
-      label += stage.boss ? "　BOSS" : `　戦闘 ${stage.wave + 1}/${stage.waves}`;
+    let label: string;
+    if (stage.floor != null) {
+      // 無限の回廊：階層を表示（5階ごとはボス）
+      const boss = stage.floor % 5 === 0;
+      label = `無限の回廊　${stage.floor}階${boss ? "　BOSS" : ""}`;
+      if (boss) ctx.fillStyle = "#ff6b6b";
+    } else {
+      label = `STAGE ${stage.index + 1} / ${stage.count}`;
+      if (stage.wave != null && stage.waves != null) {
+        label += stage.boss ? "　BOSS" : `　戦闘 ${stage.wave + 1}/${stage.waves}`;
+      }
+      if (stage.boss) ctx.fillStyle = "#ff6b6b";
     }
-    if (stage.boss) ctx.fillStyle = "#ff6b6b";
     ctx.fillText(label, W - 10, 14);
   }
 

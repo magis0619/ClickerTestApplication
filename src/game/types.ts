@@ -106,12 +106,16 @@ export interface WeaponMods {
   breakPower: number;
 }
 
-/** ステージ定義。各ステージは3回の戦闘（waves）を持ち、3回目はボス */
+/** ステージ定義。各ステージは複数回の戦闘（waves）を持つ。endless=無限の回廊 */
 export interface StageDef {
   name: string;
   desc: string;
-  /** 各戦闘の敵編成（通常3戦闘。最後がボス戦） */
+  /** 各戦闘の敵編成（通常は最後がボス戦）。endless時は未使用 */
   waves: EnemyDef[][];
+  /** 無限の回廊（終わりなく敵が出続け、到達階を記録） */
+  endless?: boolean;
+  /** 推奨レベル（表示用） */
+  recommendLv?: number;
 }
 
 /** ガード判定の結果段階。none=失敗(被弾) / guard=通常ガード / just=中間 / perfect=パーフェクトガード */
@@ -144,4 +148,8 @@ export interface SaveData {
   gold: number;
   /** ショップで購入済みの武器baseId（売り切れ表示に使う） */
   purchased: string[];
+  /** 削除ロック中の武器UID（削除・整理から保護） */
+  locked: string[];
+  /** 無限の回廊で到達した最高階 */
+  bestFloor: number;
 }

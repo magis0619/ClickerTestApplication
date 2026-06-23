@@ -1001,3 +1001,122 @@ button.wpn-row:hover { background: #241f55; }
   66% { box-shadow: 0 0 14px rgba(74, 163, 255, 0.75); border-color: #4aa3ff; }
   100% { box-shadow: 0 0 14px rgba(255, 93, 93, 0.75); border-color: #ff5d5d; }
 }
+
+/* ===== 共通：上部バー／下部ナビ／画面見出し ===== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border: 1px solid #2a2350;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1b1640, #141029);
+}
+.tb-power { font-size: 13px; color: #cfe4ff; font-weight: 700; }
+.tb-power b { color: #fff; font-size: 17px; }
+.tb-gold { display: flex; align-items: baseline; gap: 3px; }
+.screen-title { margin: 4px 0 8px; font-size: 20px; letter-spacing: 1px; }
+
+.bottom-nav {
+  display: flex;
+  margin-top: 14px;
+  background: #100e1d;
+  border: 1px solid #2a2350;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 2px;
+  border: none;
+  background: transparent;
+  color: #8e88b8;
+  font-size: 10px;
+  cursor: pointer;
+}
+.nav-ico { font-size: 20px; }
+.nav-on { background: #1c2c50; color: #fff; }
+
+/* ===== タイトル ===== */
+.title-hero { display: flex; align-items: center; gap: 14px; justify-content: center; padding: 16px 0; }
+.title-sprite { image-rendering: pixelated; height: 88px; }
+.title-logo { font-size: 26px; font-weight: 900; color: #5fa8ff; letter-spacing: 1px; }
+.title-sub { font-size: 12px; color: #9690c4; }
+.menu-btn { width: 100%; }
+
+/* ===== ステージ選択（サムネ＋情報＋ドロップ＋バッジ） ===== */
+.stage-list { display: flex; flex-direction: column; gap: 12px; }
+.stage-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #2e2750;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1b1640, #141029);
+  text-align: left;
+  cursor: default;
+}
+.stage-card.locked { opacity: 0.6; }
+.st-thumb {
+  flex-shrink: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  background: radial-gradient(circle at 50% 35%, #2e2a55, #0e0b22);
+  border: 1px solid #3a3466;
+}
+.st-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-bottom: 34px; }
+.st-no { font-size: 11px; font-weight: 800; color: #7f9fd0; letter-spacing: 1px; }
+.st-name { font-size: 18px; font-weight: 900; color: #fff; }
+.st-meta { display: flex; align-items: center; gap: 8px; }
+.st-stars { color: #ffcf3f; font-size: 13px; letter-spacing: 1px; }
+.st-lv { font-size: 10px; color: #b6b0dc; background: rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1px 6px; }
+.st-desc { font-size: 11px; color: #cfc9f2; }
+.st-sub { font-size: 11px; color: #9690c4; }
+.st-sub b { color: #ffd35f; }
+.st-drops { display: flex; align-items: center; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.st-drops-label { font-size: 9px; color: #7f7aa0; margin-right: 2px; }
+.st-drop {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.3); border-radius: 6px;
+}
+.st-drop .wpn-sprite { height: 26px; width: auto; }
+.st-badge { position: absolute; top: 10px; right: 10px; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 8px; }
+.st-clear { background: #2e7d32; color: #fff; box-shadow: 0 0 8px rgba(80, 220, 120, 0.4); }
+.st-locked { background: #2a2a3a; color: #9a9ab0; }
+.st-go {
+  position: absolute; right: 12px; bottom: 12px;
+  padding: 9px 16px; border: none; border-radius: 10px;
+  background: linear-gradient(180deg, #3a8fe0, #2c6ab8);
+  box-shadow: 0 3px 0 #1a3f73;
+  color: #fff; font-weight: 800; font-size: 13px; cursor: pointer;
+}
+.st-go:active { transform: translateY(2px); box-shadow: 0 1px 0 #1a3f73; }
+
+/* ===== インベントリ：ツールバー・フィルタチップ・大きい武器画像 ===== */
+.inv-titlebar { display: flex; align-items: baseline; justify-content: space-between; }
+.inv-count { font-size: 12px; color: #9690c4; }
+.inv-tools { display: flex; gap: 8px; margin: 8px 0; }
+.inv-tool { flex: 1; padding: 9px; border: 1px solid #3a3466; border-radius: 8px; background: #1d1940; color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; }
+.inv-tool-on { border-color: #ffcf3f; color: #ffd95f; }
+.inv-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.inv-chip { padding: 6px 11px; border: 1px solid #2e2750; border-radius: 20px; background: #161232; color: #cfc9f2; font-size: 12px; font-weight: 800; cursor: pointer; }
+.inv-chip-on { background: #2a2456; border-color: #5fa8ff; }
+.rarity-chip { letter-spacing: 1px; }
+
+.wpn-row { position: relative; }
+.wpn-icon { width: 64px; height: 64px; }
+.wpn-icon .wpn-sprite { height: 56px; width: auto; }
+.wpn-lock { position: absolute; top: 8px; right: 10px; font-size: 16px; }
+.wpn-lockbtn.on { border-color: #ffcf3f; color: #ffd95f; }

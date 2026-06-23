@@ -10,5 +10,10 @@
 
   { "id": "shell_warden",    "name": "シェルウォーデン",     "kind": "carapace", "maxHp": 300, "attack": 24, "telegraphMs": 950,  "countStart": 4, "breakThreshold": 90,  "dropWeaponId": "w_dragoon_blade", "dropRate": 100, "boss": true },
   { "id": "wraith_monarch",  "name": "レイスモナーク",       "kind": "aerial",   "maxHp": 420, "attack": 30, "telegraphMs": 880,  "countStart": 3, "breakThreshold": 110, "dropWeaponId": "w_void_glaive",   "dropRate": 100, "boss": true },
-  { "id": "carapace_tyrant", "name": "カラペイス・タイラント", "kind": "carapace", "maxHp": 600, "attack": 36, "telegraphMs": 820,  "countStart": 3, "breakThreshold": 140, "dropWeaponId": "w_astral_edge",   "dropRate": 100, "boss": true }
+  { "id": "carapace_tyrant", "name": "カラペイス・タイラント", "kind": "carapace", "maxHp": 600, "attack": 36, "telegraphMs": 820,  "countStart": 3, "breakThreshold": 140, "dropWeaponId": "w_astral_edge",   "dropRate": 100, "boss": true },
+
+  { "id": "frost_imp",       "name": "フロストインプ",       "kind": "phantom",  "maxHp": 210, "attack": 26, "telegraphMs": 1000, "countStart": 3, "breakThreshold": 72,  "dropWeaponId": "w_storm_saber",   "dropRate": 30 },
+  { "id": "ice_crawler",     "name": "アイスクローラー",     "kind": "carapace", "maxHp": 300, "attack": 24, "telegraphMs": 1100, "countStart": 4, "breakThreshold": 90,  "dropWeaponId": "w_quake_hammer",  "dropRate": 30 },
+  { "id": "frost_drake",     "name": "フロストドレイク",     "kind": "aerial",   "maxHp": 250, "attack": 30, "telegraphMs": 950,  "countStart": 3, "breakThreshold": 82,  "dropWeaponId": "w_wind_pike",     "dropRate": 30 },
+  { "id": "frost_dragon",    "name": "フロストドラゴン",     "kind": "aerial",   "maxHp": 540, "attack": 34, "telegraphMs": 880,  "countStart": 3, "breakThreshold": 135, "dropWeaponId": "w_void_glaive",   "dropRate": 100, "boss": true }
 ]

@@ -20,10 +20,28 @@
   {
     "name": "獣王の広間",
     "desc": "強敵が連戦で襲う。最深部に獣王",
+    "recommendLv": 15,
     "waves": [
       ["stone_sentinel", "shell_crawler"],
       ["ember_hound", "venom_lurker", "gloom_shade"],
       ["carapace_tyrant", "wraith_feather", "gloom_shade"]
     ]
+  },
+  {
+    "name": "凍てつく要塞",
+    "desc": "凍結の魔物が立ちはだかる難所。最奥に氷竜",
+    "recommendLv": 20,
+    "waves": [
+      ["ice_crawler", "frost_imp"],
+      ["frost_drake", "frost_imp", "ice_crawler"],
+      ["frost_dragon", "ice_crawler"]
+    ]
+  },
+  {
+    "name": "無限の回廊",
+    "desc": "終わりなき回廊。何階まで潜れるか挑め",
+    "recommendLv": 99,
+    "endless": true,
+    "waves": []
   }
 ]
