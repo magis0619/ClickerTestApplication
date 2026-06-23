@@ -444,7 +444,7 @@ function buildBattle(): void {
       const step = document.createElement("div");
       step.className = "wc-step";
       step.innerHTML =
-        `<span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
+        `<span class="wc-sk">${s.name}</span>` +
         `<span class="wc-link">⚡連携</span>` +
         `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span></span>`;
       combo.appendChild(step);

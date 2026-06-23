@@ -203,18 +203,19 @@ button {
 .battle-hud.focus .bh-en .bh-fill { background: linear-gradient(180deg, #ffd95f, #dca31c); }
 .battle-hud.focus .bh-en .bh-text { color: #fff7df; }
 
-/* ===== 戦闘：武器カード（系統ラベル＋武器ドット絵／スキルはコンボ表示） ===== */
+/* ===== 戦闘：武器カード（1列・横長。左に系統＋武器ドット絵、右にスキル） ===== */
 .weapons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 .weapon-card {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 11px 9px 13px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 9px 12px;
   border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 16px;
   background: linear-gradient(180deg, #2a2356, #1b1640);
@@ -255,17 +256,20 @@ button {
 .weapon-card.wclass-pierce:active { box-shadow: 0 1px 0 #1d5e2f; }
 .weapon-card.wclass-crush:active { box-shadow: 0 1px 0 #8a4f14; }
 
+/* 左ブロック：系統ラベル＋武器ドット絵（カードの左端を使う） */
 .wc-head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  justify-content: center;
+  gap: 3px;
+  width: 96px;
+  flex-shrink: 0;
+  padding-right: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
 }
 .wc-kind {
-  align-self: stretch;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: #fff;
@@ -283,29 +287,33 @@ button {
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 9px;
-  padding: 3px 8px;
+  padding: 2px 8px;
 }
-.wc-img-wrap .wpn-sprite { height: 40px; width: auto; }
+.wc-img-wrap .wpn-sprite { height: 38px; width: auto; }
 .wpn-sprite { image-rendering: pixelated; display: block; }
 
+/* 右ブロック：スキル（残り幅をすべて使う） */
 .wc-combo {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
 }
 
 .wc-step {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 7px;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.46);
   border: 1px solid rgba(0, 0, 0, 0.5);
   border-left: 3px solid rgba(255, 255, 255, 0.25);
 }
 .wc-no { font-size: 13px; opacity: 0.9; color: #fff; }
-.wc-sk { flex: 1; font-size: 12px; font-weight: 800; color: #fff; min-width: 0; }
+.wc-sk { flex: 1; font-size: 15px; font-weight: 800; color: #fff; min-width: 0; }
 
 /* コスト：数字を大きく、暗いピルで囲んでコントラストを上げる */
 .wc-cost {

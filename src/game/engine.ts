@@ -34,6 +34,16 @@ import {
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
 
+/** 撃破時に飛び散るコイン（金貨）粒子 */
+export interface Coin {
+  /** 基準にする敵スロットのインデックス */
+  anchor: number;
+  ox: number; oy: number;
+  vx: number; vy: number;
+  ttl: number;
+  spin: number;
+}
+
 export interface FloatText {
   text: string;
   color: string;
@@ -122,6 +132,8 @@ export class Battle {
   targetIndex = 0;
 
   floats: FloatText[] = [];
+  /** 撃破時に飛び散るコイン粒子 */
+  coins: Coin[] = [];
   lastGuard: GuardResult = "none";
   lastGuardTtl = 0;
   /** 画面シェイク残り時間(ms) */
@@ -399,6 +411,19 @@ export class Battle {
     this.goldEarned += gold;
     this.pushFloat(e.drop ? "ドロップ!" : "撃破!", "#ffd35f", idx);
     this.pushFloat(`+${gold} G`, "#ffe27a", idx);
+    // コインが弾けて落ちる演出（ゴールドが多いほど多く）
+    const coinN = Math.min(14, 5 + Math.round(gold / 25));
+    for (let i = 0; i < coinN; i++) {
+      this.coins.push({
+        anchor: idx,
+        ox: (Math.random() * 2 - 1) * 16,
+        oy: -8 - Math.random() * 14,
+        vx: (Math.random() * 2 - 1) * 2.0,
+        vy: -2.4 - Math.random() * 2.2,
+        ttl: 850 + Math.random() * 300,
+        spin: Math.random() * Math.PI * 2,
+      });
+    }
     this.shake(220, 5);
     this.sfx.push("die");
   }
@@ -501,6 +526,16 @@ export class Battle {
       f.rise += dtMs * 0.03;
     }
     this.floats = this.floats.filter((f) => f.ttl > 0);
+    // コイン：重力で跳ねて落ちる
+    for (const c of this.coins) {
+      const k = dtMs / 16;
+      c.vy += 0.16 * k;
+      c.ox += c.vx * k;
+      c.oy += c.vy * k;
+      c.spin += 0.22 * k;
+      c.ttl -= dtMs;
+    }
+    this.coins = this.coins.filter((c) => c.ttl > 0);
     if (this.lastGuardTtl > 0) this.lastGuardTtl -= dtMs;
     if (this.shakeT > 0) this.shakeT -= dtMs;
     if (this.lungeT > 0) this.lungeT -= dtMs;

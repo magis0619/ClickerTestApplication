@@ -164,6 +164,7 @@ export function render(
   if (b.perfectFxT > 0 && b.perfectFxIndex >= 0) {
     drawPerfectFx(ctx, b, slots[b.perfectFxIndex]);
   }
+  drawCoins(ctx, b, slots);
   drawFloats(ctx, b, slots);
   ctx.restore();
 
@@ -609,11 +610,66 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   }
 }
 
+/** 撃破時のコイン（金貨）を描く。回転で横幅が伸縮する */
+function drawCoins(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
+  for (const c of b.coins) {
+    const base = slots[c.anchor];
+    if (!base) continue;
+    const x = base.x + c.ox;
+    const y = base.y + c.oy;
+    const alpha = Math.max(0, Math.min(1, c.ttl / 300));
+    ctx.globalAlpha = alpha;
+    const wob = Math.abs(Math.cos(c.spin)); // 回転で見える幅が変わる
+    const cw = 2.5 + wob * 4;
+    const ch = 7;
+    ctx.fillStyle = "#ffd95f";
+    ctx.beginPath();
+    ctx.ellipse(x, y, cw, ch, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#a9781a";
+    ctx.stroke();
+    if (cw > 3.6) {
+      ctx.fillStyle = "#fff6c8";
+      ctx.beginPath();
+      ctx.ellipse(x - cw * 0.25, y - ch * 0.3, cw * 0.3, ch * 0.38, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** 味方(player)の表記を、画面右側（中央より右）にログ的に積んで表示する */
+function drawPlayerLog(ctx: CanvasRenderingContext2D, b: Battle): void {
+  const logs = b.floats.filter((f) => f.anchor === "player");
+  if (logs.length === 0) return;
+  const x = W - 12;
+  let y = H - 60;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "alphabetic";
+  ctx.lineJoin = "round";
+  // 新しいもの（配列末尾）を味方に近い下側に、古いものを上へ積む（最大6件）
+  for (let i = logs.length - 1; i >= 0 && i >= logs.length - 6; i--) {
+    const f = logs[i];
+    const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
+    ctx.globalAlpha = alpha;
+    ctx.font = "900 15px monospace";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.strokeText(f.text, x, y);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, x, y);
+    y -= 21;
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
+  drawPlayerLog(ctx, b); // 味方の表記は右側ログへ
   for (const f of b.floats) {
+    if (f.anchor === "player") continue; // ログで描画済み
     let pos: { x: number; y: number };
-    if (f.anchor === "player") pos = PLAYER_POS;
-    else if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
+    if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
     else pos = slots[f.anchor] ?? { x: W / 2, y: H / 2 };
     const age = f.max - f.ttl;
     const x = pos.x + (f.dx ?? 0);
