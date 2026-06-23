@@ -1,5 +1,6 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef } from "./types.ts";
 import {
+  matchCombo,
   WEAKNESS,
   WEAKNESS_MULTIPLIER,
   PLAYER_MAX_HP,
@@ -131,6 +132,8 @@ export class Battle {
   sfx: SfxEvent[] = [];
   /** 「集中」発動中：次の行動のEN消費をなくす */
   freeNextEn = false;
+  /** 直近に発動したスキル（連携＝コンボ判定に使う） */
+  lastSkill: LastSkill | null = null;
   /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
@@ -179,6 +182,10 @@ export class Battle {
       this.pushFloat("ENが足りない", "#ffcc55", "player");
       return false;
     }
+    // 連携判定：直近スキル → 今のスキル の並びで成立するか
+    const cls = mods?.weapon;
+    const combo = cls ? matchCombo(this.lastSkill, skill.kind, cls) : undefined;
+
     this.playerEn -= cost;
     this.freeNextEn = false; // 消費（集中はこの後に再セット）
 
@@ -192,17 +199,20 @@ export class Battle {
         this.pushFloat("集中！ 次の行動EN0", "#9fd9ff", "player");
         break;
       case "attack":
-        this.performAttack(skill, mods);
+        this.performAttack(skill, mods, combo);
         break;
     }
+
+    // 直近スキルを記録（次の連携判定に使う）
+    this.lastSkill = cls ? { kind: skill.kind, cls } : null;
 
     this.advanceCounts(); // 行動したので敵カウントを進める
     this.checkWin();
     return true;
   }
 
-  /** 攻撃スキルを実行：対象数ぶんの敵に、ヒット数ぶん攻撃する */
-  private performAttack(skill: Skill, mods?: WeaponMods): void {
+  /** 攻撃スキルを実行：対象数ぶんの敵に、ヒット数ぶん攻撃する。combo成立時は追撃を足す */
+  private performAttack(skill: Skill, mods?: WeaponMods, combo?: ComboDef): void {
     const targets = this.pickTargets(skill.targets);
     for (const e of targets) {
       for (let h = 0; h < skill.hits; h++) {
@@ -210,8 +220,23 @@ export class Battle {
         this.hitOne(e, skill, mods);
       }
     }
+    // 連携成立：現在の対象へ追撃（チャージ倍率が乗ったまま追加で殴る）
+    if (combo) {
+      const t = this.target;
+      const idx = t ? this.enemies.indexOf(t) : -1;
+      if (t && t.alive) {
+        for (let i = 0; i < combo.bonusHits; i++) {
+          if (!t.alive) break;
+          this.hitOne(t, skill, mods);
+        }
+      }
+      this.pushFloat(`${combo.name}！`, "#ffd35f", idx >= 0 ? idx : "player");
+      this.sfx.push("just");
+      this.shake(170, 3);
+      this.lungeT = 240;
+    }
     this.consumeCharge();
-    this.lungeT = 200;
+    this.lungeT = Math.max(this.lungeT, 200);
   }
 
   /** 攻撃対象を選ぶ：現在のターゲット＋（足りなければ）他の生存敵を左から補う */
@@ -232,6 +257,7 @@ export class Battle {
     const before = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
+    this.lastSkill = null; // 休憩で連携チェーンは途切れる
     this.advanceCounts(); // 休憩も「行動」なので敵カウントを進める
   }
 

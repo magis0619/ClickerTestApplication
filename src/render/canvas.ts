@@ -109,6 +109,18 @@ function drawSprite(
   }
 }
 
+/** スプライトを単体のcanvas要素に描き出す（ボタン用アイコンなどに使う） */
+export function makeSpriteCanvas(sprite: Sprite, scale: number): HTMLCanvasElement {
+  const width = sprite.rows.reduce((m, r) => Math.max(m, r.length), 0);
+  const height = sprite.rows.length;
+  const cv = document.createElement("canvas");
+  cv.width = width * scale;
+  cv.height = height * scale;
+  const c = cv.getContext("2d")!;
+  drawSprite(c, sprite, cv.width / 2, cv.height, scale);
+  return cv;
+}
+
 export function render(
   ctx: CanvasRenderingContext2D,
   b: Battle,

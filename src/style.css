@@ -253,6 +253,40 @@ button {
 .wc-step-on .wc-sk { color: #fff; }
 .wc-step-on .wc-cost-num { color: #ffd35f; }
 
+/* ===== スキル連携（連携技）の通知 ===== */
+/* 連携バッジ（⚡連携）：通常は隠し、連携可能なときだけ点滅表示 */
+.wc-link {
+  display: none;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 900;
+  color: #1a1206;
+  background: linear-gradient(180deg, #ffe27a, #ffb43a);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+/* 連携が成立する段：金色に強く発光させる */
+.wc-combo-on {
+  background: rgba(255, 210, 90, 0.22);
+  border-left-color: #ffe27a;
+}
+.wc-combo-on .wc-sk { color: #fff; }
+.wc-combo-on .wc-link {
+  display: inline-block;
+  animation: combo-flash 0.5s steps(1) infinite;
+}
+@keyframes combo-flash { 50% { opacity: 0.35; } }
+
+/* 連携可能なカード全体を縁取って光らせる */
+.weapon-card.combo-ready {
+  border-color: #ffe27a;
+  animation: combo-pulse 0.7s ease-in-out infinite;
+}
+@keyframes combo-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 210, 90, 0.45); }
+  50% { box-shadow: 0 0 20px rgba(255, 210, 90, 0.95); }
+}
+
 /* ===== 戦闘：ガード／休憩の大ボタン ===== */
 .battle-actions {
   display: grid;
@@ -266,7 +300,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 16px 10px;
+  padding: 14px 10px;
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -274,9 +308,14 @@ button {
   transition: transform 0.04s, filter 0.1s;
 }
 .act-btn:active { transform: translateY(2px) scale(0.99); filter: brightness(1.15); }
-.act-title { font-size: 18px; font-weight: 800; letter-spacing: 1px; }
-.act-key { font-size: 11px; opacity: 0.85; }
-.act-sub { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+/* ボタンのドット絵アイコン */
+.act-icon {
+  image-rendering: pixelated;
+  height: 46px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+}
 .guard-act { background: linear-gradient(180deg, #2f7fd0, #245aa0); box-shadow: 0 3px 0 #1a3f73; }
 .guard-act:hover { background: linear-gradient(180deg, #3a8fe0, #2c6ab8); }
 .rest-act { background: linear-gradient(180deg, #2f9d78, #237a5e); box-shadow: 0 3px 0 #19564180; }

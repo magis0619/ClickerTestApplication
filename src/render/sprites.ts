@@ -249,3 +249,54 @@ export const BOSS_TEL: Sprite = {
     "o.bo......ob.o",
   ],
 };
+
+// ===== UIアイコン（ボタン用のドット絵） =====
+const SHIELD_PAL: Record<string, string> = {
+  o: "#0c0a18", // 輪郭
+  b: "#7fc0ff", // 盾(青)
+  c: "#2c6fb8", // 盾(影)
+  w: "#dff0ff", // ハイライト
+  y: "#ffd35f", // 紋章(金)
+};
+
+/** ガードボタン：盾 */
+export const SHIELD: Sprite = {
+  palette: SHIELD_PAL,
+  rows: [
+    ".oooooooo.",
+    "obbbbbbbbo",
+    "obwwbbbbco",
+    "obbbbbbbco",
+    "obbbyybbco",
+    "obbyyyybco",
+    "obbbyybbco",
+    "obbbbbbbco",
+    "oobbbbbboo",
+    ".oobbbboo.",
+    "...obbo...",
+    "....oo....",
+  ],
+};
+
+const SLEEP_PAL: Record<string, string> = {
+  z: "#eafff2", // Zzz(白緑)
+};
+
+/** 休憩ボタン：睡眠（Zzz） */
+export const SLEEP: Sprite = {
+  palette: SLEEP_PAL,
+  rows: [
+    "............",
+    "........zzz.",
+    ".........z..",
+    "........zzz.",
+    ".....zzzz...",
+    ".......zz...",
+    ".....zz.....",
+    ".....zzzz...",
+    "zzzzz.......",
+    "...zz.......",
+    ".zz.........",
+    "zzzzz.......",
+  ],
+};

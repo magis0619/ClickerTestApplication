@@ -1,9 +1,10 @@
 import "./style.css";
-import { render, drawBackdrop, enemySlots } from "./render/canvas.ts";
+import { render, drawBackdrop, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
+import { SHIELD, SLEEP } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL,
-  getWeapon, getSkill, skillDescription, isRainbowRarity, REST_EN_RECOVER,
+  getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance } from "./game/types.ts";
@@ -345,6 +346,7 @@ function buildBattle(): void {
       step.innerHTML =
         `<span class="wc-no">${CIRCLE[i] ?? i + 1}</span>` +
         `<span class="wc-sk">${KIND_ICON[s.kind]} ${s.name}</span>` +
+        `<span class="wc-link">⚡連携</span>` +
         `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span><span class="wc-cost-lbl">EN</span></span>`;
       combo.appendChild(step);
       steps.push(step);
@@ -361,17 +363,13 @@ function buildBattle(): void {
 
   const guardBtn = document.createElement("button");
   guardBtn.className = "act-btn guard-act";
-  guardBtn.innerHTML =
-    `<span class="act-title">🛡 ガード</span><span class="act-key">(Space)</span>` +
-    `<span class="act-sub">タイミングでEN大回復！</span>`;
+  guardBtn.appendChild(actionIcon(SHIELD));
   guardBtn.addEventListener("click", doGuard);
   pressFx(guardBtn);
 
   const restBtn = document.createElement("button");
   restBtn.className = "act-btn rest-act";
-  restBtn.innerHTML =
-    `<span class="act-title">🧘 休憩</span><span class="act-key">(R)</span>` +
-    `<span class="act-sub">EN +${REST_EN_RECOVER} 回復</span>`;
+  restBtn.appendChild(actionIcon(SLEEP));
   restBtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
   pressFx(restBtn);
 
@@ -381,8 +379,16 @@ function buildBattle(): void {
   updateWeaponButtons();
 }
 
+/** ボタン用のドット絵アイコン要素を作る */
+function actionIcon(sprite: Parameters<typeof makeSpriteCanvas>[0]): HTMLCanvasElement {
+  const icon = makeSpriteCanvas(sprite, 4);
+  icon.className = "act-icon";
+  return icon;
+}
+
 function updateWeaponButtons(): void {
   if (!game.battle) return;
+  const last = game.battle.lastSkill;
   for (const { card, cls, steps } of weaponButtons) {
     const active = game.comboIndex(cls);
     const cur = game.currentSkill(cls);
@@ -391,6 +397,10 @@ function updateWeaponButtons(): void {
     // ENが足りなければカードを無効表示
     const broke = !cur || game.battle!.playerEn < cur.enCost;
     card.classList.toggle("disabled", broke);
+    // 連携候補：直近スキルと次の段で連携が成立し、かつ撃てるなら明確に光らせる
+    const combo = cur && !broke ? matchCombo(last, cur.kind, cls) : undefined;
+    card.classList.toggle("combo-ready", !!combo);
+    steps.forEach((step, i) => step.classList.toggle("wc-combo-on", !!combo && i === active));
   }
 }
 

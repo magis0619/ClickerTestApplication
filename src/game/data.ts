@@ -1,5 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
+  LastSkill, ComboDef,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -57,6 +58,22 @@ export function skillDescription(s: Skill): string {
   if (s.critMult !== CRIT_MULT_DEFAULT) parts.push(`会心${s.critMult}倍`);
   if (s.breakMult !== 1) parts.push(`ブレイク${s.breakMult}倍`);
   return parts.join("・");
+}
+
+// ===== スキル連携（連携技：a→bの順で発動すると追撃が発生する） =====
+// スキルは抽選でランダムに入手するため、連携は「スキル種類」で定義して
+// どんな武器構成でも成立しうるようにする。
+export const COMBOS: ComboDef[] = [
+  { id: "smite",  name: "連携・渾身", first: "charge", second: "attack", bonusHits: 1, desc: "ためる → 攻撃 で追撃1" },
+  { id: "ambush", name: "連携・奇襲", first: "focus",  second: "attack", bonusHits: 2, desc: "集中 → 攻撃 で追撃2" },
+  { id: "rush",   name: "連携・連撃", first: "attack", second: "attack", diffClass: true, bonusHits: 1, desc: "別系統の攻撃を続けて追撃1" },
+];
+
+/** 直近スキル(last)と今出すスキル(kind/cls)で成立する連携を返す（なければ undefined） */
+export function matchCombo(last: LastSkill | null, kind: SkillKind, cls: WeaponClass): ComboDef | undefined {
+  if (!last) return undefined;
+  return COMBOS.find((c) =>
+    c.first === last.kind && c.second === kind && (!c.diffClass || last.cls !== cls));
 }
 
 // ===== 武器テンプレート（weapons.json から読み込み） =====

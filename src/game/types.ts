@@ -32,6 +32,25 @@ export interface Skill {
   breakMult: number;
 }
 
+/** 直近に発動したスキル（連携＝コンボ判定に使う） */
+export interface LastSkill {
+  kind: SkillKind;
+  cls: WeaponClass;
+}
+
+/** スキル連携（連携技）の定義。first → second の順で出すと追撃が発生する */
+export interface ComboDef {
+  id: string;
+  name: string;
+  first: SkillKind;
+  second: SkillKind;
+  /** first と別系統の武器で出す必要があるか（連撃用） */
+  diffClass?: boolean;
+  /** 連携成立時の追撃ヒット数 */
+  bonusHits: number;
+  desc: string;
+}
+
 /** 敵データ */
 export interface EnemyDef {
   id: string;
