@@ -40,6 +40,17 @@ export function enemySlots(n: number): { x: number; y: number }[] {
   return enemyLayout(n).map((L) => ({ x: L.cx, y: L.footY }));
 }
 
+/** ライトテーマの背景ドットグリッド（ターミナル風の方眼） */
+function drawDotGrid(ctx: CanvasRenderingContext2D): void {
+  const step = 16;
+  ctx.fillStyle = "#d8cdd5";
+  for (let y = step / 2; y < H; y += step) {
+    for (let x = step / 2; x < W; x += step) {
+      ctx.fillRect(x, y, 2, 2);
+    }
+  }
+}
+
 /** 角丸矩形パス */
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
@@ -127,14 +138,13 @@ export function render(
   b: Battle,
   stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number },
 ): void {
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#1a1430");
-  grad.addColorStop(1, "#0c0a18");
-  ctx.fillStyle = grad;
+  // ライト基調のターミナル風ビューポート（ドットグリッド）
+  ctx.fillStyle = "#efe9ec";
   ctx.fillRect(0, 0, W, H);
+  drawDotGrid(ctx);
 
-  // 地面のライン
-  ctx.strokeStyle = "#2e2750";
+  // 地面のライン（淡いグレー）
+  ctx.strokeStyle = "#d2c7cf";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, GROUND_Y);
@@ -172,21 +182,21 @@ export function render(
   if (stage) {
     ctx.textAlign = "right";
     ctx.font = "bold 11px monospace";
-    ctx.fillStyle = "#9690c4";
+    ctx.fillStyle = "#8a7a90";
     let label: string;
     if (stage.floor != null) {
       // 無限の回廊：階層を表示（5階ごとはボス）
       const boss = stage.floor % 5 === 0;
-      label = `無限の回廊　${stage.floor}階${boss ? "　BOSS" : ""}`;
-      if (boss) ctx.fillStyle = "#ff6b6b";
+      label = `FLOOR_${stage.floor}${boss ? " :: BOSS" : ""}`;
+      if (boss) ctx.fillStyle = "#d61c8a";
     } else {
-      label = `STAGE ${stage.index + 1} / ${stage.count}`;
+      label = `STAGE_${stage.index + 1}/${stage.count}`;
       if (stage.wave != null && stage.waves != null) {
-        label += stage.boss ? "　BOSS" : `　戦闘 ${stage.wave + 1}/${stage.waves}`;
+        label += stage.boss ? " :: BOSS" : ` :: W${stage.wave + 1}/${stage.waves}`;
       }
-      if (stage.boss) ctx.fillStyle = "#ff6b6b";
+      if (stage.boss) ctx.fillStyle = "#d61c8a";
     }
-    ctx.fillText(label, W - 10, 14);
+    ctx.fillText(label, W - 10, 16);
   }
 
   drawWarningBanner(ctx, b, imminent);
@@ -269,8 +279,12 @@ function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   });
   if (b.charge > 1) {
     ctx.textAlign = "center";
-    ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "#ffd35f";
+    ctx.font = "900 12px monospace";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.strokeText("CHARGED", x, y - 80);
+    ctx.fillStyle = "#d97a16";
     ctx.fillText("CHARGED", x, y - 80);
   }
 }
@@ -303,24 +317,21 @@ function drawEnemyCard(
 
   // === カード枠 ===
   ctx.save();
+  roundRect(ctx, L.left, L.top, L.w, L.h, 6);
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.fill();
   if (imminent && danger > 0.25) {
-    // 次に攻撃する敵：赤く強調＋グロー
+    // 次に攻撃する敵：マゼンタで強調＋グロー
     const glow = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 80 : 150));
-    ctx.shadowColor = "#ff3b3b";
-    ctx.shadowBlur = 10 + glow * 12;
-    roundRect(ctx, L.left, L.top, L.w, L.h, 10);
-    ctx.fillStyle = "rgba(60,18,24,0.55)";
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = `rgba(255,80,80,${0.6 + glow * 0.4})`;
+    ctx.shadowColor = "#e0188f";
+    ctx.shadowBlur = 8 + glow * 12;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = `rgba(224,24,143,${0.7 + glow * 0.3})`;
     ctx.stroke();
+    ctx.shadowBlur = 0;
   } else {
-    roundRect(ctx, L.left, L.top, L.w, L.h, 10);
-    ctx.fillStyle = "rgba(20,16,42,0.5)";
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = targeted ? "#ffea00" : "#332c5a";
+    ctx.lineWidth = targeted ? 3 : 1.5;
+    ctx.strokeStyle = targeted ? "#e0188f" : "#2a2030";
     ctx.stroke();
   }
   ctx.restore();
@@ -330,7 +341,7 @@ function drawEnemyCard(
   const bx = L.left + 16, by = L.top + 16;
   ctx.beginPath();
   ctx.arc(bx, by, 12, 0, Math.PI * 2);
-  ctx.fillStyle = "#0c0a18";
+  ctx.fillStyle = "#fbf7f9";
   ctx.fill();
   ctx.lineWidth = 2;
   ctx.strokeStyle = WCLASS_COLOR[weak];
@@ -347,16 +358,16 @@ function drawEnemyCard(
   ctx.font = "bold 13px monospace";
   ctx.lineJoin = "round";
   ctx.lineWidth = 3.5;
-  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
   ctx.strokeText(e.def.name, L.cx, L.top + 20);
-  ctx.fillStyle = "#ffe3ee";
+  ctx.fillStyle = "#1a1024";
   ctx.fillText(e.def.name, L.cx, L.top + 20);
 
   // === HP / ブレイクゲージ ===
   const barX = L.left + 12, barW = L.w - 24, barY = L.top + 32;
-  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#ff5d86", "#33101c");
+  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#e0188f", "#e6d9e0");
   const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
-  bar(ctx, barX, barY + 9, barW, 3, bg, "#ffcf3f", "#3a2f10");
+  bar(ctx, barX, barY + 9, barW, 3, bg, "#16b8d8", "#d6e6ea");
 
   // === スプライト（震え・赤点滅・怯み・被弾を反映） ===
   let trembleX = 0, trembleY = 0;
@@ -392,7 +403,7 @@ function drawEnemyCard(
   const cy = L.top + L.h - 4;
   if (e.isBroken) {
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ffdd44";
+    ctx.fillStyle = "#0a9bb5";
     ctx.font = "bold 12px monospace";
     ctx.fillText(`BREAK ${e.breakTurns}`, L.cx, cy);
   } else if (e.inTelegraph) {
@@ -414,10 +425,10 @@ function drawEnemyCard(
     const r = 16 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2.5 : 0);
     ctx.beginPath();
     ctx.arc(L.cx, ccy, r, 0, Math.PI * 2);
-    ctx.fillStyle = urgent ? "#a8324a" : "#2a2350";
+    ctx.fillStyle = urgent ? "#d61c8a" : "#15101c";
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = urgent ? "#ff6f8a" : "#5a4fa0";
+    ctx.strokeStyle = urgent ? "#ff5db0" : "#3a3048";
     ctx.stroke();
     // カウント数値：太字で、味方スキルのコスト表示くらい大きく
     ctx.textAlign = "center";
@@ -431,7 +442,7 @@ function drawEnemyCard(
   // === ターゲットマーカー（カード下に黄色い三角） ===
   if (targeted) {
     const ty = L.top + L.h + 8;
-    ctx.fillStyle = "#ffea00";
+    ctx.fillStyle = "#e0188f";
     ctx.beginPath();
     ctx.moveTo(L.cx, ty + 8);
     ctx.lineTo(L.cx - 8, ty);
@@ -521,7 +532,7 @@ function drawTargetArrows(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (b.aliveEnemies.length <= 1) return;
   const y = 166;
   const pulse = 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 400));
-  ctx.fillStyle = `rgba(255,234,0,${0.45 + pulse * 0.4})`;
+  ctx.fillStyle = `rgba(224,24,143,${0.5 + pulse * 0.4})`;
   // 左
   ctx.beginPath();
   ctx.moveTo(14, y); ctx.lineTo(26, y - 9); ctx.lineTo(26, y + 9); ctx.closePath();
@@ -616,9 +627,9 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   const t = b.enemies[b.targetIndex];
   if (t && t.alive) {
     ctx.textAlign = "left";
-    ctx.font = "11px monospace";
-    ctx.fillStyle = "#9690c4";
-    ctx.fillText(`対象: ${t.def.name}（${KIND_LABEL[t.def.kind]}） 弱点:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, 14);
+    ctx.font = "bold 11px monospace";
+    ctx.fillStyle = "#8a7a90";
+    ctx.fillText(`TARGET: ${t.def.name} [${KIND_LABEL[t.def.kind]}] WEAK:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, 16);
   }
 }
 
@@ -886,7 +897,7 @@ function bar(
   ctx.fillRect(x, y, w, h);
   ctx.fillStyle = fill;
   ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), h);
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
   ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, w, h);
 }

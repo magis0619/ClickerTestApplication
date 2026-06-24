@@ -55,6 +55,8 @@ button {
   width: 100%;
   max-width: 600px;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar h1 {
@@ -1409,3 +1411,228 @@ button.wpn-row:hover { background: #241f55; }
   color: #fff;
 }
 .forge-awaken-btn:active { box-shadow: 0 1px 0 #5a1f8a; }
+
+/* =====================================================================
+   BATTLE_ROYALE — 戦闘画面のライト基調・ネオブルータリズム風テーマ
+   （添付モックを模倣。戦闘中のみ body.in-battle で有効化）
+   ===================================================================== */
+body.in-battle {
+  background: #ece4e7;
+  color: #15101c;
+}
+/* 戦闘中は既定のミュートバー（右上）を隠す（ギアを上部バーに統合） */
+.in-battle .topbar { display: none; }
+
+/* 戦闘ビューポート（canvas）：太い黒枠＋オフセット影＋ドット背景 */
+.in-battle #screen {
+  border: 3px solid #15101c;
+  border-radius: 0;
+  background: #efe9ec;
+  box-shadow: 6px 6px 0 #15101c;
+}
+.in-battle #controls { padding-bottom: 16px; }
+
+/* ----- 上部バー ----- */
+.bt-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bt-title {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #e0188f;
+  text-transform: uppercase;
+}
+.bt-title-mark { color: #15101c; }
+.bt-top-right { display: flex; align-items: center; gap: 8px; }
+.bt-gear {
+  width: 34px; height: 34px;
+  font-size: 18px;
+  border: 2px solid #15101c;
+  background: #faf7f8;
+  color: #15101c;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 #15101c;
+}
+.bt-gear:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #15101c; }
+.bt-portrait {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #15101c;
+  background: #1a1226;
+  box-shadow: 3px 3px 0 #15101c;
+  overflow: hidden;
+}
+.bt-portrait canvas { image-rendering: pixelated; height: 34px; width: auto; }
+
+/* ----- HP / AP セグメントバー ----- */
+.bt-stats { margin: 12px 0; }
+.bt-stat-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-top: 8px;
+}
+.bt-stat-label {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 15px; font-weight: 900; letter-spacing: 1px; color: #15101c;
+}
+.bt-crit {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #e0188f;
+  animation: critBlink 0.7s steps(1) infinite;
+}
+@keyframes critBlink { 50% { opacity: 0.3; } }
+.bt-seg-bar { display: flex; gap: 3px; height: 18px; margin: 5px 0 2px; }
+.bt-seg {
+  flex: 1;
+  background: #ddd2d9;
+  border: 1px solid #c2b6bf;
+}
+.bt-seg-hp .bt-seg.on { background: #e0188f; border-color: #a01065; }
+.bt-seg-en .bt-seg.on { background: #16c2e0; border-color: #0e8fa8; }
+.bt-seg-en.focus .bt-seg.on { background: #ffce3a; border-color: #c79a16; }
+
+/* ----- スキルカード 2x2 ----- */
+.bt-skills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.sk-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 132px;
+  padding: 12px 12px 10px;
+  text-align: left;
+  background: #faf7f8;
+  border: 2.5px solid #15101c;
+  box-shadow: 5px 5px 0 #15101c;
+  color: #15101c;
+  cursor: pointer;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+.sk-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.sk-card.btn-press { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.sk-card.disabled {
+  pointer-events: none;
+  background: #ece7ea;
+  box-shadow: 5px 5px 0 #b7afb6;
+  border-color: #b7afb6;
+  color: #9a93a0;
+}
+.sk-card.combo-ready {
+  border-color: #e0188f;
+  box-shadow: 5px 5px 0 #e0188f;
+  animation: skCombo 0.7s ease-in-out infinite;
+}
+@keyframes skCombo {
+  0%, 100% { box-shadow: 5px 5px 0 #e0188f; }
+  50% { box-shadow: 5px 5px 0 #ff66b6; }
+}
+.sk-cost {
+  align-self: flex-start;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+  color: #eafaf6;
+  background: #1f6b63;
+  padding: 2px 8px;
+}
+.sk-card.disabled .sk-cost { background: #9a93a0; color: #ece7ea; }
+.sk-cost-zero { background: #5b7a1f; }
+.sk-icon {
+  position: absolute; top: 10px; right: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sk-icon canvas { image-rendering: pixelated; height: 26px; width: auto; }
+.sk-title {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 24px; font-weight: 900; letter-spacing: 0.5px; line-height: 1;
+}
+.sk-card.disabled .sk-title { color: #9a93a0; }
+.sk-desc { font-size: 11px; line-height: 1.3; color: #5a5260; flex: 1; }
+.sk-card.disabled .sk-desc { color: #a59ea8; }
+.sk-footer {
+  margin-top: auto;
+  padding-top: 7px;
+  border-top: 1px solid #15101c;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px;
+}
+.sk-card.disabled .sk-footer { border-top-color: #c2b6bf; color: #a59ea8; }
+/* フッタータグの配色 */
+.ft-combo { color: #e0188f; }
+.ft-crit { color: #d61c1c; }
+.ft-charge { color: #d97a16; }
+.ft-focus { color: #0e9fbe; }
+.ft-aoe { color: #8a3ad0; }
+.ft-hits { color: #2c6fb8; }
+.ft-low { color: #5a5260; }
+.ft-safe { color: #5b7a1f; }
+.ft-base { color: #5a5260; }
+/* GUARDカード：予兆中の強調 */
+.sk-guard.guard-now {
+  border-color: #e0188f;
+  box-shadow: 5px 5px 0 #e0188f;
+  animation: skCombo 0.45s ease-in-out infinite;
+}
+
+/* ----- REST バー ----- */
+.bt-rest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #faf7f8;
+  border: 2.5px solid #15101c;
+  box-shadow: 4px 4px 0 #15101c;
+  color: #15101c;
+  cursor: pointer;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+.bt-rest:active, .bt-rest.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.bt-rest-ico { display: flex; align-items: center; }
+.bt-rest-ico canvas { image-rendering: pixelated; height: 24px; width: auto; }
+.bt-rest-name {
+  flex: 1;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 15px; font-weight: 900; letter-spacing: 1px;
+}
+.bt-rest-tag {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; color: #16a8c4;
+}
+
+/* ----- COMBAT_LOG バー ----- */
+.bt-log {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #faf7f8;
+  border: 2px solid #15101c;
+}
+.bt-log-title {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #e0188f;
+  flex-shrink: 0;
+}
+.bt-log-line {
+  flex: 1; min-width: 0;
+  font-size: 12px; color: #5a5260;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.bt-log::after {
+  content: "▾";
+  color: #15101c;
+  font-size: 12px;
+}

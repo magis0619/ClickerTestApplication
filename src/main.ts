@@ -5,12 +5,12 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL, RARITY_ORDER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview,
-  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS, SHOP_CHESTS,
+  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS, SHOP_CHESTS, REST_EN_RECOVER,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import type {
-  Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
+  Rarity, SfxEvent, SkillKind, Skill, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
 } from "./game/types.ts";
 
 /** インスタンスの武器名・レアリティ（テンプレートから取得） */
@@ -20,16 +20,27 @@ function instRarity(inst: WeaponInstance): Rarity { return getWeapon(inst.baseId
 const canvas = document.getElementById("screen") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const controls = document.getElementById("controls") as HTMLDivElement;
+const app = document.getElementById("app") as HTMLDivElement;
+// 戦闘画面の上部バー（タイトル＋設定＋ポートレート）。canvasの上に配置する
+const battleTop = document.createElement("div");
+battleTop.className = "bt-top";
+battleTop.style.display = "none";
+app.insertBefore(battleTop, canvas);
 
 const game = new Game();
-/** 戦闘中の武器カード（カード本体＋コンボ各段＋移動するフォーカス枠を保持） */
-let weaponButtons: {
-  card: HTMLButtonElement; cls: WeaponClass; steps: HTMLElement[];
-  focus: HTMLElement; focusIdx: number;
+/** 戦闘中の武器カード（COST・説明・フッタータグを更新するため保持） */
+let battleCards: {
+  card: HTMLButtonElement; cls: WeaponClass;
+  cost: HTMLElement; desc: HTMLElement; footer: HTMLElement;
 }[] = [];
-/** 戦闘中のHP/ENバー（攻撃ボタンの上に配置。毎フレーム更新する） */
+/** 戦闘中のガードカード（敵の予兆中に強調する） */
+let guardCard: HTMLButtonElement | null = null;
+/** 戦闘中の戦況ログバー（COMBAT_LOG） */
+let battleLog: HTMLElement | null = null;
+/** 戦闘中のHP/AP（セグメント）バー。毎フレーム更新する */
 let battleHud: {
-  root: HTMLElement; hpFill: HTMLElement; hpText: HTMLElement; enFill: HTMLElement; enText: HTMLElement;
+  hpLabel: HTMLElement; hpSegs: HTMLElement[]; crit: HTMLElement;
+  enLabel: HTMLElement; enSegs: HTMLElement[]; enWrap: HTMLElement;
 } | null = null;
 let renderedScreen = "";
 
@@ -50,6 +61,23 @@ function withFade(action: () => void): void {
 
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", charge: "▲", focus: "◎" };
 const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
+/** 戦闘スキルカードの英字見出し（モックに合わせた SLASH / PIERCE / STRIKE） */
+const CLASS_EN: Record<WeaponClass, string> = { slash: "SLASH", pierce: "PIERCE", crush: "STRIKE" };
+/** HPセグメントバーの分割数 */
+const HP_SEGMENTS = 14;
+
+/** スキルカード下部のフッタータグ（連携・会心・AoEなどを端的に示す） */
+function skillTag(s: Skill, comboReady: boolean): { text: string; cls: string } {
+  if (comboReady) return { text: "COMBO READY", cls: "ft-combo" };
+  if (s.kind === "charge") return { text: "CHARGE UP", cls: "ft-charge" };
+  if (s.kind === "focus") return { text: "FOCUS", cls: "ft-focus" };
+  if (s.critMult > 1.5) return { text: `CRIT ${s.critMult}X`, cls: "ft-crit" };
+  if (s.targets > 1) return { text: `AOE x${s.targets}`, cls: "ft-aoe" };
+  if (s.hits > 1) return { text: `${s.hits} HITS`, cls: "ft-hits" };
+  if (s.critAdd > 0) return { text: `CRIT +${s.critAdd}%`, cls: "ft-crit" };
+  if (s.enCost <= 1) return { text: "LOW AP", cls: "ft-low" };
+  return { text: "STRIKE", cls: "ft-base" };
+}
 
 const RARITY_STAR: Record<string, number> = {
   common: 1, uncommon: 2, rare: 3, epic: 4, legend: 5, astral: 6,
@@ -166,11 +194,18 @@ canvas.addEventListener("pointerdown", (e) => {
 // ===== 画面ごとのUI =====
 function buildControls(): void {
   controls.innerHTML = "";
-  weaponButtons = [];
+  battleCards = [];
   battleHud = null;
+  guardCard = null;
+  battleLog = null;
   renderedScreen = game.screen;
   // バトル枠（canvas）は戦闘・リザルトのみ表示し、メニュー系画面では隠す
   canvas.style.display = (game.screen === "battle" || game.screen === "result") ? "block" : "none";
+  // 戦闘中はライト基調のターミナル風テーマに切替え、上部バーを表示
+  const inBattle = game.screen === "battle";
+  document.body.classList.toggle("in-battle", inBattle);
+  battleTop.style.display = inBattle ? "" : "none";
+  if (!inBattle) battleTop.innerHTML = "";
   switch (game.screen) {
     case "title": buildTitle(); break;
     case "stageSelect": buildStageSelect(); break;
@@ -895,94 +930,139 @@ function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
   return order.indexOf(instRarity(a)) - order.indexOf(instRarity(b));
 }
 
-function buildBattle(): void {
-  // HP/EN（攻撃ボタンの上に配置）
-  const hud = document.createElement("div");
-  hud.className = "battle-hud";
-  hud.innerHTML =
-    `<div class="bh-bar bh-hp"><div class="bh-fill"></div><span class="bh-text"></span></div>` +
-    `<div class="bh-bar bh-en"><div class="bh-fill"></div><span class="bh-text"></span></div>`;
-  controls.appendChild(hud);
-  battleHud = {
-    root: hud,
-    hpFill: hud.querySelector(".bh-hp .bh-fill") as HTMLElement,
-    hpText: hud.querySelector(".bh-hp .bh-text") as HTMLElement,
-    enFill: hud.querySelector(".bh-en .bh-fill") as HTMLElement,
-    enText: hud.querySelector(".bh-en .bh-text") as HTMLElement,
-  };
+/** 戦闘画面の上部バー（タイトル＋設定ギア＋ポートレート） */
+function buildBattleTop(): void {
+  battleTop.innerHTML = "";
+  const title = document.createElement("div");
+  title.className = "bt-title";
+  const name = game.isEndless ? `THE_CORRIDOR ${game.endlessFloor}F` : game.currentStage.name;
+  title.innerHTML = `<span class="bt-title-mark">▶</span> ${name}`;
 
-  const row = document.createElement("div");
-  row.className = "weapons";
+  const right = document.createElement("div");
+  right.className = "bt-top-right";
+  const gear = document.createElement("button");
+  gear.className = "bt-gear";
+  gear.textContent = "⚙";
+  gear.addEventListener("click", () => { audio.init(); gear.textContent = audio.toggleMute() ? "🔇" : "⚙"; });
+  const port = document.createElement("div");
+  port.className = "bt-portrait";
+  port.appendChild(makeSpriteCanvas(WARDEN, 3));
+  right.appendChild(gear);
+  right.appendChild(port);
+
+  battleTop.appendChild(title);
+  battleTop.appendChild(right);
+}
+
+function buildBattle(): void {
+  buildBattleTop();
+
+  // ===== HP / AP セグメントバー =====
+  const hud = document.createElement("div");
+  hud.className = "bt-stats";
+  const hpRow = document.createElement("div");
+  hpRow.className = "bt-stat-row";
+  const hpLabel = document.createElement("span");
+  hpLabel.className = "bt-stat-label";
+  const crit = document.createElement("span");
+  crit.className = "bt-crit";
+  crit.textContent = "CRITICAL!";
+  hpRow.appendChild(hpLabel);
+  hpRow.appendChild(crit);
+  const hpBar = document.createElement("div");
+  hpBar.className = "bt-seg-bar bt-seg-hp";
+  const hpSegs: HTMLElement[] = [];
+  for (let i = 0; i < HP_SEGMENTS; i++) {
+    const s = document.createElement("span");
+    s.className = "bt-seg";
+    hpBar.appendChild(s);
+    hpSegs.push(s);
+  }
+  const enRow = document.createElement("div");
+  enRow.className = "bt-stat-row";
+  const enLabel = document.createElement("span");
+  enLabel.className = "bt-stat-label";
+  enRow.appendChild(enLabel);
+  const enBar = document.createElement("div");
+  enBar.className = "bt-seg-bar bt-seg-en";
+  const enSegs: HTMLElement[] = [];
+  for (let i = 0; i < PLAYER_MAX_EN; i++) {
+    const s = document.createElement("span");
+    s.className = "bt-seg";
+    enBar.appendChild(s);
+    enSegs.push(s);
+  }
+  hud.appendChild(hpRow);
+  hud.appendChild(hpBar);
+  hud.appendChild(enRow);
+  hud.appendChild(enBar);
+  controls.appendChild(hud);
+  battleHud = { hpLabel, hpSegs, crit, enLabel, enSegs, enWrap: enBar };
+
+  // ===== スキルカード 2x2（SLASH / PIERCE / STRIKE / GUARD） =====
+  const grid = document.createElement("div");
+  grid.className = "bt-skills";
   for (const cls of CLASSES) {
     const inst = game.equippedInstance(cls);
     const card = document.createElement("button");
-    card.className = `weapon-card wclass-${cls}`;
+    card.className = `sk-card wclass-${cls}`;
     card.addEventListener("click", () => attackWith(cls));
     pressFx(card);
-
-    // ヘッダー：系統ラベル＋武器のドット絵（武器名の代わりに絵を表示）
-    const head = document.createElement("div");
-    head.className = "wc-head";
-    const kind = document.createElement("span");
-    kind.className = "wc-kind";
-    kind.textContent = `${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}`;
-    head.appendChild(kind);
-    if (inst) {
-      const wrap = document.createElement("div");
-      wrap.className = "wc-img-wrap";
-      wrap.appendChild(weaponSpriteEl(inst.baseId, cls, 3));
-      head.appendChild(wrap);
-    } else {
-      const nm = document.createElement("span");
-      nm.className = "wc-name";
-      nm.textContent = "（未装備）";
-      head.appendChild(nm);
-    }
-    card.appendChild(head);
-
-    // スキルは「コンボ」として順番に表示
-    const combo = document.createElement("div");
-    combo.className = "wc-combo";
-    const steps: HTMLElement[] = [];
-    game.comboSkills(cls).forEach((s) => {
-      const step = document.createElement("div");
-      step.className = "wc-step";
-      step.innerHTML =
-        `<span class="wc-sk">${s.name}</span>` +
-        `<span class="wc-link">⚡連携</span>` +
-        `<span class="wc-cost"><span class="wc-cost-num">${s.enCost}</span></span>`;
-      combo.appendChild(step);
-      steps.push(step);
-    });
-    // 次に出るスキルへ「ぬるっと」移動するフォーカス枠
-    const focus = document.createElement("div");
-    focus.className = "wc-focus";
-    combo.appendChild(focus);
-    card.appendChild(combo);
-    row.appendChild(card);
-    weaponButtons.push({ card, cls, steps, focus, focusIdx: -1 });
+    const cost = document.createElement("span");
+    cost.className = "sk-cost";
+    const icon = document.createElement("span");
+    icon.className = "sk-icon";
+    if (inst) icon.appendChild(weaponSpriteEl(inst.baseId, cls, 2));
+    const title = document.createElement("div");
+    title.className = "sk-title";
+    title.textContent = CLASS_EN[cls];
+    const desc = document.createElement("div");
+    desc.className = "sk-desc";
+    const footer = document.createElement("div");
+    footer.className = "sk-footer";
+    card.appendChild(cost);
+    card.appendChild(icon);
+    card.appendChild(title);
+    card.appendChild(desc);
+    card.appendChild(footer);
+    grid.appendChild(card);
+    battleCards.push({ card, cls, cost, desc, footer });
   }
-  controls.appendChild(row);
+  // GUARD カード（4枚目）
+  const gcard = document.createElement("button");
+  gcard.className = "sk-card sk-guard";
+  gcard.addEventListener("click", doGuard);
+  pressFx(gcard);
+  gcard.innerHTML =
+    `<span class="sk-cost sk-cost-zero">COST 0</span>` +
+    `<span class="sk-icon"></span>` +
+    `<div class="sk-title">GUARD</div>` +
+    `<div class="sk-desc">タイミングで被弾を軽減・EN回復</div>` +
+    `<div class="sk-footer ft-safe">SAFE PASS</div>`;
+  gcard.querySelector(".sk-icon")?.appendChild(actionIcon(SHIELD));
+  grid.appendChild(gcard);
+  guardCard = gcard;
+  controls.appendChild(grid);
 
-  // ガード／休憩（大きめのアクションボタン）
-  const actions = document.createElement("div");
-  actions.className = "battle-actions";
+  // ===== REST バー =====
+  const rest = document.createElement("button");
+  rest.className = "bt-rest";
+  rest.innerHTML =
+    `<span class="bt-rest-ico"></span>` +
+    `<span class="bt-rest-name">REST_MODE</span>` +
+    `<span class="bt-rest-tag">+${REST_EN_RECOVER} AP</span>`;
+  rest.querySelector(".bt-rest-ico")?.appendChild(actionIcon(SLEEP));
+  rest.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
+  pressFx(rest);
+  controls.appendChild(rest);
 
-  const guardBtn = document.createElement("button");
-  guardBtn.className = "act-btn guard-act";
-  guardBtn.appendChild(actionIcon(SHIELD));
-  guardBtn.addEventListener("click", doGuard);
-  pressFx(guardBtn);
+  // ===== COMBAT_LOG バー =====
+  const log = document.createElement("div");
+  log.className = "bt-log";
+  log.innerHTML = `<span class="bt-log-title">COMBAT_LOG_V2</span><span class="bt-log-line"></span>`;
+  controls.appendChild(log);
+  battleLog = log.querySelector(".bt-log-line") as HTMLElement;
 
-  const restBtn = document.createElement("button");
-  restBtn.className = "act-btn rest-act";
-  restBtn.appendChild(actionIcon(SLEEP));
-  restBtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
-  pressFx(restBtn);
-
-  actions.appendChild(guardBtn);
-  actions.appendChild(restBtn);
-  controls.appendChild(actions);
   updateWeaponButtons();
 }
 
@@ -1007,51 +1087,64 @@ function weaponSpriteEl(baseId: string, cls: WeaponClass, scale: number): HTMLEl
   return span;
 }
 
-/** HP/ENバー（攻撃ボタン上）を現在値で更新する */
+/** HP/AP（セグメントバー）を現在値で更新する */
 function updateBattleHud(): void {
   if (!battleHud || !game.battle) return;
   const b = game.battle;
-  const hp = Math.ceil(b.playerHp);
-  battleHud.hpFill.style.width = `${Math.max(0, Math.min(100, (b.playerHp / PLAYER_MAX_HP) * 100))}%`;
-  battleHud.hpText.textContent = `HP ${hp} / ${PLAYER_MAX_HP}`;
+  const hp = Math.max(0, Math.ceil(b.playerHp));
+  const hpRatio = b.playerHp / PLAYER_MAX_HP;
+  battleHud.hpLabel.textContent = `HP [${hp}/${PLAYER_MAX_HP}]`;
+  const hpFilled = Math.ceil(Math.max(0, Math.min(1, hpRatio)) * battleHud.hpSegs.length);
+  battleHud.hpSegs.forEach((s, i) => s.classList.toggle("on", i < hpFilled));
+  battleHud.crit.style.visibility = hpRatio <= 0.25 ? "visible" : "hidden";
   const en = Math.floor(b.playerEn);
-  battleHud.enFill.style.width = `${Math.max(0, Math.min(100, (en / PLAYER_MAX_EN) * 100))}%`;
-  const focus = b.freeNextEn;
-  battleHud.enText.textContent = focus
-    ? `EN ${en} / ${PLAYER_MAX_EN}（次0!）`
-    : `EN ${en} / ${PLAYER_MAX_EN}`;
-  battleHud.root.classList.toggle("focus", focus);
+  battleHud.enLabel.textContent = `AP [${en}/${PLAYER_MAX_EN}]`;
+  battleHud.enSegs.forEach((s, i) => s.classList.toggle("on", i < en));
+  battleHud.enWrap.classList.toggle("focus", b.freeNextEn);
 }
 
+/** スキルカード・GUARD・ログを毎フレーム更新（関数名は呼び出し元の都合で維持） */
 function updateWeaponButtons(): void {
   if (!game.battle) return;
   updateBattleHud();
-  const last = game.battle.lastSkill;
-  for (const entry of weaponButtons) {
-    const { card, cls, steps, focus } = entry;
-    const active = game.comboIndex(cls);
+  const b = game.battle;
+  const last = b.lastSkill;
+  for (const entry of battleCards) {
+    const { card, cls, cost, desc, footer } = entry;
     const cur = game.currentSkill(cls);
-    // 次に出る段をハイライト
-    steps.forEach((step, i) => step.classList.toggle("wc-step-on", i === active));
-    // ENが足りなければカードを無効表示
-    const broke = !cur || game.battle!.playerEn < cur.enCost;
-    card.classList.toggle("disabled", broke);
-    // 連携候補：直近スキルと次の段で連携が成立し、かつ撃てるなら明確に光らせる
-    const combo = cur && !broke ? matchCombo(last, cur.kind, cls) : undefined;
-    card.classList.toggle("combo-ready", !!combo);
-    steps.forEach((step, i) => step.classList.toggle("wc-combo-on", !!combo && i === active));
-    // フォーカス枠を次に出る段へ「ぬるっと」移動（位置が変わった時だけ更新）
-    const target = steps[active];
-    if (target) {
-      if (entry.focusIdx !== active) {
-        focus.style.transform = `translateY(${target.offsetTop}px)`;
-        focus.style.height = `${target.offsetHeight}px`;
-        entry.focusIdx = active;
-      }
-      focus.classList.add("on");
-    } else {
-      focus.classList.remove("on");
+    if (!cur) {
+      card.classList.add("disabled");
+      card.classList.remove("combo-ready");
+      cost.textContent = "—";
+      desc.textContent = "武器が未装備です";
+      footer.textContent = "N/A";
+      footer.className = "sk-footer ft-base";
+      continue;
     }
+    cost.textContent = `COST ${cur.enCost}`;
+    desc.textContent = `${cur.name}：${skillDescription(cur)}`;
+    const broke = b.playerEn < cur.enCost;
+    card.classList.toggle("disabled", broke);
+    const combo = !broke ? matchCombo(last, cur.kind, cls) : undefined;
+    card.classList.toggle("combo-ready", !!combo);
+    const tag = skillTag(cur, !!combo);
+    footer.textContent = tag.text;
+    footer.className = "sk-footer " + tag.cls;
+  }
+  // GUARD：敵の予兆中は「今ガード！」と強調
+  if (guardCard) {
+    const telegraph = b.enemies.some((e) => e.alive && e.inTelegraph);
+    guardCard.classList.toggle("guard-now", telegraph);
+    const f = guardCard.querySelector(".sk-footer") as HTMLElement | null;
+    if (f) {
+      f.textContent = telegraph ? "GUARD NOW!" : "SAFE PASS";
+      f.className = "sk-footer " + (telegraph ? "ft-combo" : "ft-safe");
+    }
+  }
+  // COMBAT_LOG：直近の味方ログを表示
+  if (battleLog) {
+    const logs = b.floats.filter((fl) => fl.anchor === "player");
+    battleLog.textContent = logs.length ? logs[logs.length - 1].text : "READY";
   }
 }
 
