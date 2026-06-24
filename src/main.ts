@@ -1237,8 +1237,9 @@ function updateWeaponButtons(): void {
     const cur = game.currentSkill(cls);
     // 次に出る段を強調
     steps.forEach((step, i) => step.classList.toggle("sk-step-on", i === active));
-    // ENが足りなければ無効表示
-    const broke = !cur || b.playerEn < cur.enCost;
+    // ENが足りなければ無効表示（「集中」発動中は次の消費が0なので有効）
+    const cost = cur ? (b.freeNextEn ? 0 : cur.enCost) : 0;
+    const broke = !cur || b.playerEn < cost;
     card.classList.toggle("disabled", broke);
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
     const combo = cur && !broke ? matchCombo(last, cur.kind, cls) : undefined;
