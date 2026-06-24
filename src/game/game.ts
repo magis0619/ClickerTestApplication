@@ -1,9 +1,12 @@
 import { Battle } from "./engine.ts";
 import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
+  effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
-import type { Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef } from "./types.ts";
+import type {
+  Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef, ShopChest,
+} from "./types.ts";
 
 const CLASSES: WeaponClass[] = ["slash", "pierce", "crush"];
 
@@ -34,6 +37,7 @@ export class Game {
   goTitle(): void { this.screen = "title"; }
   goStageSelect(): void { this.screen = "stageSelect"; }
   goInventory(): void { this.screen = "inventory"; }
+  goForge(): void { this.screen = "forge"; }
   goShop(): void { this.screen = "shop"; }
 
   /** 所持ゴールド */
@@ -52,6 +56,91 @@ export class Game {
     this.save.purchased.push(baseId);
     writeSave(this.save);
     return true;
+  }
+
+  /** 宝箱を購入＝即開封。成功なら中身の武器インスタンスを返す（ゴールド不足はnull） */
+  buyChest(chest: ShopChest): WeaponInstance | null {
+    if (this.save.gold < chest.price) return null;
+    this.save.gold -= chest.price;
+    const inst = rollChestWeapon(chest.rarity);
+    this.save.inventory.push(inst);
+    writeSave(this.save);
+    return inst;
+  }
+
+  // ===== 鍛冶屋（武器強化：経験値レベル・覚醒） =====
+  /** 強化対象に出来る他の武器（素材候補）。対象自身・装備中・ロック中は除外 */
+  forgeMaterials(targetUid: string): WeaponInstance[] {
+    return this.save.inventory.filter((it) =>
+      it.uid !== targetUid &&
+      !this.isLocked(it.uid) &&
+      !this.isEquippedAny(it.uid));
+  }
+  /** いずれかの系統で装備中か */
+  isEquippedAny(uid: string): boolean {
+    return (["slash", "pierce", "crush"] as WeaponClass[]).some((c) => this.save.equipped[c] === uid);
+  }
+  /** 対象武器のレベル上限（覚醒回数で決まる） */
+  levelCapOf(inst: WeaponInstance): number {
+    return levelCap(inst.awakened ?? 0);
+  }
+  /** 覚醒の壁に到達しているか（レベル上限で、まだ覚醒余地がある） */
+  atAwakenWall(inst: WeaponInstance): boolean {
+    return (inst.level ?? 1) >= this.levelCapOf(inst) && (inst.awakened ?? 0) < MAX_AWAKEN;
+  }
+  /** 覚醒に必要な「同一武器」の素材候補（対象自身・装備中・ロック中は除外） */
+  awakenCandidates(inst: WeaponInstance): WeaponInstance[] {
+    return this.forgeMaterials(inst.uid).filter((m) => m.baseId === inst.baseId);
+  }
+  /** 覚醒可能か（壁に到達＆必要数の同一武器がある） */
+  canAwaken(inst: WeaponInstance): boolean {
+    if (!this.atAwakenWall(inst)) return false;
+    return this.awakenCandidates(inst).length >= awakenCost(inst.awakened ?? 0);
+  }
+  /** 覚醒を実行：必要数の同一武器を消費し、覚醒回数+1・レベル上限を解放 */
+  awaken(uid: string): boolean {
+    const inst = this.save.inventory.find((it) => it.uid === uid);
+    if (!inst || !this.canAwaken(inst)) return false;
+    const need = awakenCost(inst.awakened ?? 0);
+    const mats = this.awakenCandidates(inst).slice(0, need).map((m) => m.uid);
+    this.save.inventory = this.save.inventory.filter((it) => !mats.includes(it.uid));
+    inst.awakened = (inst.awakened ?? 0) + 1;
+    writeSave(this.save);
+    return true;
+  }
+  /** 素材として選んだ武器の合計経験値 */
+  materialExpTotal(uids: string[]): number {
+    return uids.reduce((s, uid) => {
+      const m = this.save.inventory.find((it) => it.uid === uid);
+      return s + (m ? materialExp(m) : 0);
+    }, 0);
+  }
+  /**
+   * 素材武器を消費して対象に経験値を与え、可能な限りレベルアップ（壁で停止）。
+   * 返り値：上昇したレベル数（0なら強化なし）
+   */
+  enhance(targetUid: string, materialUids: string[]): number {
+    const inst = this.save.inventory.find((it) => it.uid === targetUid);
+    if (!inst || materialUids.length === 0) return 0;
+    const w = getWeapon(inst.baseId);
+    if (!w) return 0;
+    const before = inst.level ?? 1;
+    inst.level = before;
+    inst.exp = inst.exp ?? 0;
+    inst.exp += this.materialExpTotal(materialUids);
+    // 経験値が溜まる限りレベルアップ（覚醒の壁＝レベル上限で停止）
+    while (inst.level < this.levelCapOf(inst)) {
+      const need = expForNext(w.rarity, inst.level);
+      if (inst.exp < need) break;
+      inst.exp -= need;
+      inst.level += 1;
+    }
+    // 上限に達したら端数の経験値は持ち越さない
+    if (inst.level >= this.levelCapOf(inst)) inst.exp = 0;
+    // 素材を消費
+    this.save.inventory = this.save.inventory.filter((it) => !materialUids.includes(it.uid));
+    writeSave(this.save);
+    return inst.level - before;
   }
 
   /** ステージが選択可能か（前ステージクリアで解放） */
@@ -93,7 +182,8 @@ export class Game {
   }
   equippedWeapon(cls: WeaponClass): Weapon | undefined {
     const inst = this.equippedInstance(cls);
-    return inst ? getWeapon(inst.baseId) : undefined;
+    // 強化レベル・覚醒を反映した実効ステータスを返す（戦闘・戦闘力表示で使用）
+    return inst ? effectiveWeapon(inst) : undefined;
   }
 
   /** インスタンスが持つ（抽選された）スキルID列 */

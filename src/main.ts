@@ -5,10 +5,13 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL, RARITY_ORDER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview,
-  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS,
+  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS, SHOP_CHESTS,
+  effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
-import type { Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem } from "./game/types.ts";
+import type {
+  Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
+} from "./game/types.ts";
 
 /** インスタンスの武器名・レアリティ（テンプレートから取得） */
 function instName(inst: WeaponInstance): string { return getWeapon(inst.baseId)?.name ?? "???"; }
@@ -103,6 +106,18 @@ let invRarity: Rarity | "all" = "all";
 let invSortDesc = true;
 /** インベントリ：ロック中のみ表示 */
 let invLockedOnly = false;
+/** 鍛冶屋：強化対象に選んだ武器UID（null=一覧から選ぶ画面） */
+let forgeTargetUid: string | null = null;
+/** 鍛冶屋：素材に選んだ武器UID */
+const forgeMaterials = new Set<string>();
+
+/** レベル・覚醒バッジ（Lv表記＋覚醒の星） */
+function levelTag(inst: WeaponInstance): string {
+  const lv = inst.level ?? 1;
+  const aw = inst.awakened ?? 0;
+  const awStar = aw > 0 ? ` <span class="wpn-awaken">✦${aw}</span>` : "";
+  return `<span class="wpn-lv">Lv.${lv}</span>${awStar}`;
+}
 
 // ===== オーディオ =====
 window.addEventListener("pointerdown", () => audio.init());
@@ -160,6 +175,7 @@ function buildControls(): void {
     case "title": buildTitle(); break;
     case "stageSelect": buildStageSelect(); break;
     case "inventory": buildInventory(); break;
+    case "forge": buildForge(); break;
     case "shop": buildShop(); break;
     case "battle": buildBattle(); break;
     case "result": buildResult(); break;
@@ -201,6 +217,7 @@ function bottomNav(): HTMLElement {
     ["🏠", "ホーム", "title", () => game.goTitle()],
     ["🗺️", "ダンジョン", "stageSelect", () => game.goStageSelect()],
     ["🎒", "インベントリ", "inventory", () => game.goInventory()],
+    ["🔨", "鍛冶屋", "forge", () => game.goForge()],
     ["🛒", "ショップ", "shop", () => game.goShop()],
   ];
   for (const [icon, label, scr, act] of items) {
@@ -221,12 +238,271 @@ function rarityGlowClass(r: Rarity): string {
   return "";
 }
 
+// ===== 鍛冶屋（武器強化） =====
+function buildForge(): void {
+  controls.appendChild(topBar());
+  const head = document.createElement("h2");
+  head.className = "screen-title";
+  head.textContent = "🔨 鍛冶屋";
+  controls.appendChild(head);
+
+  const target = forgeTargetUid
+    ? game.save.inventory.find((it) => it.uid === forgeTargetUid)
+    : undefined;
+
+  if (!target) {
+    forgeTargetUid = null;
+    forgeMaterials.clear();
+    const hint = document.createElement("div");
+    hint.className = "forge-hint";
+    hint.textContent = "強化する武器を選ぼう";
+    controls.appendChild(hint);
+    const list = document.createElement("div");
+    list.className = "forge-list";
+    const items = game.save.inventory.slice().sort((a, b) => -rarityDesc(a, b));
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "inv-empty";
+      empty.textContent = "（武器がありません）";
+      list.appendChild(empty);
+    }
+    for (const inst of items) list.appendChild(forgeTargetRow(inst));
+    controls.appendChild(list);
+    controls.appendChild(bottomNav());
+    return;
+  }
+
+  buildForgePanel(target);
+  controls.appendChild(bottomNav());
+}
+
+/** 強化対象を選ぶための行（タップで対象に設定） */
+function forgeTargetRow(inst: WeaponInstance): HTMLElement {
+  const w = getWeapon(inst.baseId)!;
+  const eff = effectiveWeapon(inst) ?? w;
+  const r = instRarity(inst);
+  const row = document.createElement("button");
+  row.className = ("forge-row " + rarityGlowClass(r)).trim();
+  if (game.isEquippedAny(inst.uid)) row.classList.add("forge-row-eq");
+  row.innerHTML =
+    `<span class="forge-row-icon"></span>` +
+    `<span class="forge-row-info">` +
+    `<span class="forge-row-name">${instName(inst)}${game.isEquippedAny(inst.uid) ? ` <span class="wpn-eqtag">装備</span>` : ""}</span>` +
+    `<span ${rarityAttr(r, "forge-row-stars")}>${rarityStars(r)}</span>` +
+    `<span class="forge-row-meta">${levelTag(inst)}　⚔ <b>${eff.attack}</b></span></span>` +
+    `<span class="forge-row-go">強化 ▶</span>`;
+  row.querySelector(".forge-row-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
+  row.addEventListener("click", () => { forgeTargetUid = inst.uid; forgeMaterials.clear(); buildControls(); });
+  return row;
+}
+
+/** 選択中の武器の強化パネル（経験値バー＋素材選択 or 覚醒） */
+function buildForgePanel(target: WeaponInstance): void {
+  const w = getWeapon(target.baseId)!;
+  const eff = effectiveWeapon(target) ?? w;
+  const r = instRarity(target);
+  const lv = target.level ?? 1;
+  const cap = game.levelCapOf(target);
+  const aw = target.awakened ?? 0;
+
+  // 対象カード（大きく）
+  const card = document.createElement("div");
+  card.className = ("forge-target " + rarityGlowClass(r)).trim();
+  const icon = document.createElement("div");
+  icon.className = "forge-target-icon";
+  icon.appendChild(weaponSpriteEl(target.baseId, w.weapon, 4));
+  card.appendChild(icon);
+  const info = document.createElement("div");
+  info.className = "forge-target-info";
+  info.innerHTML =
+    `<div class="forge-target-name">${instName(target)}</div>` +
+    `<div ${rarityAttr(r, "forge-target-stars")}>${rarityStars(r)} ` +
+    `<span class="wpn-rlabel">${RARITY_LABEL[r]}・${WEAPON_LABEL[w.weapon]}</span></div>` +
+    `<div class="forge-target-meta">${levelTag(target)} <span class="forge-cap">/ 上限 ${cap}</span></div>` +
+    `<div class="forge-target-stat">⚔ 攻撃力 <b>${eff.attack}</b>　Break <b>${eff.breakPower}</b>${eff.critChance ? `　会心 ${eff.critChance}%` : ""}</div>`;
+  card.appendChild(info);
+  controls.appendChild(card);
+
+  // 経験値バー
+  const atWall = game.atAwakenWall(target);
+  const maxed = lv >= cap && aw >= MAX_AWAKEN;
+  const expBox = document.createElement("div");
+  expBox.className = "forge-exp";
+  if (maxed) {
+    expBox.innerHTML = `<div class="forge-exp-label">最大強化に到達しました</div>`;
+  } else if (atWall) {
+    expBox.innerHTML = `<div class="forge-exp-label">レベル上限。覚醒で限界突破しよう</div>`;
+  } else {
+    const need = expForNext(r, lv);
+    const cur = target.exp ?? 0;
+    const pct = Math.max(0, Math.min(100, (cur / need) * 100));
+    expBox.innerHTML =
+      `<div class="forge-exp-label">EXP ${cur} / ${need}（次のレベルまで）</div>` +
+      `<div class="forge-exp-bar"><div class="forge-exp-fill" style="width:${pct}%"></div></div>`;
+  }
+  controls.appendChild(expBox);
+
+  // 別の武器を選ぶ
+  const back = document.createElement("button");
+  back.className = "forge-back";
+  back.textContent = "← 別の武器を選ぶ";
+  back.addEventListener("click", () => { forgeTargetUid = null; forgeMaterials.clear(); buildControls(); });
+  controls.appendChild(back);
+
+  if (maxed) return;
+
+  if (atWall) {
+    buildAwakenSection(target);
+  } else {
+    buildEnhanceSection(target);
+  }
+}
+
+/** 経験値を与える素材選択セクション */
+function buildEnhanceSection(target: WeaponInstance): void {
+  const w = getWeapon(target.baseId)!;
+  const cap = game.levelCapOf(target);
+  const sect = document.createElement("div");
+  sect.className = "forge-section";
+  sect.innerHTML = `<div class="forge-sect-head">素材にする武器を選ぶ（経験値になり消費されます）</div>`;
+  controls.appendChild(sect);
+
+  // 選択中サマリ＋強化ボタン
+  const sel = [...forgeMaterials].filter((uid) => game.save.inventory.some((it) => it.uid === uid));
+  const gained = game.materialExpTotal(sel);
+  // 強化後レベルをプレビュー
+  let pvLevel = target.level ?? 1;
+  let pvExp = (target.exp ?? 0) + gained;
+  while (pvLevel < cap) {
+    const need = expForNext(w.rarity, pvLevel);
+    if (pvExp < need) break;
+    pvExp -= need; pvLevel += 1;
+  }
+  const gainedLv = pvLevel - (target.level ?? 1);
+
+  const summary = document.createElement("div");
+  summary.className = "forge-summary";
+  summary.innerHTML =
+    `<span class="forge-sum-exp">+${gained} EXP</span>` +
+    (gainedLv > 0 ? `<span class="forge-sum-lv">Lv.${target.level ?? 1} → Lv.${pvLevel}</span>` : "");
+  controls.appendChild(summary);
+
+  const apply = document.createElement("button");
+  apply.className = "forge-apply";
+  apply.textContent = "強化する";
+  apply.disabled = sel.length === 0;
+  apply.addEventListener("click", () => {
+    const ups = game.enhance(target.uid, sel);
+    if (ups > 0) audio.sfxPerfect(); else audio.sfxGuard();
+    forgeMaterials.clear();
+    buildControls();
+  });
+  controls.appendChild(apply);
+
+  // 素材候補一覧
+  const list = document.createElement("div");
+  list.className = "forge-mat-list";
+  const mats = game.forgeMaterials(target.uid).sort((a, b) => -rarityDesc(a, b));
+  if (mats.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "inv-empty";
+    empty.textContent = "（素材にできる武器がありません。装備中・ロック中は使えません）";
+    list.appendChild(empty);
+  }
+  for (const m of mats) list.appendChild(forgeMatRow(m));
+  controls.appendChild(list);
+}
+
+/** 素材候補1行（タップで選択トグル） */
+function forgeMatRow(inst: WeaponInstance): HTMLElement {
+  const w = getWeapon(inst.baseId)!;
+  const r = instRarity(inst);
+  const on = forgeMaterials.has(inst.uid);
+  const row = document.createElement("button");
+  row.className = "forge-mat" + (on ? " forge-mat-on" : "");
+  row.innerHTML =
+    `<span class="forge-mat-check">${on ? "✓" : ""}</span>` +
+    `<span class="forge-mat-icon"></span>` +
+    `<span class="forge-mat-info">` +
+    `<span class="forge-mat-name">${instName(inst)}</span>` +
+    `<span ${rarityAttr(r, "forge-mat-stars")}>${rarityStars(r)} ${levelTag(inst)}</span></span>` +
+    `<span class="forge-mat-exp">+${materialExp(inst)}</span>`;
+  row.querySelector(".forge-mat-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 2));
+  row.addEventListener("click", () => {
+    if (forgeMaterials.has(inst.uid)) forgeMaterials.delete(inst.uid);
+    else forgeMaterials.add(inst.uid);
+    buildControls();
+  });
+  return row;
+}
+
+/** 覚醒セクション（同一武器を消費してレベル上限を解放） */
+function buildAwakenSection(target: WeaponInstance): void {
+  const need = awakenCost(target.awakened ?? 0);
+  const cands = game.awakenCandidates(target);
+  const ok = game.canAwaken(target);
+  const sect = document.createElement("div");
+  sect.className = "forge-section forge-awaken";
+  sect.innerHTML =
+    `<div class="forge-sect-head">✦ 覚醒（限界突破）</div>` +
+    `<div class="forge-awaken-desc">同じ「${instName(target)}」を <b>${need}本</b> 合成してレベル上限を解放します` +
+    `（次の上限 ${levelCap((target.awakened ?? 0) + 1)}）</div>` +
+    `<div class="forge-awaken-count ${ok ? "ok" : "ng"}">所持できる素材：${cands.length} / ${need} 本</div>`;
+  controls.appendChild(sect);
+
+  const apply = document.createElement("button");
+  apply.className = "forge-apply forge-awaken-btn";
+  apply.textContent = ok ? "✦ 覚醒する" : "素材が足りません";
+  apply.disabled = !ok;
+  apply.addEventListener("click", () => {
+    if (game.awaken(target.uid)) { audio.sfxPerfect(); buildControls(); }
+  });
+  controls.appendChild(apply);
+
+  if (cands.length > 0) {
+    const list = document.createElement("div");
+    list.className = "forge-mat-list";
+    const head = document.createElement("div");
+    head.className = "forge-sect-sub";
+    head.textContent = "合成に使われる同一武器";
+    list.appendChild(head);
+    for (const m of cands.slice(0, need)) {
+      const r = instRarity(m);
+      const row = document.createElement("div");
+      row.className = "forge-mat forge-mat-fixed";
+      row.innerHTML =
+        `<span class="forge-mat-icon"></span>` +
+        `<span class="forge-mat-info"><span class="forge-mat-name">${instName(m)}</span>` +
+        `<span ${rarityAttr(r, "forge-mat-stars")}>${rarityStars(r)} ${levelTag(m)}</span></span>`;
+      row.querySelector(".forge-mat-icon")?.appendChild(weaponSpriteEl(m.baseId, getWeapon(m.baseId)!.weapon, 2));
+      list.appendChild(row);
+    }
+    controls.appendChild(list);
+  }
+}
+
 function buildShop(): void {
   controls.appendChild(topBar());
   const head = document.createElement("h2");
   head.className = "screen-title";
   head.textContent = "🛒 ショップ";
   controls.appendChild(head);
+
+  // 宝箱（購入＝即開封。レアリティ帯の武器がランダムで出る）
+  const chestHead = document.createElement("div");
+  chestHead.className = "shop-subhead";
+  chestHead.textContent = "🎁 宝箱（購入で即開封）";
+  controls.appendChild(chestHead);
+  const chestList = document.createElement("div");
+  chestList.className = "shop-list";
+  for (const chest of SHOP_CHESTS) chestList.appendChild(chestRow(chest));
+  controls.appendChild(chestList);
+
+  // 武器（直接購入。一度買うと売り切れ）
+  const wpnHead = document.createElement("div");
+  wpnHead.className = "shop-subhead";
+  wpnHead.textContent = "🗡 武器";
+  controls.appendChild(wpnHead);
   const list = document.createElement("div");
   list.className = "shop-list";
   for (const item of SHOP_ITEMS) {
@@ -235,6 +511,69 @@ function buildShop(): void {
   }
   controls.appendChild(list);
   controls.appendChild(bottomNav());
+}
+
+/** ショップの宝箱1種（レアリティ色＋価格＋開封ボタン） */
+function chestRow(chest: ShopChest): HTMLElement {
+  const color = isRainbowRarity(chest.rarity) ? "#ff7de9" : RARITY_COLOR[chest.rarity];
+  const card = document.createElement("div");
+  card.className = ("shop-card chest-card " + rarityGlowClass(chest.rarity)).trim();
+
+  const icon = document.createElement("div");
+  icon.className = "shop-icon";
+  const cv = makeSpriteCanvas(chestSprite(color, false), 3);
+  cv.className = "wpn-sprite";
+  icon.appendChild(cv);
+  card.appendChild(icon);
+
+  const info = document.createElement("div");
+  info.className = "shop-info";
+  info.innerHTML =
+    `<div class="shop-name">${chest.name}</div>` +
+    `<div ${rarityAttr(chest.rarity, "shop-stars")}>${rarityStars(chest.rarity)} ` +
+    `<span class="shop-rlabel">${RARITY_LABEL[chest.rarity]}の武器</span></div>` +
+    `<div class="shop-stat">${RARITY_LABEL[chest.rarity]}帯の武器がランダムで出現</div>`;
+  card.appendChild(info);
+
+  const buy = document.createElement("button");
+  buy.className = "shop-buy";
+  buy.disabled = game.gold < chest.price;
+  buy.innerHTML =
+    `<span class="shop-price">${chest.price.toLocaleString()} G</span>` +
+    `<span class="shop-buy-lbl">開封</span>`;
+  buy.addEventListener("click", () => {
+    const inst = game.buyChest(chest);
+    if (inst) openChestModal(inst);
+  });
+  card.appendChild(buy);
+  return card;
+}
+
+/** 宝箱購入時の開封モーダル（中央に宝箱→開封演出→中身を表示） */
+function openChestModal(inst: WeaponInstance): void {
+  const rarity = instRarity(inst);
+  const color = isRainbowRarity(rarity) ? "#ff7de9" : RARITY_COLOR[rarity];
+  const overlay = document.createElement("div");
+  overlay.className = "chest-modal";
+
+  const slot = document.createElement("div");
+  slot.className = "chest-slot chest-modal-slot";
+  const chest = document.createElement("div");
+  chest.className = "chest-img";
+  chest.appendChild(makeSpriteCanvas(chestSprite(color, false), 7));
+  slot.appendChild(chest);
+  const reward = rewardCard(inst);
+  slot.appendChild(reward);
+  overlay.appendChild(slot);
+
+  const close = document.createElement("button");
+  close.className = "chest-modal-close";
+  close.textContent = "受け取る";
+  close.addEventListener("click", () => { overlay.remove(); buildControls(); });
+  overlay.appendChild(close);
+
+  document.body.appendChild(overlay);
+  window.setTimeout(() => openChest(chest, reward, color, rarity, 7), 350);
 }
 
 /** ショップの1商品（武器画像＋情報＋価格/購入ボタン） */
@@ -446,6 +785,7 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
   head.className = "wpn-row" + (equipped ? " wpn-on" : "");
   const rarity = instRarity(inst);
   const locked = game.isLocked(inst.uid);
+  const eff = effectiveWeapon(inst) ?? w;
   const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
   // 左：大きい武器ドット絵 ／ 右（中央より右）：攻撃力・スキルを大きく
   head.innerHTML =
@@ -453,9 +793,10 @@ function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
     `<span class="wpn-left">` +
     `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
     `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
-    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span></span>` +
+    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
+    levelTag(inst) + `</span>` +
     `<span class="wpn-right">` +
-    `<span class="wpn-atk">⚔ 攻撃力 <b>${w.attack}</b>${w.critChance ? `　会心 ${w.critChance}%` : ""}</span>` +
+    `<span class="wpn-atk">⚔ 攻撃力 <b>${eff.attack}</b>${eff.critChance ? `　会心 ${eff.critChance}%` : ""}</span>` +
     `<span class="wpn-skills">${skillNames || "スキルなし"}</span></span>` +
     `<span class="wpn-lock${locked ? " on" : ""}">${locked ? "🔒" : ""}</span>`;
   // 系統の絵文字に代えて、武器ごとのドット絵を大きく表示
@@ -757,28 +1098,63 @@ function buildChestReveal(drops: WeaponInstance[]): HTMLElement {
     stage.appendChild(slot);
 
     // 0.7秒間隔で順番に開封
-    window.setTimeout(() => openChest(chest, reward, color), 500 + i * 750);
+    window.setTimeout(() => openChest(chest, reward, color, instRarity(inst)), 500 + i * 750);
   });
   return stage;
 }
 
-/** 1つの宝箱を開封：揺れ → 光って開く → 中身がポップ */
-function openChest(chest: HTMLElement, reward: HTMLElement, color: string): void {
+/** 1つの宝箱を開封：揺れ → 光って開く → 中身がポップ。エピック以上は派手な演出 */
+function openChest(chest: HTMLElement, reward: HTMLElement, color: string, rarity: Rarity, scale = 5): void {
   if (!chest.isConnected) return;
-  chest.classList.add("shake");
+  const flashy = rarity === "epic" || rarity === "legend" || rarity === "astral";
+  // エピック以上は開封前に「溜め」の発光で期待感を出す（通常は単純な揺れ）
+  chest.classList.add(flashy ? "chest-charge" : "shake");
   window.setTimeout(() => {
     if (!chest.isConnected) return;
     // 開封フレームに差し替え＋発光
     chest.innerHTML = "";
-    chest.appendChild(makeSpriteCanvas(chestSprite(color, true), 5));
-    chest.classList.remove("shake");
+    chest.appendChild(makeSpriteCanvas(chestSprite(color, true), scale));
+    chest.classList.remove("shake", "chest-charge");
     chest.classList.add("burst");
+    // レアリティ別のバースト演出
+    if (rarity === "astral") chest.classList.add("burst-astral");
+    else if (rarity === "legend") chest.classList.add("burst-legend");
+    else if (rarity === "epic") chest.classList.add("burst-epic");
     audio.sfxPerfect();
+    spawnChestParticles(chest, rarity);
     window.setTimeout(() => {
       chest.classList.add("gone");
       reward.classList.add("show");
-    }, 200);
-  }, 460);
+    }, flashy ? 360 : 200);
+  }, flashy ? 620 : 460);
+}
+
+/** 開封時に飛び散る光の粒子（エピック=紫 / レジェンド=金 / アストラル=虹色をふんだんに） */
+function spawnChestParticles(chest: HTMLElement, rarity: Rarity): void {
+  const tier = rarity === "astral" ? "p-astral" : rarity === "legend" ? "p-legend" : rarity === "epic" ? "p-epic" : "";
+  if (!tier) return; // レア以下は粒子なし（通常演出のまま）
+  const host = chest.parentElement ?? chest;
+  const n = rarity === "astral" ? 30 : rarity === "legend" ? 20 : 14;
+  const rainbow = ["#ff5d5d", "#ffcf3f", "#5fe06a", "#4aa3ff", "#b96bff", "#ff7de9"];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("span");
+    p.className = "chest-particle " + tier;
+    const ang = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+    const dist = 38 + Math.random() * (rarity === "astral" ? 92 : 58);
+    p.style.setProperty("--dx", `${Math.cos(ang) * dist}px`);
+    p.style.setProperty("--dy", `${Math.sin(ang) * dist}px`);
+    p.style.animationDelay = `${Math.random() * 140}ms`;
+    if (rarity === "astral") p.style.background = rainbow[i % rainbow.length];
+    host.appendChild(p);
+    window.setTimeout(() => p.remove(), 1300);
+  }
+  // アストラルは中央に虹色のリングを重ねる
+  if (rarity === "astral") {
+    const ring = document.createElement("span");
+    ring.className = "chest-ring";
+    host.appendChild(ring);
+    window.setTimeout(() => ring.remove(), 1000);
+  }
 }
 
 function buildResultPanel(): void {

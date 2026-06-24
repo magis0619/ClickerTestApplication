@@ -96,6 +96,12 @@ export interface WeaponInstance {
   baseId: string;
   /** 抽選されたスキルID（レアリティで1〜2個）。コンボとして順番に発動 */
   skillIds: string[];
+  /** 強化レベル（1始まり。鍛冶屋で経験値を与えて上昇） */
+  level?: number;
+  /** 現在のレベル内で蓄積した経験値 */
+  exp?: number;
+  /** 覚醒回数（10レベルごとの壁を同武器合成で突破した回数） */
+  awakened?: number;
 }
 
 /** 武器インスタンス由来の補正（攻撃時に戦闘へ渡す＝武器本体のステータス） */
@@ -128,11 +134,20 @@ export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" 
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "title" | "stageSelect" | "inventory" | "shop" | "battle" | "result";
+export type Screen = "title" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result";
 
 /** ショップで購入できる武器とその価格 */
 export interface ShopItem {
   baseId: string;
+  price: number;
+}
+
+/** ショップで購入できる宝箱（購入＝即開封。指定レアリティ帯の武器がランダムで出る） */
+export interface ShopChest {
+  id: string;
+  name: string;
+  /** この宝箱が出す武器のレアリティ帯 */
+  rarity: Rarity;
   price: number;
 }
 

@@ -1129,3 +1129,283 @@ button.wpn-row:hover { background: #241f55; }
 .wpn-icon .wpn-sprite { height: 56px; width: auto; }
 .wpn-lock { position: absolute; top: 8px; right: 10px; font-size: 16px; }
 .wpn-lockbtn.on { border-color: #ffcf3f; color: #ffd95f; }
+
+/* レベル・覚醒バッジ */
+.wpn-lv {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffe27a;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #5a4a20;
+  border-radius: 5px;
+  padding: 0 6px;
+  margin-top: 2px;
+}
+.wpn-awaken {
+  font-size: 11px;
+  font-weight: 900;
+  color: #ff9ee6;
+  text-shadow: 0 0 6px rgba(255, 125, 233, 0.7);
+}
+
+/* ===== ショップ：見出し／宝箱 ===== */
+.shop-subhead {
+  font-size: 14px;
+  font-weight: 800;
+  color: #cfe4ff;
+  margin: 14px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2a2350;
+}
+.shop-subhead:first-of-type { margin-top: 4px; }
+.chest-card .shop-icon .wpn-sprite { height: 50px; width: auto; }
+
+/* ===== 宝箱：開封演出のレアリティ別エフェクト ===== */
+.chest-img.chest-charge { animation: chestCharge 0.62s ease-in-out; }
+@keyframes chestCharge {
+  0%, 100% { transform: translateX(0) rotate(0); filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5)); }
+  25% { transform: translateX(-4px) rotate(-7deg); filter: drop-shadow(0 0 16px #fff6c8) brightness(1.35); }
+  75% { transform: translateX(4px) rotate(7deg); filter: drop-shadow(0 0 16px #fff6c8) brightness(1.35); }
+}
+.chest-img.burst-epic { filter: drop-shadow(0 0 16px #b96bff) drop-shadow(0 0 6px #fff); }
+.chest-img.burst-legend { filter: drop-shadow(0 0 20px #ffd35f) drop-shadow(0 0 8px #fff6c8); }
+.chest-img.burst-astral { animation: chestBurst 0.32s ease-out, astralFlash 0.85s linear; }
+@keyframes astralFlash {
+  0% { filter: drop-shadow(0 0 8px #ff5d5d) brightness(1.5); }
+  25% { filter: drop-shadow(0 0 16px #ffcf3f) brightness(1.4); }
+  50% { filter: drop-shadow(0 0 18px #5fe06a) brightness(1.5); }
+  75% { filter: drop-shadow(0 0 16px #4aa3ff) brightness(1.4); }
+  100% { filter: drop-shadow(0 0 14px #b96bff) brightness(1.2); }
+}
+
+/* 開封時に飛び散る光の粒子 */
+.chest-particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: chestParticle 0.95s ease-out forwards;
+}
+@keyframes chestParticle {
+  0% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2); opacity: 0; }
+}
+.p-epic { background: #c98bff; box-shadow: 0 0 8px #b96bff; }
+.p-legend { background: #ffe27a; box-shadow: 0 0 9px #ffcf3f; width: 9px; height: 9px; }
+.p-astral { box-shadow: 0 0 11px currentColor; width: 10px; height: 10px; }
+
+/* アストラル：中央から広がる虹色リング */
+.chest-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: chestRing 0.9s ease-out forwards, rainbow-ring 0.9s linear;
+}
+@keyframes chestRing {
+  0% { width: 18px; height: 18px; opacity: 1; border-width: 7px; }
+  100% { width: 230px; height: 230px; opacity: 0; border-width: 1px; }
+}
+@keyframes rainbow-ring {
+  0% { border-color: #ff5d5d; box-shadow: 0 0 20px #ff5d5d; }
+  25% { border-color: #ffcf3f; box-shadow: 0 0 20px #ffcf3f; }
+  50% { border-color: #5fe06a; box-shadow: 0 0 20px #5fe06a; }
+  75% { border-color: #4aa3ff; box-shadow: 0 0 20px #4aa3ff; }
+  100% { border-color: #ff7de9; box-shadow: 0 0 20px #ff7de9; }
+}
+
+/* ===== 宝箱の購入開封モーダル ===== */
+.chest-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(6, 4, 16, 0.86);
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.chest-modal-slot {
+  width: 180px;
+  height: 200px;
+}
+.chest-modal-slot .chest-img canvas { height: 110px; }
+.chest-modal-slot .reward-img { height: 76px; }
+.chest-modal-slot .reward-name { font-size: 14px; }
+.chest-modal-close {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3a8fe0, #2c6ab8);
+  box-shadow: 0 3px 0 #1a3f73;
+  color: #fff;
+  cursor: pointer;
+}
+.chest-modal-close:active { transform: translateY(2px); box-shadow: 0 1px 0 #1a3f73; }
+
+/* ===== 鍛冶屋（武器強化） ===== */
+.forge-hint { font-size: 13px; color: #cfc9f2; margin: 4px 0 10px; }
+.forge-list { display: flex; flex-direction: column; gap: 8px; }
+.forge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #2a2350;
+  border-radius: 10px;
+  background: #1b1640;
+  color: var(--ink);
+  cursor: pointer;
+}
+.forge-row:hover { background: #241f55; }
+.forge-row-eq { border-color: #3a6da0; }
+.forge-row-icon {
+  width: 48px; height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.25); border-radius: 8px;
+}
+.forge-row-icon .wpn-sprite { height: 42px; width: auto; }
+.forge-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.forge-row-name { font-size: 14px; font-weight: 700; }
+.forge-row-stars { font-size: 11px; letter-spacing: 1px; }
+.forge-row-meta { font-size: 12px; color: #cfc9f2; display: flex; align-items: center; gap: 6px; }
+.forge-row-meta b { color: #ffd35f; }
+.forge-row-go { flex-shrink: 0; font-size: 13px; font-weight: 800; color: #ffb43a; }
+
+.forge-target {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px;
+  border: 2px solid #2e2750;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #211b48, #161232);
+  margin-bottom: 10px;
+}
+.forge-target-icon {
+  width: 72px; height: 72px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.3); border-radius: 10px;
+}
+.forge-target-icon .wpn-sprite { height: 60px; width: auto; }
+.forge-target-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.forge-target-name { font-size: 17px; font-weight: 900; color: #fff; }
+.forge-target-stars { font-size: 13px; letter-spacing: 1px; }
+.forge-target-meta { font-size: 13px; }
+.forge-cap { font-size: 11px; color: #9690c4; }
+.forge-target-stat { font-size: 13px; color: #d7d2f4; }
+.forge-target-stat b { color: #ffd35f; }
+
+.forge-exp { margin-bottom: 10px; }
+.forge-exp-label { font-size: 12px; color: #b6b0dc; margin-bottom: 4px; }
+.forge-exp-bar {
+  height: 14px; border-radius: 7px; overflow: hidden;
+  background: #0e1018; border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.forge-exp-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #7fe0ff, #2c9fcc);
+  transition: width 0.25s ease;
+}
+.forge-back {
+  width: 100%;
+  padding: 9px;
+  font-size: 12px;
+  border: 1px solid #3a3466;
+  border-radius: 8px;
+  background: transparent;
+  color: #cfc9f2;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.forge-back:hover { background: #1d1940; }
+
+.forge-section {
+  background: #110d28;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.forge-sect-head { font-size: 13px; font-weight: 800; color: #ffcf7f; margin-bottom: 4px; }
+.forge-sect-sub { font-size: 11px; color: #9690c4; margin: 4px 0; }
+.forge-summary {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin-bottom: 8px; min-height: 20px;
+}
+.forge-sum-exp { font-size: 15px; font-weight: 900; color: #7fe0ff; }
+.forge-sum-lv { font-size: 14px; font-weight: 800; color: #ffd95f; }
+.forge-apply {
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffb43a, #df861f);
+  box-shadow: 0 3px 0 #8a4f14;
+  color: #2a1606;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.forge-apply:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a4f14; }
+.forge-apply:disabled {
+  background: #2a2a3a; color: #6a6a80; box-shadow: none; cursor: not-allowed;
+}
+
+.forge-mat-list { display: flex; flex-direction: column; gap: 6px; }
+.forge-mat {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; text-align: left;
+  padding: 8px 10px;
+  border: 1px solid #2a2350;
+  border-radius: 8px;
+  background: #161232;
+  color: var(--ink);
+  cursor: pointer;
+}
+.forge-mat:hover { background: #201b44; }
+.forge-mat-on { border-color: #ffcf3f; background: #2a2310; }
+.forge-mat-fixed { cursor: default; opacity: 0.85; }
+.forge-mat-check {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #5a4a20; border-radius: 5px;
+  font-size: 13px; font-weight: 900; color: #ffd95f;
+}
+.forge-mat-on .forge-mat-check { background: #ffcf3f; color: #2a1606; border-color: #ffcf3f; }
+.forge-mat-icon {
+  width: 38px; height: 38px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.25); border-radius: 7px;
+}
+.forge-mat-icon .wpn-sprite { height: 32px; width: auto; }
+.forge-mat-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.forge-mat-name { font-size: 13px; font-weight: 700; }
+.forge-mat-stars { font-size: 11px; letter-spacing: 1px; }
+.forge-mat-exp { flex-shrink: 0; font-size: 13px; font-weight: 800; color: #7fe0ff; }
+
+.forge-awaken { border: 1px solid #6a3a8a; }
+.forge-awaken-desc { font-size: 12px; color: #d7d2f4; margin-bottom: 6px; }
+.forge-awaken-desc b { color: #ff9ee6; }
+.forge-awaken-count { font-size: 12px; font-weight: 800; }
+.forge-awaken-count.ok { color: #6fe0a0; }
+.forge-awaken-count.ng { color: #ff8a9a; }
+.forge-awaken-btn {
+  background: linear-gradient(180deg, #c06bff, #8a3ad0);
+  box-shadow: 0 3px 0 #5a1f8a;
+  color: #fff;
+}
+.forge-awaken-btn:active { box-shadow: 0 1px 0 #5a1f8a; }

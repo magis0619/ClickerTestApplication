@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef, ShopItem,
+  LastSkill, ComboDef, ShopItem, ShopChest,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -122,7 +122,7 @@ function newUid(): string {
 export function makeInstance(baseId: string): WeaponInstance {
   const w = getWeapon(baseId);
   const skillIds = w ? rollSkills(w.rarity, skillCountForRarity(w.rarity)) : [];
-  return { uid: newUid(), baseId, skillIds };
+  return { uid: newUid(), baseId, skillIds, level: 1, exp: 0, awakened: 0 };
 }
 
 /** 敵の撃破ドロップを判定（率で外れあり） */
@@ -159,6 +159,78 @@ export const SHOP_ITEMS: ShopItem[] = [
   { baseId: "w_void_glaive",   price: 3400 },
   { baseId: "w_mjolnir",       price: 4000 },
 ];
+
+// ===== ショップ：宝箱（購入＝即開封。レアリティ帯の武器がランダムで出る） =====
+export const SHOP_CHESTS: ShopChest[] = [
+  { id: "chest_common",   name: "なめし革の宝箱", rarity: "common",   price: 100 },
+  { id: "chest_uncommon", name: "青銅の宝箱",     rarity: "uncommon", price: 260 },
+  { id: "chest_rare",     name: "白銀の宝箱",     rarity: "rare",     price: 620 },
+  { id: "chest_epic",     name: "魔晶の宝箱",     rarity: "epic",     price: 1400 },
+  { id: "chest_legend",   name: "黄金の宝箱",     rarity: "legend",   price: 3000 },
+  { id: "chest_astral",   name: "星辰の宝箱",     rarity: "astral",   price: 6000 },
+];
+
+/** 指定レアリティ帯の武器を1本ランダムに引く（該当が無ければ近いレアリティで代替） */
+export function rollChestWeapon(rarity: Rarity): WeaponInstance {
+  let pool = WEAPONS.filter((w) => w.rarity === rarity);
+  // 該当レアリティが無ければ、低い方へ繰り下げて探す
+  for (let r = rarityIndex(rarity) - 1; pool.length === 0 && r >= 0; r--) {
+    pool = WEAPONS.filter((w) => w.rarity === RARITY_ORDER[r]);
+  }
+  if (pool.length === 0) pool = WEAPONS.slice();
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  return makeInstance(w.id);
+}
+
+// ===== 武器の強化（鍛冶屋）：レベル・経験値・覚醒 =====
+/** 10レベルごとに「覚醒」の壁。覚醒回数の上限 */
+export const AWAKEN_STEP = 10;
+export const MAX_AWAKEN = 5;
+/** 覚醒回数から現在のレベル上限を求める（覚醒0=10, 1=20, …, 5=60） */
+export function levelCap(awakened: number): number {
+  return (Math.min(MAX_AWAKEN, awakened) + 1) * AWAKEN_STEP;
+}
+/** 次の覚醒に必要な「同一武器」の素材数（1,2,3,4,5本） */
+export function awakenCost(awakened: number): number {
+  return Math.min(MAX_AWAKEN, awakened) + 1;
+}
+
+/** レベルL→L+1 に必要な経験値（レアリティが高いほど多く要る） */
+const EXP_BASE: Record<Rarity, number> = {
+  common: 50, uncommon: 90, rare: 150, epic: 260, legend: 420, astral: 640,
+};
+export function expForNext(rarity: Rarity, level: number): number {
+  return Math.round(EXP_BASE[rarity] * (1 + (level - 1) * 0.45));
+}
+
+/** 素材にしたときに与える経験値（レアリティ基準＋これまでの強化分を一部還元） */
+const MATERIAL_EXP: Record<Rarity, number> = {
+  common: 35, uncommon: 70, rare: 130, epic: 240, legend: 420, astral: 700,
+};
+export function materialExp(inst: WeaponInstance): number {
+  const w = getWeapon(inst.baseId);
+  if (!w) return 0;
+  const base = MATERIAL_EXP[w.rarity];
+  const lvBonus = ((inst.level ?? 1) - 1) * Math.round(base * 0.15);
+  const awBonus = (inst.awakened ?? 0) * base;
+  return base + lvBonus + awBonus;
+}
+
+/** レベル・覚醒を反映した実効ステータス（攻撃・ブレイク・会心が伸びる） */
+export function effectiveWeapon(inst: WeaponInstance): Weapon | undefined {
+  const w = getWeapon(inst.baseId);
+  if (!w) return undefined;
+  const lv = inst.level ?? 1;
+  const aw = inst.awakened ?? 0;
+  const lvMult = 1 + (lv - 1) * 0.06; // 1レベルごとに基礎の+6%
+  const awMult = 1 + aw * 0.10;       // 覚醒ごとに+10%
+  return {
+    ...w,
+    attack: Math.round(w.attack * lvMult * awMult),
+    breakPower: Math.round(w.breakPower * lvMult * awMult),
+    critChance: w.critChance + aw * 2,
+  };
+}
 
 // ===== 敵（enemies.json から読み込み） =====
 interface RawEnemy {
