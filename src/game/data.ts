@@ -92,9 +92,9 @@ export function getWeapon(id: string): Weapon | undefined { return WEAPONS.find(
 export function skillCountForRarity(r: Rarity): number {
   return rarityIndex(r) >= rarityIndex("epic") ? 2 : 1;
 }
-/** スキル抽選の重み（低レアほど出やすい。高レアは出にくく弱体化） */
+/** スキル抽選の重み（低レアほど出やすい。高レアは大幅に出にくい） */
 const SKILL_DRAW_WEIGHT: Record<Rarity, number> = {
-  common: 100, uncommon: 38, rare: 14, epic: 5, legend: 2, astral: 0.8,
+  common: 100, uncommon: 38, rare: 12, epic: 1.6, legend: 0.4, astral: 0.12,
 };
 /** 武器レアリティ以下のスキルから、低レア寄りの重みで count 個（重複なし）抽選 */
 export function rollSkills(weaponRarity: Rarity, count: number): string[] {
@@ -127,9 +127,9 @@ export function makeInstance(baseId: string): WeaponInstance {
 
 /** 武器ドロップ率の全体倍率（少し下げる） */
 const DROP_RATE_MULT = 0.85;
-/** レアリティが高い武器ほどドロップ率を下げる倍率 */
+/** レアリティが高い武器ほどドロップ率を下げる倍率。高レアは大幅に絞る（エピックで実効約10%） */
 const RARITY_DROP_MULT: Record<Rarity, number> = {
-  common: 1.0, uncommon: 0.95, rare: 0.85, epic: 0.7, legend: 0.55, astral: 0.45,
+  common: 1.0, uncommon: 0.95, rare: 0.8, epic: 0.5, legend: 0.2, astral: 0.1,
 };
 
 /** 敵の撃破ドロップを判定（率で外れあり。高レア武器ほど出にくい） */
