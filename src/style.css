@@ -2029,3 +2029,100 @@ body.theme-nb {
 .wpn-mini.on { background: #fff6d8; border-color: #e0188f; color: #b01070; }
 .wpn-mini-del { color: #d61c1c; }
 .wpn-mini-del.confirm { background: #d61c1c; color: #fff; border-color: #d61c1c; }
+
+/* =====================================================================
+   戦闘スキル：攻撃3カード（2スキル段＋移動フォーカス）＋ ガード/休憩の縦列
+   を横一列に並べる（2x2グリッドから差し替え）
+   ===================================================================== */
+.bt-skills {
+  grid-template-columns: repeat(3, 1fr) 0.82fr;
+  gap: 8px;
+  align-items: stretch;
+}
+.bt-skills .sk-card {
+  min-height: 0;
+  padding: 8px 7px 9px;
+  gap: 7px;
+}
+.sk-card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.bt-skills .sk-title { font-size: 16px; }
+.bt-skills .sk-icon { position: static; }
+.bt-skills .sk-icon canvas { height: 22px; }
+
+/* スキル段（コンボ表示） */
+.sk-steps { position: relative; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.sk-step {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 6px 7px;
+  background: #fff;
+  border: 1.5px solid #15101c;
+}
+.sk-step-name {
+  font-size: 11px; font-weight: 800; color: #15101c;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.sk-step-cost {
+  flex-shrink: 0;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; line-height: 1; color: #e0188f;
+}
+.sk-step-on .sk-step-name { color: #b01070; }
+.sk-step-on .sk-step-cost { color: #e0188f; }
+
+/* 次に出る段へ「ぬるっと」移動するフォーカス枠 */
+.sk-focus {
+  position: absolute;
+  left: 0; right: 0; top: 0; height: 0;
+  z-index: 1;
+  border: 2.5px solid #e0188f;
+  background: rgba(224, 24, 143, 0.12);
+  box-shadow: 0 0 8px rgba(224, 24, 143, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.5, 1), height 0.16s ease, opacity 0.16s ease;
+}
+.sk-focus.on { opacity: 1; }
+
+/* 連携バッジ（段からはみ出して表示） */
+.sk-link {
+  display: none;
+  position: absolute;
+  right: -5px; top: 0;
+  z-index: 2;
+  white-space: nowrap;
+  font-family: "Courier New", monospace;
+  font-size: 9px; font-weight: 900;
+  color: #fff; background: #e0188f;
+  border: 1.5px solid #15101c;
+  padding: 1px 5px;
+}
+.sk-link.on { display: block; animation: skCombo 0.5s steps(1) infinite; }
+
+/* 連携可能カードの強調（既存 combo-ready を踏襲） */
+.bt-skills .sk-card.combo-ready { border-color: #e0188f; box-shadow: 5px 5px 0 #e0188f; }
+
+/* ガード（上）／休憩（下）の縦列 */
+.bt-gr-col { display: flex; flex-direction: column; gap: 8px; }
+.bt-act {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 6px 4px;
+  background: #faf7f8;
+  border: 2.5px solid #15101c;
+  box-shadow: 4px 4px 0 #15101c;
+  color: #15101c;
+  cursor: pointer;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+.bt-act:active, .bt-act.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.bt-act-ico { display: flex; align-items: center; justify-content: center; }
+.bt-act-ico canvas { image-rendering: pixelated; height: 28px; width: auto; }
+.bt-act-lbl { font-family: "Courier New", ui-monospace, monospace; font-size: 12px; font-weight: 900; letter-spacing: 0.5px; }
+.bt-guard { background: #d8ecff; }
+.bt-rest2 { background: #d8f7ea; }
+.bt-guard.guard-now {
+  border-color: #e0188f;
+  box-shadow: 4px 4px 0 #e0188f;
+  animation: skCombo 0.45s ease-in-out infinite;
+}
