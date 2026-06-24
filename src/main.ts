@@ -142,6 +142,13 @@ function levelTag(inst: WeaponInstance): string {
 window.addEventListener("pointerdown", () => audio.init());
 const topbarEl = document.querySelector(".topbar") as HTMLElement;
 
+// 規定フォントを先読み（canvasの文字が初回からデザイン通りに描画されるように）
+if (document.fonts) {
+  for (const f of ["900 16px Anybody", "700 16px 'Space Mono'", "800 16px 'Hanken Grotesk'"]) {
+    document.fonts.load(f).catch(() => {});
+  }
+}
+
 /** 対象を前後に切り替える（左右矢印・Tキー共通） */
 function cycleTarget(dir: number): void {
   if (!game.battle) return;
@@ -185,6 +192,7 @@ function buildControls(): void {
   battleHud = null;
   guardCard = null;
   battleLog = null;
+  const screenChanged = renderedScreen !== game.screen;
   renderedScreen = game.screen;
   // バトル枠（canvas）は戦闘中のみ表示。それ以外（リザルト含む）はDOMで構成
   canvas.style.display = game.screen === "battle" ? "block" : "none";
@@ -206,6 +214,8 @@ function buildControls(): void {
     case "battle": buildBattle(); break;
     case "result": buildResult(); break;
   }
+  // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
+  if (screenChanged) window.scrollTo(0, 0);
 }
 
 function buildTitle(): void {

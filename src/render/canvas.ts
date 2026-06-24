@@ -181,7 +181,7 @@ export function render(
   drawPlayerHud(ctx, b);
   if (stage) {
     ctx.textAlign = "right";
-    ctx.font = "bold 11px monospace";
+    ctx.font = "bold 11px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
     ctx.fillStyle = "#8a7a90";
     let label: string;
     if (stage.floor != null) {
@@ -279,7 +279,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   });
   if (b.charge > 1) {
     ctx.textAlign = "center";
-    ctx.font = "900 12px monospace";
+    ctx.font = "900 12px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.lineJoin = "round";
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -355,7 +355,7 @@ function drawEnemyCard(
 
   // === 名前（大きく・読みやすく：濃い縁取り付き） ===
   ctx.textAlign = "center";
-  ctx.font = "bold 13px monospace";
+  ctx.font = "800 13px 'Hanken Grotesk', 'Hiragino Kaku Gothic ProN', sans-serif";
   ctx.lineJoin = "round";
   ctx.lineWidth = 3.5;
   ctx.strokeStyle = "rgba(255,255,255,0.95)";
@@ -404,7 +404,7 @@ function drawEnemyCard(
   if (e.isBroken) {
     ctx.textAlign = "center";
     ctx.fillStyle = "#0a9bb5";
-    ctx.font = "bold 12px monospace";
+    ctx.font = "700 12px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
     ctx.fillText(`BREAK ${e.breakTurns}`, L.cx, cy);
   } else if (e.inTelegraph) {
     // 予兆：びっくりマーク
@@ -413,7 +413,7 @@ function drawEnemyCard(
     ctx.translate(L.cx, cy - 4);
     ctx.scale(pulse, pulse);
     ctx.textAlign = "center";
-    ctx.font = "bold 26px monospace";
+    ctx.font = "bold 26px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.fillStyle = "#1a0a0a";
     ctx.fillText("!", 1.5, 1.5);
     ctx.fillStyle = "#ff3b3b";
@@ -434,7 +434,7 @@ function drawEnemyCard(
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#ffffff";
-    ctx.font = "900 23px monospace";
+    ctx.font = "900 23px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
     ctx.fillText(`${e.count}`, L.cx, ccy + 1);
     ctx.textBaseline = "alphabetic";
   }
@@ -462,7 +462,7 @@ function drawWarningBanner(ctx: CanvasRenderingContext2D, b: Battle, imminent: n
   const pulse = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 80));
   ctx.textAlign = "center";
   ctx.globalAlpha = pulse;
-  ctx.font = "bold 17px monospace";
+  ctx.font = "bold 17px 'Hanken Grotesk', 'Hiragino Kaku Gothic ProN', sans-serif";
   ctx.fillStyle = "#ff4040";
   ctx.fillText("⚠ 敵の攻撃！ ガード！", W / 2, 74);
   ctx.globalAlpha = 1;
@@ -627,7 +627,7 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   const t = b.enemies[b.targetIndex];
   if (t && t.alive) {
     ctx.textAlign = "left";
-    ctx.font = "bold 11px monospace";
+    ctx.font = "bold 11px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
     ctx.fillStyle = "#8a7a90";
     ctx.fillText(`TARGET: ${t.def.name} [${KIND_LABEL[t.def.kind]}] WEAK:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, 16);
   }
@@ -676,7 +676,7 @@ function drawPlayerLog(ctx: CanvasRenderingContext2D, b: Battle): void {
     const f = logs[i];
     const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
     ctx.globalAlpha = alpha;
-    ctx.font = "900 22px monospace";
+    ctx.font = "900 22px 'Hanken Grotesk', 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.lineWidth = 5;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     ctx.strokeText(f.text, x, y);
@@ -713,7 +713,7 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
     ctx.scale(scale, scale);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "900 19px monospace";
+    ctx.font = "900 19px 'Hanken Grotesk', 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.lineJoin = "round";
     ctx.lineWidth = 4.5;
     ctx.globalAlpha = alpha;
@@ -738,7 +738,7 @@ function drawDamageBurst(
   ctx.scale(pop, pop);
 
   // 数値の幅に合わせて爆発の大きさを決める
-  ctx.font = `900 ${fontSize}px monospace`;
+  ctx.font = `900 ${fontSize}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
   const tw = ctx.measureText(num).width;
   const rx = tw / 2 + 16;
   const ry = fontSize * 0.95;
@@ -785,7 +785,7 @@ function drawDamageBurst(
 
   // 修飾（会心! 弱点! 渾身!）を爆発の上に小さく
   if (tag) {
-    ctx.font = "900 12px monospace";
+    ctx.font = "900 12px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.lineWidth = 3.5;
     ctx.strokeStyle = "#5a0a06";
     ctx.strokeText(tag, 0, -ry - 5);
@@ -820,7 +820,7 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
     // 虹色グロー＋複数アウトラインで「手前に押し出す」厚み
     ctx.shadowColor = rainbowColor();
     ctx.shadowBlur = 26;
-    ctx.font = `900 ${entry.size}px monospace`;
+    ctx.font = `900 ${entry.size}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.lineJoin = "round";
     ctx.globalAlpha = baseAlpha;
     ctx.lineWidth = 8;
@@ -838,7 +838,7 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
       ctx.shadowColor = entry.glow;
       ctx.shadowBlur = 14;
     }
-    ctx.font = `bold ${entry.size}px monospace`;
+    ctx.font = `bold ${entry.size}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.lineJoin = "round";
     ctx.globalAlpha = baseAlpha;
     ctx.lineWidth = 6;
@@ -876,7 +876,7 @@ function drawResult(ctx: CanvasRenderingContext2D, b: Battle): void {
 
   ctx.shadowColor = glow;
   ctx.shadowBlur = 26;
-  ctx.font = "900 52px monospace";
+  ctx.font = "900 52px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
   ctx.lineWidth = 9;
   ctx.strokeStyle = won ? "#062542" : "#2a060c";
   ctx.strokeText(line1, 0, -24);
