@@ -20,6 +20,7 @@ import {
   JUST_DAMAGE_MULT,
   PERFECT_HP_RECOVER,
   HITSTOP_MS,
+  HIT_HITSTOP_MS,
   SLOWMO_MS,
   SLOWMO_SCALE,
   WHITE_FLASH_MS,
@@ -55,10 +56,10 @@ export interface FloatText {
   rise: number;
   /** 表示種別。damage=爆発エフェクト付きの数値 / text=通常テキスト */
   kind?: "damage" | "text";
-  /** ダメージの修飾（会心!・弱点! など。爆発の上に小さく出す） */
-  tag?: string;
-  /** ダメージ強調（会心/弱点/渾身）＝爆発を大きく赤く */
+  /** ダメージ強調（会心/弱点/渾身）＝爆発を大きく */
   big?: boolean;
+  /** 会心ヒット＝吹き出しの色を変える */
+  crit?: boolean;
   /** 横方向のばらつき(px)。連続ヒットの数値が重ならないように */
   dx?: number;
 }
@@ -134,6 +135,8 @@ export class Battle {
   floats: FloatText[] = [];
   /** 撃破時に飛び散るコイン粒子 */
   coins: Coin[] = [];
+  /** 撃破時の爆発エフェクト（敵スロットを基準に描画） */
+  explosions: { anchor: number; ttl: number; max: number }[] = [];
   lastGuard: GuardResult = "none";
   lastGuardTtl = 0;
   /** 画面シェイク残り時間(ms) */
@@ -379,11 +382,13 @@ export class Battle {
 
     const wasAlive = e.alive;
     e.hp = Math.max(0, e.hp - dmg);
-    e.hitFlash = 260;
+    e.hitFlash = 300;
     const idx = this.enemies.indexOf(e);
-    const tag = crit ? "会心!" : this.charge > 1 ? "渾身!" : weak ? "弱点!" : e.isBroken ? "会心!" : "";
     const big = crit || weak || e.isBroken || this.charge > 1;
-    this.pushDamage(dmg, tag, idx, big);
+    this.pushDamage(dmg, idx, big, crit);
+    // 当たった瞬間の0.05秒ストップ＋画面シェイク（手応え）
+    this.hitstopT = Math.max(this.hitstopT, HIT_HITSTOP_MS);
+    this.shake(150, crit ? 5 : 3);
 
     if (!e.isBroken) {
       e.breakGauge += (mods?.breakPower ?? 0) * skill.breakMult;
@@ -406,11 +411,11 @@ export class Battle {
     e.deathDir = 1; // プレイヤーは左、敵は右向きなので右奥へ吹き飛ぶ
     e.breakTurns = 0;
     e.flinchT = 0;
-    e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり）
+    e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり＝撃破時は宝箱で表示）
     const gold = rollEnemyGold(e.def); // 強い敵ほど多い
     this.goldEarned += gold;
-    this.pushFloat(e.drop ? "ドロップ!" : "撃破!", "#ffd35f", idx);
-    this.pushFloat(`+${gold} G`, "#ffe27a", idx);
+    // 撃破の爆発エフェクト（テキストポップは出さず、爆発＋コイン＋宝箱で魅せる）
+    this.explosions.push({ anchor: idx, ttl: 460, max: 460 });
     // コインが弾けて落ちる演出（ゴールドが多いほど多く）
     const coinN = Math.min(14, 5 + Math.round(gold / 25));
     for (let i = 0; i < coinN; i++) {
@@ -424,7 +429,7 @@ export class Battle {
         spin: Math.random() * Math.PI * 2,
       });
     }
-    this.shake(220, 5);
+    this.shake(280, 7);
     this.sfx.push("die");
   }
 
@@ -536,6 +541,9 @@ export class Battle {
       c.ttl -= dtMs;
     }
     this.coins = this.coins.filter((c) => c.ttl > 0);
+    // 撃破の爆発エフェクト
+    for (const ex of this.explosions) ex.ttl -= dtMs;
+    this.explosions = this.explosions.filter((ex) => ex.ttl > 0);
     if (this.lastGuardTtl > 0) this.lastGuardTtl -= dtMs;
     if (this.shakeT > 0) this.shakeT -= dtMs;
     if (this.lungeT > 0) this.lungeT -= dtMs;
@@ -602,9 +610,9 @@ export class Battle {
   }
 
   /** ダメージ数値（爆発エフェクト付き）。長めに残して手応えを出す */
-  private pushDamage(dmg: number, tag: string, anchor: FloatText["anchor"], big: boolean): void {
+  private pushDamage(dmg: number, anchor: FloatText["anchor"], big: boolean, crit: boolean): void {
     this.floats.push({
-      text: dmg.toLocaleString(), color: "", kind: "damage", tag, big,
+      text: dmg.toLocaleString(), color: "", kind: "damage", big, crit,
       anchor, ttl: DAMAGE_TTL, max: DAMAGE_TTL,
       rise: this.stackOffset(anchor, 30),
       dx: (Math.random() * 2 - 1) * 22,

@@ -174,6 +174,7 @@ export function render(
   if (b.perfectFxT > 0 && b.perfectFxIndex >= 0) {
     drawPerfectFx(ctx, b, slots[b.perfectFxIndex]);
   }
+  drawExplosions(ctx, b, slots);
   drawCoins(ctx, b, slots);
   drawFloats(ctx, b, slots);
   ctx.restore();
@@ -633,6 +634,47 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
   }
 }
 
+/** 撃破時の爆発エフェクト：中心フラッシュ＋拡がる炎リング＋放射スパーク */
+function drawExplosions(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
+  for (const ex of b.explosions) {
+    const base = slots[ex.anchor];
+    if (!base) continue;
+    const p = 1 - ex.ttl / ex.max; // 0→1
+    const a = Math.max(0, 1 - p);
+    const x = base.x, y = base.y - 28;
+
+    // 中心フラッシュ
+    ctx.globalAlpha = a * 0.9;
+    const fr = 8 + p * 32;
+    const g = ctx.createRadialGradient(x, y, 2, x, y, fr);
+    g.addColorStop(0, "#fff8e0");
+    g.addColorStop(0.45, "#ffae3a");
+    g.addColorStop(1, "rgba(224,29,29,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, fr, 0, Math.PI * 2); ctx.fill();
+
+    // 拡がるリング
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = "#ffd35f";
+    ctx.lineWidth = 4 * (1 - p) + 1;
+    ctx.beginPath(); ctx.arc(x, y, 10 + p * 48, 0, Math.PI * 2); ctx.stroke();
+
+    // 放射状スパーク
+    ctx.strokeStyle = "#ff7a1e";
+    ctx.lineWidth = 3;
+    const n = 10;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + 0.2;
+      const r0 = 10 + p * 22, r1 = 18 + p * 54;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0);
+      ctx.lineTo(x + Math.cos(ang) * r1, y + Math.sin(ang) * r1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 /** 撃破時のコイン（金貨）を描く。回転で横幅が伸縮する */
 function drawCoins(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number; y: number }[]): void {
   for (const c of b.coins) {
@@ -703,7 +745,7 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
     if (f.kind === "damage") {
       // 出現時に大きく弾けてから定位置へ
       const pop = age < 160 ? 1.75 - 0.75 * (age / 160) : 1;
-      drawDamageBurst(ctx, x, y, f.text, f.tag ?? "", !!f.big, pop, alpha);
+      drawDamageBurst(ctx, x, y, f.text, !!f.big, !!f.crit, pop, alpha);
       continue;
     }
     // 通常テキスト（味方の回復/効果なども相手のダメージ表記くらい大きく）
@@ -726,12 +768,13 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
   ctx.globalAlpha = 1;
 }
 
-/** ダメージ数値を「赤いギザギザ爆発」の上に大きく描く（会心/弱点はより大きく赤く） */
+/** ダメージ数値を「ギザギザ爆発」の上に大きく描く（数値は1.5倍、会心は色を変える） */
 function drawDamageBurst(
   ctx: CanvasRenderingContext2D,
-  x: number, y: number, num: string, tag: string, big: boolean, pop: number, alpha: number,
+  x: number, y: number, num: string, big: boolean, crit: boolean, pop: number, alpha: number,
 ): void {
-  const fontSize = big ? 27 : 21;
+  // 吹き出しを1.5倍に（big=40 / 通常=31）
+  const fontSize = big ? 40 : 31;
   ctx.save();
   ctx.translate(x, y);
   ctx.globalAlpha = alpha;
@@ -740,7 +783,7 @@ function drawDamageBurst(
   // 数値の幅に合わせて爆発の大きさを決める
   ctx.font = `900 ${fontSize}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
   const tw = ctx.measureText(num).width;
-  const rx = tw / 2 + 16;
+  const rx = tw / 2 + 22;
   const ry = fontSize * 0.95;
 
   // ギザギザの爆発（外側→内側を交互に結ぶ星形）
@@ -755,7 +798,12 @@ function drawDamageBurst(
   }
   ctx.closePath();
   const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, Math.max(rx, ry));
-  if (big) {
+  if (crit) {
+    // 会心：ピンク〜パープルで色を変える
+    grad.addColorStop(0, "#fff0fa");
+    grad.addColorStop(0.5, "#ff5db6");
+    grad.addColorStop(1, "#b80069");
+  } else if (big) {
     grad.addColorStop(0, "#fff3a0");
     grad.addColorStop(0.5, "#ff8a2a");
     grad.addColorStop(1, "#e01d1d");
@@ -765,33 +813,24 @@ function drawDamageBurst(
     grad.addColorStop(1, "#ff7a1e");
   }
   ctx.fillStyle = grad;
-  ctx.shadowColor = big ? "rgba(255,60,40,0.6)" : "rgba(255,140,40,0.5)";
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = crit ? "rgba(223,11,129,0.65)" : big ? "rgba(255,60,40,0.6)" : "rgba(255,140,40,0.5)";
+  ctx.shadowBlur = 12;
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.lineJoin = "round";
   ctx.lineWidth = 2.5;
-  ctx.strokeStyle = big ? "#5a0a06" : "#6a2e08";
+  ctx.strokeStyle = crit ? "#5a0033" : big ? "#5a0a06" : "#6a2e08";
   ctx.stroke();
 
   // 数値（白＋濃い縁取り）
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.lineWidth = 4.5;
-  ctx.strokeStyle = big ? "#6a0c06" : "#7a3410";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = crit ? "#6a0040" : big ? "#6a0c06" : "#7a3410";
   ctx.strokeText(num, 0, 1);
   ctx.fillStyle = "#ffffff";
   ctx.fillText(num, 0, 1);
 
-  // 修飾（会心! 弱点! 渾身!）を爆発の上に小さく
-  if (tag) {
-    ctx.font = "900 12px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = "#5a0a06";
-    ctx.strokeText(tag, 0, -ry - 5);
-    ctx.fillStyle = "#ffe680";
-    ctx.fillText(tag, 0, -ry - 5);
-  }
   ctx.textBaseline = "alphabetic";
   ctx.restore();
 }

@@ -1502,9 +1502,11 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ===== メインループ =====
+/** 全体のゲームスピード（1未満で全体的にゆったり動く） */
+const GAME_SPEED = 0.8;
 let last = performance.now();
 function loop(now: number): void {
-  const dt = Math.min(50, now - last);
+  const dt = Math.min(50, now - last) * GAME_SPEED;
   last = now;
 
   const prev = game.screen;

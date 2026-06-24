@@ -324,8 +324,10 @@ export const PERFECT_HP_RECOVER = 18;
 // ===== パーフェクトガードの演出・怯ませ =====
 /** パーフェクト成功時のヒットストップ（完全静止）時間 */
 export const HITSTOP_MS = 150;
-/** ヒットストップ後のスローモーション時間 */
-export const SLOWMO_MS = 520;
+/** 通常ヒット時の軽いヒットストップ（0.05秒の手応え） */
+export const HIT_HITSTOP_MS = 50;
+/** ヒットストップ後のスローモーション時間（パーフェクトの余韻を長く） */
+export const SLOWMO_MS = 1040;
 /** スローモーション中の時間倍率（小さいほど遅い） */
 export const SLOWMO_SCALE = 0.3;
 /** パーフェクト時の画面ホワイトアウト時間 */
