@@ -2136,3 +2136,81 @@ body.theme-nb {
   font-family: "Anybody", "Hiragino Kaku Gothic ProN", sans-serif;
   letter-spacing: -0.01em;
 }
+
+/* =====================================================================
+   バトル：メインメニューへ戻るボタン
+   ===================================================================== */
+.bt-exit {
+  height: 34px; padding: 0 10px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+  border: 2px solid #1c1b1b; background: #fcf9f8; color: #1c1b1b; cursor: pointer;
+  box-shadow: 3px 3px 0 #1c1b1b;
+}
+.bt-exit:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1c1b1b; }
+
+/* =====================================================================
+   確認ダイアログ
+   ===================================================================== */
+.confirm-modal {
+  position: fixed; inset: 0; z-index: 140;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(10, 6, 14, 0.7);
+  animation: fadeIn 0.18s ease;
+}
+.confirm-box {
+  width: 100%; max-width: 360px;
+  background: #ffffff; border: 3px solid #1c1b1b; box-shadow: 7px 7px 0 #1c1b1b;
+  padding: 18px 16px;
+}
+.confirm-msg {
+  font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: 15px; font-weight: 700; color: #1c1b1b; line-height: 1.6;
+  white-space: pre-line; margin-bottom: 16px; text-align: center;
+}
+.confirm-acts { display: flex; gap: 10px; }
+.confirm-no, .confirm-yes {
+  flex: 1; padding: 12px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace;
+  font-size: 14px; font-weight: 700;
+  border: 2.5px solid #1c1b1b; cursor: pointer;
+  box-shadow: 4px 4px 0 #1c1b1b;
+}
+.confirm-no { background: #ffffff; color: #1c1b1b; }
+.confirm-yes { background: #df0b81; color: #fff; }
+.confirm-no:active, .confirm-yes:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
+
+/* =====================================================================
+   リザルト画面（他画面とデザイン統一）
+   ===================================================================== */
+.theme-nb .result-panel {
+  background: #ffffff; border: 3px solid #1c1b1b; box-shadow: 6px 6px 0 #1c1b1b;
+  border-radius: 0; padding: 16px;
+}
+.nb-title.r-win { color: #df0b81; }
+.nb-title.r-lose { color: #ba1a1a; }
+.theme-nb .result-sub {
+  font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: 14px; font-weight: 700; color: #1c1b1b; text-align: center; margin-bottom: 12px;
+}
+.theme-nb .result-gold {
+  display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 4px 0 12px;
+}
+.theme-nb .result-gold .gold-amt {
+  font-family: "Space Mono", monospace; font-size: 22px; font-weight: 700; color: #df0b81; text-shadow: none;
+}
+.theme-nb .result-gold .gold-unit { font-family: "Space Mono", monospace; font-size: 12px; color: #8d6f78; }
+.theme-nb .result-gold-total { font-size: 11px; color: #8d6f78; font-weight: 600; }
+.theme-nb .reward-name { color: #1c1b1b; }
+.theme-nb .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.theme-nb .result-panel .guard-btn,
+.theme-nb .result-panel .reset-btn {
+  flex: 1; min-width: 120px; padding: 13px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace;
+  font-size: 14px; font-weight: 700; border-radius: 0;
+  border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; cursor: pointer;
+}
+.theme-nb .result-panel .guard-btn { background: #df0b81; color: #fff; }
+.theme-nb .result-panel .reset-btn { background: #ffffff; color: #1c1b1b; }
+.theme-nb .result-panel .guard-btn:active,
+.theme-nb .result-panel .reset-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }

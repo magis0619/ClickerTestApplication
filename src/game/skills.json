@@ -3,7 +3,7 @@
 
   { "id": "crit_up",       "name": "会心40%",     "rarity": "uncommon", "enCost": 3, "kind": "attack", "critAdd": 40 },
   { "id": "charge",        "name": "ためる",       "rarity": "uncommon", "enCost": 2, "kind": "charge" },
-  { "id": "focus",         "name": "集中",         "rarity": "uncommon", "enCost": 0, "kind": "focus" },
+  { "id": "focus",         "name": "集中",         "rarity": "uncommon", "enCost": 4, "kind": "focus" },
 
   { "id": "double_hit",    "name": "2回攻撃",     "rarity": "rare",     "enCost": 5, "kind": "attack", "hits": 2 },
   { "id": "double_target", "name": "2体攻撃",     "rarity": "rare",     "enCost": 5, "kind": "attack", "targets": 2 },

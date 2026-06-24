@@ -186,12 +186,11 @@ function buildControls(): void {
   guardCard = null;
   battleLog = null;
   renderedScreen = game.screen;
-  // バトル枠（canvas）は戦闘・リザルトのみ表示し、メニュー系画面では隠す
-  canvas.style.display = (game.screen === "battle" || game.screen === "result") ? "block" : "none";
-  // 戦闘中はバトル専用テーマ、メニュー系はターミナル風ライトテーマ(theme-nb)
+  // バトル枠（canvas）は戦闘中のみ表示。それ以外（リザルト含む）はDOMで構成
+  canvas.style.display = game.screen === "battle" ? "block" : "none";
+  // 戦闘中はバトル専用テーマ、それ以外（リザルト含む）はターミナル風ライトテーマ
   const inBattle = game.screen === "battle";
-  const themed = inBattle || game.screen !== "result"; // result以外は全てテーマ適用
-  const menuThemed = themed && !inBattle; // メニュー系（共通上部バーを出す）
+  const menuThemed = !inBattle;
   document.body.classList.toggle("in-battle", inBattle);
   document.body.classList.toggle("theme-nb", menuThemed);
   battleTop.style.display = inBattle ? "" : "none";
@@ -250,14 +249,42 @@ function buildTopHeader(): void {
 }
 
 /** 画面見出し（任意のSCREENタグ＋大きな斜体タイトル） */
-function screenHead(title: string, tag?: string): HTMLElement {
+function screenHead(title: string, tag?: string, titleClass = ""): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "nb-head";
   let html = "";
   if (tag) html += `<span class="nb-screen-tag">${tag}</span>`;
-  html += `<h2 class="nb-title">${title}</h2>`;
+  html += `<h2 class="nb-title ${titleClass}">${title}</h2>`;
   wrap.innerHTML = html;
   return wrap;
+}
+
+/** 確認ダイアログ（はい／いいえ）。はいで onYes を実行 */
+function confirmModal(message: string, onYes: () => void): void {
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-modal";
+  const box = document.createElement("div");
+  box.className = "confirm-box";
+  const msg = document.createElement("div");
+  msg.className = "confirm-msg";
+  msg.textContent = message;
+  const acts = document.createElement("div");
+  acts.className = "confirm-acts";
+  const no = document.createElement("button");
+  no.className = "confirm-no";
+  no.textContent = "いいえ";
+  no.addEventListener("click", () => overlay.remove());
+  const yes = document.createElement("button");
+  yes.className = "confirm-yes";
+  yes.textContent = "はい";
+  yes.addEventListener("click", () => { overlay.remove(); onYes(); });
+  acts.appendChild(no);
+  acts.appendChild(yes);
+  box.appendChild(msg);
+  box.appendChild(acts);
+  overlay.appendChild(box);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 /** セクション見出し（左に大文字ラベル、右に任意の要素） */
@@ -1040,6 +1067,17 @@ function buildBattleTop(): void {
 
   const right = document.createElement("div");
   right.className = "bt-top-right";
+  // メインメニューへ戻る（確認あり・進行中のバトルは破棄）
+  const exit = document.createElement("button");
+  exit.className = "bt-exit";
+  exit.textContent = "⏏ MENU";
+  exit.addEventListener("click", () => {
+    confirmModal("メインメニューに戻りますか？\n進行中のバトルは記録されません。", () => {
+      game.battle = null;
+      game.goTitle();
+      buildControls();
+    });
+  });
   const gear = document.createElement("button");
   gear.className = "bt-gear";
   gear.textContent = "⚙";
@@ -1047,6 +1085,7 @@ function buildBattleTop(): void {
   const port = document.createElement("div");
   port.className = "bt-portrait";
   port.appendChild(makeSpriteCanvas(WARDEN, 3));
+  right.appendChild(exit);
   right.appendChild(gear);
   right.appendChild(port);
 
@@ -1374,55 +1413,43 @@ function spawnChestParticles(chest: HTMLElement, rarity: Rarity): void {
 }
 
 function buildResultPanel(): void {
-  const panel = document.createElement("div");
-  panel.className = "result-panel";
   const endless = game.isEndless;
-  const title = document.createElement("h2");
-  title.textContent = endless
-    ? `${game.lastFloor} 階 到達`
-    : (game.lastWon ? `STAGE ${game.stageIndex + 1} CLEAR` : "DEFEATED");
-  title.className = (endless || game.lastWon) ? "r-win" : "r-lose";
-  panel.appendChild(title);
+  const won = game.lastWon;
+  const good = won || endless;
+  // 他画面と同じ：大きな斜体タイトル＋タグ
+  const headTitle = endless ? "RESULT" : (won ? "VICTORY" : "DEFEAT");
+  const tag = endless ? `${game.lastFloor}F 到達` : (won ? `STAGE ${game.stageIndex + 1}` : "RETRY?");
+  controls.appendChild(screenHead(headTitle, tag, won ? "r-win" : endless ? "r-win" : "r-lose"));
 
-  if (endless) {
-    const info = document.createElement("div");
-    info.className = "u-head";
-    info.textContent = `最高到達 ${game.save.bestFloor} 階　/　この回廊で稼いだ宝箱 ${game.lastDrops.length} 個`;
-    panel.appendChild(info);
+  const panel = document.createElement("div");
+  panel.className = "result-panel " + (good ? "result-win" : "result-lose");
+
+  // 見出し詳細
+  const sub = document.createElement("div");
+  sub.className = "result-sub";
+  if (endless) sub.textContent = `最高到達 ${game.save.bestFloor} 階 ・ 入手宝箱 ${game.lastDrops.length} 個`;
+  else if (won) sub.textContent = game.lastDrops.length > 0 ? `🎁 入手した宝箱 ${game.lastDrops.length} 個` : "入手した武器はありませんでした";
+  else sub.textContent = "倒れてしまった…… 装備を見直して再挑戦しよう";
+  panel.appendChild(sub);
+
+  // ゴールド・ドロップ（勝利／回廊時）
+  if (good) {
     const goldLine = document.createElement("div");
     goldLine.className = "result-gold";
     goldLine.innerHTML =
-      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G 獲得</span>` +
+      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G</span>` +
       `<span class="result-gold-total">（所持 ${game.gold.toLocaleString()} G）</span>`;
     panel.appendChild(goldLine);
     if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
-  } else if (game.lastWon) {
-    const head = document.createElement("div");
-    head.className = "u-head";
-    head.textContent = game.lastDrops.length > 0
-      ? `🎁 入手した宝箱（${game.lastDrops.length}個）`
-      : "🗡 入手した武器はありませんでした";
-    panel.appendChild(head);
-    const goldLine = document.createElement("div");
-    goldLine.className = "result-gold";
-    goldLine.innerHTML =
-      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G 獲得</span>` +
-      `<span class="result-gold-total">（所持 ${game.gold.toLocaleString()} G）</span>`;
-    panel.appendChild(goldLine);
-    if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
-  } else {
-    const info = document.createElement("p");
-    info.className = "r-info";
-    info.textContent = "倒れてしまった……装備を見直して再挑戦しよう";
-    panel.appendChild(info);
   }
 
+  // アクション
   const actions = document.createElement("div");
   actions.className = "actions";
-  if (!game.lastWon) actions.appendChild(primaryButton("もう一度", () => withFade(() => game.retryStage())));
-  const hasNext = game.lastWon && game.stageIndex + 1 < STAGE_COUNT && game.stageUnlocked(game.stageIndex + 1);
+  if (!won) actions.appendChild(primaryButton("もう一度", () => withFade(() => game.retryStage())));
+  const hasNext = won && game.stageIndex + 1 < STAGE_COUNT && game.stageUnlocked(game.stageIndex + 1);
   if (hasNext) actions.appendChild(primaryButton("次のステージへ", () => withFade(() => game.startStage(game.stageIndex + 1))));
-  actions.appendChild(secondaryButton("ステージ選択", () => { game.goStageSelect(); buildControls(); }));
+  actions.appendChild(secondaryButton("ダンジョン選択", () => { game.goStageSelect(); buildControls(); }));
   actions.appendChild(secondaryButton("インベントリ", () => { game.goInventory(); buildControls(); }));
   panel.appendChild(actions);
   controls.appendChild(panel);
@@ -1482,16 +1509,14 @@ function loop(now: number): void {
   }
   if (game.screen !== renderedScreen) buildControls();
 
-  // バトル枠（canvas）は戦闘・リザルトのみ。メニュー系画面では描画しない
-  if (game.screen === "battle" || game.screen === "result") {
-    if (game.battle) {
-      if (game.screen === "battle") updateWeaponButtons();
-      render(ctx, game.battle, {
-        index: game.stageIndex, count: STAGE_COUNT,
-        wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
-        floor: game.isEndless ? game.endlessFloor : undefined,
-      });
-    }
+  // バトル枠（canvas）は戦闘中のみ描画
+  if (game.screen === "battle" && game.battle) {
+    updateWeaponButtons();
+    render(ctx, game.battle, {
+      index: game.stageIndex, count: STAGE_COUNT,
+      wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
+      floor: game.isEndless ? game.endlessFloor : undefined,
+    });
   }
   requestAnimationFrame(loop);
 }
