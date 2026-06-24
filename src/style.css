@@ -18,7 +18,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
   display: flex;
   justify-content: center;
   /* 連打時の文字選択・タップハイライトを抑制 */
@@ -1417,18 +1417,18 @@ button.wpn-row:hover { background: #241f55; }
    （添付モックを模倣。戦闘中のみ body.in-battle で有効化）
    ===================================================================== */
 body.in-battle {
-  background: #ece4e7;
-  color: #15101c;
+  background: #fcf9f8;
+  color: #1c1b1b;
 }
 /* 戦闘中は既定のミュートバー（右上）を隠す（ギアを上部バーに統合） */
 .in-battle .topbar { display: none; }
 
 /* 戦闘ビューポート（canvas）：太い黒枠＋オフセット影＋ドット背景 */
 .in-battle #screen {
-  border: 3px solid #15101c;
+  border: 3px solid #1c1b1b;
   border-radius: 0;
   background: #efe9ec;
-  box-shadow: 6px 6px 0 #15101c;
+  box-shadow: 6px 6px 0 #1c1b1b;
 }
 .in-battle #controls { padding-bottom: 16px; }
 
@@ -1440,31 +1440,31 @@ body.in-battle {
   margin-bottom: 10px;
 }
 .bt-title {
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 20px;
   font-weight: 900;
   letter-spacing: 1px;
-  color: #e0188f;
+  color: #df0b81;
   text-transform: uppercase;
 }
-.bt-title-mark { color: #15101c; }
+.bt-title-mark { color: #1c1b1b; }
 .bt-top-right { display: flex; align-items: center; gap: 8px; }
 .bt-gear {
   width: 34px; height: 34px;
   font-size: 18px;
-  border: 2px solid #15101c;
-  background: #faf7f8;
-  color: #15101c;
+  border: 2px solid #1c1b1b;
+  background: #ffffff;
+  color: #1c1b1b;
   cursor: pointer;
-  box-shadow: 3px 3px 0 #15101c;
+  box-shadow: 3px 3px 0 #1c1b1b;
 }
-.bt-gear:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #15101c; }
+.bt-gear:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1c1b1b; }
 .bt-portrait {
   width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
-  border: 2px solid #15101c;
+  border: 2px solid #1c1b1b;
   background: #1a1226;
-  box-shadow: 3px 3px 0 #15101c;
+  box-shadow: 3px 3px 0 #1c1b1b;
   overflow: hidden;
 }
 .bt-portrait canvas { image-rendering: pixelated; height: 34px; width: auto; }
@@ -1476,12 +1476,12 @@ body.in-battle {
   margin-top: 8px;
 }
 .bt-stat-label {
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 15px; font-weight: 900; letter-spacing: 1px; color: #15101c;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 15px; font-weight: 900; letter-spacing: 1px; color: #1c1b1b;
 }
 .bt-crit {
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #e0188f;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #df0b81;
   animation: critBlink 0.7s steps(1) infinite;
 }
 @keyframes critBlink { 50% { opacity: 0.3; } }
@@ -1491,8 +1491,8 @@ body.in-battle {
   background: #ddd2d9;
   border: 1px solid #c2b6bf;
 }
-.bt-seg-hp .bt-seg.on { background: #e0188f; border-color: #a01065; }
-.bt-seg-en .bt-seg.on { background: #16c2e0; border-color: #0e8fa8; }
+.bt-seg-hp .bt-seg.on { background: #df0b81; border-color: #a01065; }
+.bt-seg-en .bt-seg.on { background: #00c2d4; border-color: #0e8fa8; }
 .bt-seg-en.focus .bt-seg.on { background: #ffce3a; border-color: #c79a16; }
 
 /* ----- スキルカード 2x2 ----- */
@@ -1510,15 +1510,15 @@ body.in-battle {
   min-height: 132px;
   padding: 12px 12px 10px;
   text-align: left;
-  background: #faf7f8;
-  border: 2.5px solid #15101c;
-  box-shadow: 5px 5px 0 #15101c;
-  color: #15101c;
+  background: #ffffff;
+  border: 2.5px solid #1c1b1b;
+  box-shadow: 5px 5px 0 #1c1b1b;
+  color: #1c1b1b;
   cursor: pointer;
   transition: transform 0.05s, box-shadow 0.05s;
 }
-.sk-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
-.sk-card.btn-press { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.sk-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
+.sk-card.btn-press { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
 .sk-card.disabled {
   pointer-events: none;
   background: #ece7ea;
@@ -1527,17 +1527,17 @@ body.in-battle {
   color: #9a93a0;
 }
 .sk-card.combo-ready {
-  border-color: #e0188f;
-  box-shadow: 5px 5px 0 #e0188f;
+  border-color: #df0b81;
+  box-shadow: 5px 5px 0 #df0b81;
   animation: skCombo 0.7s ease-in-out infinite;
 }
 @keyframes skCombo {
-  0%, 100% { box-shadow: 5px 5px 0 #e0188f; }
+  0%, 100% { box-shadow: 5px 5px 0 #df0b81; }
   50% { box-shadow: 5px 5px 0 #ff66b6; }
 }
 .sk-cost {
   align-self: flex-start;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
   color: #eafaf6;
   background: #1f6b63;
@@ -1551,7 +1551,7 @@ body.in-battle {
 }
 .sk-icon canvas { image-rendering: pixelated; height: 26px; width: auto; }
 .sk-title {
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 24px; font-weight: 900; letter-spacing: 0.5px; line-height: 1;
 }
 .sk-card.disabled .sk-title { color: #9a93a0; }
@@ -1560,13 +1560,13 @@ body.in-battle {
 .sk-footer {
   margin-top: auto;
   padding-top: 7px;
-  border-top: 1px solid #15101c;
-  font-family: "Courier New", ui-monospace, monospace;
+  border-top: 1px solid #1c1b1b;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 13px; font-weight: 900; letter-spacing: 1px;
 }
 .sk-card.disabled .sk-footer { border-top-color: #c2b6bf; color: #a59ea8; }
 /* フッタータグの配色 */
-.ft-combo { color: #e0188f; }
+.ft-combo { color: #df0b81; }
 .ft-crit { color: #d61c1c; }
 .ft-charge { color: #d97a16; }
 .ft-focus { color: #0e9fbe; }
@@ -1577,8 +1577,8 @@ body.in-battle {
 .ft-base { color: #5a5260; }
 /* GUARDカード：予兆中の強調 */
 .sk-guard.guard-now {
-  border-color: #e0188f;
-  box-shadow: 5px 5px 0 #e0188f;
+  border-color: #df0b81;
+  box-shadow: 5px 5px 0 #df0b81;
   animation: skCombo 0.45s ease-in-out infinite;
 }
 
@@ -1590,23 +1590,23 @@ body.in-battle {
   width: 100%;
   margin-top: 12px;
   padding: 10px 14px;
-  background: #faf7f8;
-  border: 2.5px solid #15101c;
-  box-shadow: 4px 4px 0 #15101c;
-  color: #15101c;
+  background: #ffffff;
+  border: 2.5px solid #1c1b1b;
+  box-shadow: 4px 4px 0 #1c1b1b;
+  color: #1c1b1b;
   cursor: pointer;
   transition: transform 0.05s, box-shadow 0.05s;
 }
-.bt-rest:active, .bt-rest.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.bt-rest:active, .bt-rest.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
 .bt-rest-ico { display: flex; align-items: center; }
 .bt-rest-ico canvas { image-rendering: pixelated; height: 24px; width: auto; }
 .bt-rest-name {
   flex: 1;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 15px; font-weight: 900; letter-spacing: 1px;
 }
 .bt-rest-tag {
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 13px; font-weight: 900; color: #16a8c4;
 }
 
@@ -1618,12 +1618,12 @@ body.in-battle {
   width: 100%;
   margin-top: 12px;
   padding: 10px 14px;
-  background: #faf7f8;
-  border: 2px solid #15101c;
+  background: #ffffff;
+  border: 2px solid #1c1b1b;
 }
 .bt-log-title {
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #e0188f;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #df0b81;
   flex-shrink: 0;
 }
 .bt-log-line {
@@ -1633,7 +1633,7 @@ body.in-battle {
 }
 .bt-log::after {
   content: "▾";
-  color: #15101c;
+  color: #1c1b1b;
   font-size: 12px;
 }
 
@@ -1642,8 +1642,8 @@ body.in-battle {
    ターミナル風ライトテーマ。body.theme-nb で有効化。
    ===================================================================== */
 body.theme-nb {
-  background: #ece4e7;
-  color: #15101c;
+  background: #fcf9f8;
+  color: #1c1b1b;
 }
 .theme-nb #controls { padding-bottom: 90px; }
 
@@ -1655,39 +1655,39 @@ body.theme-nb {
   min-height: 0;
   padding: 8px 2px 10px;
   margin-bottom: 10px;
-  border-bottom: 3px solid #15101c;
+  border-bottom: 3px solid #1c1b1b;
 }
 .nb-brand {
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 18px; font-weight: 900; letter-spacing: 0.5px; color: #e0188f;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.5px; color: #df0b81;
 }
 .nb-top-right { display: flex; align-items: center; gap: 8px; }
 .nb-top-gold { display: flex; align-items: baseline; gap: 2px; }
-.nb-top-gold .gold-amt { font-size: 16px; color: #15101c; text-shadow: none; }
+.nb-top-gold .gold-amt { font-size: 16px; color: #1c1b1b; text-shadow: none; }
 .nb-top-gold .gold-unit { color: #8a7f90; }
 .nb-icon-btn {
   width: 30px; height: 30px; font-size: 15px; font-weight: 900;
-  border: 2px solid #15101c; background: #faf7f8; color: #15101c; cursor: pointer;
+  border: 2px solid #1c1b1b; background: #ffffff; color: #1c1b1b; cursor: pointer;
 }
-.nb-icon-btn.muted { background: #15101c; color: #faf7f8; }
+.nb-icon-btn.muted { background: #1c1b1b; color: #ffffff; }
 
 /* ---- 画面見出し ---- */
 .nb-head { margin: 4px 0 14px; }
 .nb-screen-tag {
   display: inline-block;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 12px; font-weight: 900; letter-spacing: 1px;
-  color: #0a7f97; background: #b8f0fa; border: 2px solid #15101c;
+  color: #0a7f97; background: #b8f0fa; border: 2px solid #1c1b1b;
   padding: 2px 8px; margin-bottom: 6px;
 }
 .nb-title {
   margin: 0;
   font-size: 30px; font-weight: 900; font-style: italic; letter-spacing: 0.5px;
-  color: #15101c; line-height: 1;
+  color: #1c1b1b; line-height: 1;
 }
 .nb-title::after {
   content: ""; display: block; width: 54px; height: 4px;
-  background: #15101c; margin-top: 8px;
+  background: #1c1b1b; margin-top: 8px;
 }
 
 /* ---- セクション見出し ---- */
@@ -1696,112 +1696,112 @@ body.theme-nb {
   margin: 18px 0 8px;
 }
 .nb-section-lbl {
-  font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #15101c;
+  font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #1c1b1b;
 }
 
 /* ---- 大CTAボタン ---- */
 .nb-cta {
   width: 100%; padding: 16px; margin-top: 12px;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 18px; font-weight: 900; letter-spacing: 1px;
-  color: #fff; background: #e0188f;
-  border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c; cursor: pointer;
+  color: #fff; background: #df0b81;
+  border: 2.5px solid #1c1b1b; box-shadow: 5px 5px 0 #1c1b1b; cursor: pointer;
 }
-.nb-cta:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.nb-cta:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
 .nb-cta:disabled { background: #b7afb6; box-shadow: 5px 5px 0 #b7afb6; color: #ece7ea; cursor: not-allowed; }
 
 /* ---- ボトムナビ（ライト・ネオブルータリズム） ---- */
 .theme-nb .bottom-nav {
-  background: #faf7f8; border: none; border-top: 3px solid #15101c; border-radius: 0;
+  background: #ffffff; border: none; border-top: 3px solid #1c1b1b; border-radius: 0;
   box-shadow: none;
 }
 .theme-nb .nav-item { color: #6a6270; }
-.theme-nb .nav-on { background: #e0188f; color: #fff; }
-.theme-nb .nav-lbl { font-family: "Courier New", ui-monospace, monospace; font-weight: 800; }
+.theme-nb .nav-on { background: #df0b81; color: #fff; }
+.theme-nb .nav-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-weight: 800; }
 
 /* ---- ホーム ---- */
-.theme-nb .title-logo { color: #e0188f; }
+.theme-nb .title-logo { color: #df0b81; }
 .theme-nb .title-sub { color: #5a5260; }
 .theme-nb .menu-btn {
-  background: #e0188f; color: #fff; border: 2.5px solid #15101c;
-  box-shadow: 5px 5px 0 #15101c; border-radius: 0;
-  font-family: "Courier New", ui-monospace, monospace; font-weight: 900;
+  background: #df0b81; color: #fff; border: 2.5px solid #1c1b1b;
+  box-shadow: 5px 5px 0 #1c1b1b; border-radius: 0;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-weight: 900;
 }
-.theme-nb .menu-btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.theme-nb .menu-btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
 
 /* =====================================================================
    DUNGEON HUB（ダンジョン選択）
    ===================================================================== */
 .zone-list { display: flex; flex-direction: column; gap: 14px; }
 .zone-card {
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 5px 5px 0 #1c1b1b;
   padding: 12px; cursor: pointer; transition: transform 0.05s, box-shadow 0.05s;
 }
-.zone-card.sel { box-shadow: 5px 5px 0 #e0188f; border-color: #e0188f; }
-.zone-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.zone-card.sel { box-shadow: 5px 5px 0 #df0b81; border-color: #df0b81; }
+.zone-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
 .zone-card.locked {
   background: #e7e1e4; border-style: dashed; box-shadow: none; cursor: not-allowed; opacity: 0.8;
 }
 .zone-top { display: flex; align-items: center; justify-content: space-between; }
 .zone-tag {
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 12px; font-weight: 900; letter-spacing: 1px;
-  color: #eafaf6; background: #1f6b63; border: 2px solid #15101c; padding: 2px 8px;
+  color: #eafaf6; background: #1f6b63; border: 2px solid #1c1b1b; padding: 2px 8px;
 }
 .zone-status-wrap { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
-.zone-status-lbl { font-family: "Courier New", monospace; font-size: 9px; color: #8a7f90; letter-spacing: 1px; }
-.zone-status { font-family: "Courier New", monospace; font-size: 18px; font-weight: 900; color: #e0188f; }
+.zone-status-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 9px; color: #8a7f90; letter-spacing: 1px; }
+.zone-status { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 18px; font-weight: 900; color: #df0b81; }
 .zone-status.st-locked { font-size: 13px; color: #8a7f90; }
-.zone-name { font-size: 22px; font-weight: 900; color: #15101c; margin: 6px 0 8px; }
+.zone-name { font-size: 22px; font-weight: 900; color: #1c1b1b; margin: 6px 0 8px; }
 .zone-locked-name { font-size: 18px; font-weight: 900; color: #9a909c; margin-top: 8px; }
 .zone-body { display: flex; gap: 12px; }
 .zone-thumb {
   width: 76px; height: 76px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: #1a1226; border: 2px solid #15101c;
+  background: #1a1226; border: 2px solid #1c1b1b;
 }
 .zone-thumb canvas { image-rendering: pixelated; height: 60px; width: auto; }
 .zone-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .zone-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .zone-chip {
-  font-family: "Courier New", monospace; font-size: 11px; font-weight: 800;
-  border: 2px solid #15101c; padding: 2px 7px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; font-weight: 800;
+  border: 2px solid #1c1b1b; padding: 2px 7px;
 }
 .tag-armor { background: #ffd0dc; color: #b01040; }
 .tag-phantom { background: #e6d4ff; color: #6a28b0; }
 .tag-aerial { background: #c8eefc; color: #0a7f97; }
 .tag-endless { background: #fff0a8; color: #8a6a00; }
 .zone-loot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.zone-loot-lbl { font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; color: #5a5260; }
+.zone-loot-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 800; color: #5a5260; }
 .zone-loot-item {
   width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-  background: #fff7c0; border: 2px solid #15101c;
+  background: #fff7c0; border: 2px solid #1c1b1b;
 }
 .zone-loot-item .wpn-sprite { height: 24px; width: auto; }
 
 .power-panel {
   margin-top: 16px; padding: 10px 12px;
-  background: #15101c; color: #eafff6; border: 2.5px solid #15101c;
+  background: #1c1b1b; color: #eafff6; border: 2.5px solid #1c1b1b;
 }
 .power-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.power-title { font-family: "Courier New", monospace; font-size: 14px; font-weight: 900; color: #ff66b6; letter-spacing: 0.5px; }
-.power-vs { font-family: "Courier New", monospace; font-size: 11px; color: #b9b2c2; text-align: right; }
+.power-title { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 14px; font-weight: 900; color: #ff66b6; letter-spacing: 0.5px; }
+.power-vs { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; color: #b9b2c2; text-align: right; }
 .power-panel .bt-seg-bar { margin: 8px 0 6px; height: 16px; }
-.power-panel .bt-seg { background: #3a3048; border-color: #15101c; }
-.power-panel .bt-seg.on { background: #e0188f; border-color: #ff66b6; }
+.power-panel .bt-seg { background: #3a3048; border-color: #1c1b1b; }
+.power-panel .bt-seg.on { background: #df0b81; border-color: #ff66b6; }
 .power-foot { display: flex; align-items: center; justify-content: space-between; }
-.power-surv { font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; }
-.sv-high { color: #4fe0a0; }
+.power-surv { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 800; }
+.sv-high { color: #a0d800; }
 .sv-med { color: #ffce3a; }
 .sv-low { color: #ff7a8a; }
-.power-pct { font-family: "Courier New", monospace; font-size: 14px; font-weight: 900; color: #eafff6; }
+.power-pct { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 14px; font-weight: 900; color: #eafff6; }
 
 /* =====================================================================
    GRAND BAZAAR（ショップ）
    ===================================================================== */
 .deal-timer {
-  font-family: "Courier New", monospace; font-size: 12px; font-weight: 900;
-  color: #fff; background: #d61c1c; border: 2px solid #15101c; padding: 2px 8px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 900;
+  color: #fff; background: #d61c1c; border: 2px solid #1c1b1b; padding: 2px 8px;
 }
 .deal-row {
   display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px;
@@ -1809,51 +1809,51 @@ body.theme-nb {
 }
 .deal-card {
   flex: 0 0 200px;
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 5px 5px 0 #1c1b1b;
   padding: 10px; display: flex; flex-direction: column; gap: 6px;
 }
 .deal-img {
   position: relative; height: 110px;
   display: flex; align-items: center; justify-content: center;
-  background: #1a1226; border: 2px solid #15101c;
+  background: #1a1226; border: 2px solid #1c1b1b;
 }
 .deal-img .wpn-sprite { height: 80px; width: auto; }
 .deal-ribbon {
   position: absolute; top: 6px; right: -2px;
-  font-family: "Courier New", monospace; font-size: 11px; font-weight: 900;
-  color: #fff; background: #e0188f; border: 2px solid #15101c; padding: 1px 8px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; font-weight: 900;
+  color: #fff; background: #df0b81; border: 2px solid #1c1b1b; padding: 1px 8px;
 }
-.deal-name { font-size: 16px; font-weight: 900; color: #15101c; }
+.deal-name { font-size: 16px; font-weight: 900; color: #1c1b1b; }
 .deal-sub { font-size: 11px; color: #5a5260; }
 .deal-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.deal-price { font-family: "Courier New", monospace; font-size: 16px; font-weight: 900; color: #0a7f97; }
+.deal-price { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 16px; font-weight: 900; color: #0a7f97; }
 .deal-buy {
   width: 40px; height: 36px; font-size: 16px;
-  background: #e0188f; color: #fff; border: 2px solid #15101c; box-shadow: 3px 3px 0 #15101c; cursor: pointer;
+  background: #df0b81; color: #fff; border: 2px solid #1c1b1b; box-shadow: 3px 3px 0 #1c1b1b; cursor: pointer;
 }
-.deal-buy:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #15101c; }
+.deal-buy:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1c1b1b; }
 .deal-buy:disabled { background: #b7afb6; box-shadow: 3px 3px 0 #b7afb6; cursor: not-allowed; }
 
 .armory-list { display: flex; flex-direction: column; gap: 10px; }
 .armory-row {
   display: flex; align-items: center; gap: 12px; padding: 10px;
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b;
 }
 .armory-row.sold { opacity: 0.55; }
 .armory-icon {
   width: 48px; height: 48px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: #1a1226; border: 2px solid #15101c;
+  background: #1a1226; border: 2px solid #1c1b1b;
 }
 .armory-icon .wpn-sprite { height: 40px; width: auto; }
 .armory-info { flex: 1; min-width: 0; }
-.armory-name { font-family: "Courier New", monospace; font-size: 15px; font-weight: 900; color: #15101c; }
+.armory-name { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 15px; font-weight: 900; color: #1c1b1b; }
 .armory-sub { font-size: 11px; color: #5a5260; margin: 1px 0; }
-.armory-price { font-family: "Courier New", monospace; font-size: 15px; font-weight: 900; color: #e0188f; }
+.armory-price { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 15px; font-weight: 900; color: #df0b81; }
 .armory-buy {
   flex-shrink: 0; padding: 10px 16px;
-  font-family: "Courier New", monospace; font-size: 13px; font-weight: 900;
-  color: #fff; background: #15101c; border: 2px solid #15101c; cursor: pointer;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 900;
+  color: #fff; background: #1c1b1b; border: 2px solid #1c1b1b; cursor: pointer;
 }
 .armory-buy:active { transform: translateY(1px); }
 .armory-buy:disabled { background: #b7afb6; border-color: #b7afb6; color: #ece7ea; cursor: not-allowed; }
@@ -1864,114 +1864,114 @@ body.theme-nb {
 .theme-nb .forge-hint { color: #5a5260; }
 .theme-nb .forge-list { display: flex; flex-direction: column; gap: 10px; }
 .theme-nb .forge-row {
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; border-radius: 0;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; border-radius: 0;
 }
-.theme-nb .forge-row-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
-.theme-nb .forge-row-name { color: #15101c; }
+.theme-nb .forge-row-icon { background: #1a1226; border: 2px solid #1c1b1b; border-radius: 0; }
+.theme-nb .forge-row-name { color: #1c1b1b; }
 .theme-nb .forge-row-meta { color: #5a5260; }
-.theme-nb .forge-row-meta b { color: #e0188f; }
-.theme-nb .forge-row-go { color: #e0188f; }
+.theme-nb .forge-row-meta b { color: #df0b81; }
+.theme-nb .forge-row-go { color: #df0b81; }
 
 .theme-nb .forge-target {
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c; border-radius: 0;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 5px 5px 0 #1c1b1b; border-radius: 0;
 }
-.theme-nb .forge-target-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
+.theme-nb .forge-target-icon { background: #1a1226; border: 2px solid #1c1b1b; border-radius: 0; }
 .theme-nb .forge-target-name {
-  font-family: "Courier New", monospace; font-size: 22px; color: #e0188f;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 22px; color: #df0b81;
 }
-.theme-nb .forge-target-stat { color: #15101c; }
-.theme-nb .forge-target-stat b { color: #e0188f; }
+.theme-nb .forge-target-stat { color: #1c1b1b; }
+.theme-nb .forge-target-stat b { color: #df0b81; }
 .theme-nb .forge-cap { color: #8a7f90; }
 
 .theme-nb .forge-exp-label { color: #5a5260; }
 .theme-nb .forge-exp-bar { background: #ddd2d9; border: 1px solid #c2b6bf; border-radius: 0; }
-.theme-nb .forge-exp-fill { background: #16c2e0; }
+.theme-nb .forge-exp-fill { background: #00c2d4; }
 
 .theme-nb .forge-back {
-  background: #faf7f8; color: #5a5260; border: 2px solid #15101c; border-radius: 0;
+  background: #ffffff; color: #5a5260; border: 2px solid #1c1b1b; border-radius: 0;
 }
-.theme-nb .forge-section { background: #faf7f8; border: 2px solid #15101c; border-radius: 0; }
-.theme-nb .forge-sect-head { color: #15101c; }
+.theme-nb .forge-section { background: #ffffff; border: 2px solid #1c1b1b; border-radius: 0; }
+.theme-nb .forge-sect-head { color: #1c1b1b; }
 .theme-nb .forge-sect-sub { color: #8a7f90; }
 .theme-nb .forge-summary .forge-sum-exp { color: #0a7f97; }
-.theme-nb .forge-summary .forge-sum-lv { color: #e0188f; }
+.theme-nb .forge-summary .forge-sum-lv { color: #df0b81; }
 .theme-nb .forge-apply {
-  background: #e0188f; color: #fff; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; border-radius: 0;
+  background: #df0b81; color: #fff; border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; border-radius: 0;
 }
-.theme-nb .forge-apply:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.theme-nb .forge-apply:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
 .theme-nb .forge-apply:disabled { background: #b7afb6; box-shadow: 4px 4px 0 #b7afb6; color: #ece7ea; }
 .theme-nb .forge-awaken { border-color: #8a3ad0; }
-.theme-nb .forge-awaken-btn { background: #8a3ad0; box-shadow: 4px 4px 0 #15101c; }
+.theme-nb .forge-awaken-btn { background: #8a3ad0; box-shadow: 4px 4px 0 #1c1b1b; }
 .theme-nb .forge-awaken-desc { color: #5a5260; }
 .theme-nb .forge-awaken-desc b { color: #8a3ad0; }
 .theme-nb .forge-mat {
-  background: #fff; border: 2px solid #15101c; border-radius: 0;
+  background: #fff; border: 2px solid #1c1b1b; border-radius: 0;
 }
-.theme-nb .forge-mat-on { background: #fff6d8; border-color: #e0188f; }
-.theme-nb .forge-mat-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
-.theme-nb .forge-mat-name { color: #15101c; }
+.theme-nb .forge-mat-on { background: #fff6d8; border-color: #df0b81; }
+.theme-nb .forge-mat-icon { background: #1a1226; border: 2px solid #1c1b1b; border-radius: 0; }
+.theme-nb .forge-mat-name { color: #1c1b1b; }
 .theme-nb .forge-mat-exp { color: #0a7f97; }
-.theme-nb .forge-mat-check { border: 2px solid #15101c; color: #e0188f; border-radius: 0; }
-.theme-nb .forge-mat-on .forge-mat-check { background: #e0188f; color: #fff; }
+.theme-nb .forge-mat-check { border: 2px solid #1c1b1b; color: #df0b81; border-radius: 0; }
+.theme-nb .forge-mat-on .forge-mat-check { background: #df0b81; color: #fff; }
 .theme-nb .inv-empty { color: #8a7f90; }
-.theme-nb .wpn-lv { color: #15101c; background: #c8eefc; border: 1px solid #15101c; }
+.theme-nb .wpn-lv { color: #1c1b1b; background: #c8eefc; border: 1px solid #1c1b1b; }
 .theme-nb .wpn-rlabel { color: #5a5260; }
-.theme-nb .wpn-eqtag { color: #e0188f; border-color: #e0188f; }
+.theme-nb .wpn-eqtag { color: #df0b81; border-color: #df0b81; }
 
 /* =====================================================================
    ARSENAL（インベントリ）
    ===================================================================== */
 .ars-cap { margin-bottom: 12px; }
 .ars-cap-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
-.ars-cap-lbl { font-family: "Courier New", monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #15101c; }
-.ars-cap-num { font-family: "Courier New", monospace; font-size: 13px; font-weight: 900; color: #e0188f; }
+.ars-cap-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #1c1b1b; }
+.ars-cap-num { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 900; color: #df0b81; }
 
 .ars-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
 .ars-tab {
   flex: 1; padding: 9px 4px;
-  font-family: "Courier New", monospace; font-size: 13px; font-weight: 900;
-  color: #15101c; background: #faf7f8; border: 2px solid #15101c; cursor: pointer;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 900;
+  color: #1c1b1b; background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer;
 }
-.ars-tab.on { background: #15101c; color: #fff; }
+.ars-tab.on { background: #1c1b1b; color: #fff; }
 .ars-tools { display: flex; gap: 8px; margin-bottom: 12px; }
 .ars-tool {
   flex: 1; padding: 8px;
-  font-size: 12px; font-weight: 800; color: #15101c;
-  background: #faf7f8; border: 2px solid #15101c; cursor: pointer;
+  font-size: 12px; font-weight: 800; color: #1c1b1b;
+  background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer;
 }
-.ars-tool.on { background: #fff6d8; border-color: #e0188f; color: #b01070; }
+.ars-tool.on { background: #fff6d8; border-color: #df0b81; color: #b01070; }
 
 .ars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ars-card {
   position: relative; display: flex; flex-direction: column; gap: 4px;
   padding: 8px; text-align: left;
-  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; cursor: pointer;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; cursor: pointer;
 }
-.ars-card:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.ars-card:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
 .ars-card-top { display: flex; align-items: center; justify-content: space-between; }
-.ars-card-rar { font-family: "Courier New", monospace; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; }
-.ars-card-fav { color: #e0188f; font-size: 13px; }
+.ars-card-rar { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; }
+.ars-card-fav { color: #df0b81; font-size: 13px; }
 .ars-card-img {
   height: 70px; display: flex; align-items: center; justify-content: center;
-  background: #1a1226; border: 2px solid #15101c;
+  background: #1a1226; border: 2px solid #1c1b1b;
 }
 .ars-card-img .wpn-sprite { height: 56px; width: auto; }
-.ars-card-name { font-size: 13px; font-weight: 800; color: #15101c; line-height: 1.1; }
+.ars-card-name { font-size: 13px; font-weight: 800; color: #1c1b1b; line-height: 1.1; }
 .ars-card-stats {
   display: flex; justify-content: space-between;
-  font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; color: #5a5260;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 800; color: #5a5260;
 }
 .ars-card-eq {
-  font-family: "Courier New", monospace; font-size: 12px; font-weight: 900; text-align: center;
-  color: #fff; background: #e0188f; border: 2px solid #15101c; padding: 2px 0;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 900; text-align: center;
+  color: #fff; background: #df0b81; border: 2px solid #1c1b1b; padding: 2px 0;
 }
 .ars-craft {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   min-height: 150px;
   background: transparent; border: 2.5px dashed #b09aa8; color: #9a8b96;
-  font-family: "Courier New", monospace; font-size: 13px; font-weight: 800; cursor: pointer;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 800; cursor: pointer;
 }
-.ars-craft:hover { border-color: #e0188f; color: #e0188f; }
+.ars-craft:hover { border-color: #df0b81; color: #df0b81; }
 .ars-craft-plus { font-size: 26px; }
 
 /* ---- 武器詳細モーダル ---- */
@@ -1983,50 +1983,50 @@ body.theme-nb {
 }
 .wpn-sheet {
   width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto;
-  background: #faf7f8; border: 3px solid #15101c; box-shadow: 7px 7px 0 #15101c; padding: 14px;
+  background: #ffffff; border: 3px solid #1c1b1b; box-shadow: 7px 7px 0 #1c1b1b; padding: 14px;
 }
 .wpn-sheet-head { display: flex; align-items: center; justify-content: space-between; }
-.wpn-sheet-title { font-size: 22px; font-weight: 900; font-style: italic; color: #15101c; }
+.wpn-sheet-title { font-size: 22px; font-weight: 900; font-style: italic; color: #1c1b1b; }
 .wpn-sheet-x {
   width: 32px; height: 32px; font-size: 18px; font-weight: 900;
-  background: #faf7f8; color: #15101c; border: 2px solid #15101c; cursor: pointer;
+  background: #ffffff; color: #1c1b1b; border: 2px solid #1c1b1b; cursor: pointer;
 }
 .wpn-sheet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.wpn-chip { font-family: "Courier New", monospace; font-size: 11px; font-weight: 900; border: 2px solid #15101c; padding: 2px 8px; }
+.wpn-chip { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; font-weight: 900; border: 2px solid #1c1b1b; padding: 2px 8px; }
 .wpn-chip-cls { background: #c8eefc; color: #0a7f97; }
-.wpn-chip-lv { background: #fff; color: #15101c; }
-.wpn-chip-eq { background: #e0188f; color: #fff; }
+.wpn-chip-lv { background: #fff; color: #1c1b1b; }
+.wpn-chip-eq { background: #df0b81; color: #fff; }
 .wpn-sheet-img {
   height: 150px; display: flex; align-items: center; justify-content: center;
-  background: #1a1226; border: 2px solid #15101c; margin-bottom: 12px;
+  background: #1a1226; border: 2px solid #1c1b1b; margin-bottom: 12px;
 }
 .wpn-sheet-img .wpn-sprite { height: 120px; width: auto; }
 .wpn-sheet-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #15101c; }
-.wpn-stat-val { font-family: "Courier New", monospace; font-size: 20px; font-weight: 900; color: #e0188f; }
-.wpn-stat-lbl { font-family: "Courier New", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; letter-spacing: 1px; }
+.wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #1c1b1b; }
+.wpn-stat-val { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 20px; font-weight: 900; color: #df0b81; }
+.wpn-stat-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; letter-spacing: 1px; }
 .wpn-sheet-log { margin-bottom: 12px; }
-.wpn-log-head { font-family: "Courier New", monospace; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: #15101c; margin-bottom: 6px; }
+.wpn-log-head { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: #1c1b1b; margin-bottom: 6px; }
 .wpn-log-row {
   display: flex; align-items: center; gap: 8px; padding: 7px 8px; margin-bottom: 5px;
-  background: #fff; border: 2px solid #15101c;
+  background: #fff; border: 2px solid #1c1b1b;
 }
 .wpn-log-no {
   flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
-  font-family: "Courier New", monospace; font-size: 11px; font-weight: 900;
-  color: #fff; background: #e0188f; border: 1px solid #15101c;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; font-weight: 900;
+  color: #fff; background: #df0b81; border: 1px solid #1c1b1b;
 }
-.wpn-log-name { flex-shrink: 0; font-size: 12px; font-weight: 800; color: #15101c; }
+.wpn-log-name { flex-shrink: 0; font-size: 12px; font-weight: 800; color: #1c1b1b; }
 .wpn-log-desc { flex: 1; min-width: 0; font-size: 11px; color: #5a5260; }
-.wpn-log-en { flex-shrink: 0; font-family: "Courier New", monospace; font-size: 11px; font-weight: 800; color: #0a7f97; }
+.wpn-log-en { flex-shrink: 0; font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 11px; font-weight: 800; color: #0a7f97; }
 .wpn-sheet-acts { display: flex; flex-direction: column; gap: 8px; }
 .wpn-sheet-acts .nb-cta { margin-top: 0; }
 .wpn-sheet-mini { display: flex; gap: 8px; }
 .wpn-mini {
   flex: 1; padding: 10px; font-size: 13px; font-weight: 800;
-  background: #faf7f8; color: #15101c; border: 2px solid #15101c; cursor: pointer;
+  background: #ffffff; color: #1c1b1b; border: 2px solid #1c1b1b; cursor: pointer;
 }
-.wpn-mini.on { background: #fff6d8; border-color: #e0188f; color: #b01070; }
+.wpn-mini.on { background: #fff6d8; border-color: #df0b81; color: #b01070; }
 .wpn-mini-del { color: #d61c1c; }
 .wpn-mini-del.confirm { background: #d61c1c; color: #fff; border-color: #d61c1c; }
 
@@ -2056,28 +2056,28 @@ body.theme-nb {
   display: flex; align-items: center; justify-content: space-between; gap: 4px;
   padding: 6px 7px;
   background: #fff;
-  border: 1.5px solid #15101c;
+  border: 1.5px solid #1c1b1b;
 }
 .sk-step-name {
-  font-size: 11px; font-weight: 800; color: #15101c;
+  font-size: 11px; font-weight: 800; color: #1c1b1b;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
 .sk-step-cost {
   flex-shrink: 0;
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 18px; font-weight: 900; line-height: 1; color: #e0188f;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; line-height: 1; color: #df0b81;
 }
 .sk-step-on .sk-step-name { color: #b01070; }
-.sk-step-on .sk-step-cost { color: #e0188f; }
+.sk-step-on .sk-step-cost { color: #df0b81; }
 
 /* 次に出る段へ「ぬるっと」移動するフォーカス枠 */
 .sk-focus {
   position: absolute;
   left: 0; right: 0; top: 0; height: 0;
   z-index: 1;
-  border: 2.5px solid #e0188f;
-  background: rgba(224, 24, 143, 0.12);
-  box-shadow: 0 0 8px rgba(224, 24, 143, 0.4);
+  border: 2.5px solid #df0b81;
+  background: rgba(223, 11, 129, 0.12);
+  box-shadow: 0 0 8px rgba(223, 11, 129, 0.4);
   opacity: 0;
   pointer-events: none;
   transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.5, 1), height 0.16s ease, opacity 0.16s ease;
@@ -2091,16 +2091,16 @@ body.theme-nb {
   right: -5px; top: 0;
   z-index: 2;
   white-space: nowrap;
-  font-family: "Courier New", monospace;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace;
   font-size: 9px; font-weight: 900;
-  color: #fff; background: #e0188f;
-  border: 1.5px solid #15101c;
+  color: #fff; background: #df0b81;
+  border: 1.5px solid #1c1b1b;
   padding: 1px 5px;
 }
 .sk-link.on { display: block; animation: skCombo 0.5s steps(1) infinite; }
 
 /* 連携可能カードの強調（既存 combo-ready を踏襲） */
-.bt-skills .sk-card.combo-ready { border-color: #e0188f; box-shadow: 5px 5px 0 #e0188f; }
+.bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 5px 5px 0 #df0b81; }
 
 /* ガード（上）／休憩（下）の縦列 */
 .bt-gr-col { display: flex; flex-direction: column; gap: 8px; }
@@ -2108,21 +2108,31 @@ body.theme-nb {
   flex: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 6px 4px;
-  background: #faf7f8;
-  border: 2.5px solid #15101c;
-  box-shadow: 4px 4px 0 #15101c;
-  color: #15101c;
+  background: #ffffff;
+  border: 2.5px solid #1c1b1b;
+  box-shadow: 4px 4px 0 #1c1b1b;
+  color: #1c1b1b;
   cursor: pointer;
   transition: transform 0.05s, box-shadow 0.05s;
 }
-.bt-act:active, .bt-act.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.bt-act:active, .bt-act.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
 .bt-act-ico { display: flex; align-items: center; justify-content: center; }
 .bt-act-ico canvas { image-rendering: pixelated; height: 28px; width: auto; }
-.bt-act-lbl { font-family: "Courier New", ui-monospace, monospace; font-size: 12px; font-weight: 900; letter-spacing: 0.5px; }
+.bt-act-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-size: 12px; font-weight: 900; letter-spacing: 0.5px; }
 .bt-guard { background: #d8ecff; }
 .bt-rest2 { background: #d8f7ea; }
 .bt-guard.guard-now {
-  border-color: #e0188f;
-  box-shadow: 4px 4px 0 #e0188f;
+  border-color: #df0b81;
+  box-shadow: 4px 4px 0 #df0b81;
   animation: skCombo 0.45s ease-in-out infinite;
+}
+
+/* =====================================================================
+   Hyper-Pop タイポグラフィ：見出しは Anybody（重め・チャンキー）
+   ===================================================================== */
+.nb-title, .nb-brand, .bt-title, .title-logo, .sk-title, .nb-section-lbl,
+.zone-name, .deal-name, .wpn-sheet-title, .forge-target-name,
+.result-panel h2, .topbar h1 {
+  font-family: "Anybody", "Hiragino Kaku Gothic ProN", sans-serif;
+  letter-spacing: -0.01em;
 }

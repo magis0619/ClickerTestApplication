@@ -139,7 +139,7 @@ export function render(
   stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number },
 ): void {
   // ライト基調のターミナル風ビューポート（ドットグリッド）
-  ctx.fillStyle = "#efe9ec";
+  ctx.fillStyle = "#fcf9f8";
   ctx.fillRect(0, 0, W, H);
   drawDotGrid(ctx);
 
@@ -188,13 +188,13 @@ export function render(
       // 無限の回廊：階層を表示（5階ごとはボス）
       const boss = stage.floor % 5 === 0;
       label = `FLOOR_${stage.floor}${boss ? " :: BOSS" : ""}`;
-      if (boss) ctx.fillStyle = "#d61c8a";
+      if (boss) ctx.fillStyle = "#df0b81";
     } else {
       label = `STAGE_${stage.index + 1}/${stage.count}`;
       if (stage.wave != null && stage.waves != null) {
         label += stage.boss ? " :: BOSS" : ` :: W${stage.wave + 1}/${stage.waves}`;
       }
-      if (stage.boss) ctx.fillStyle = "#d61c8a";
+      if (stage.boss) ctx.fillStyle = "#df0b81";
     }
     ctx.fillText(label, W - 10, 16);
   }
@@ -323,15 +323,15 @@ function drawEnemyCard(
   if (imminent && danger > 0.25) {
     // 次に攻撃する敵：マゼンタで強調＋グロー
     const glow = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 80 : 150));
-    ctx.shadowColor = "#e0188f";
+    ctx.shadowColor = "#df0b81";
     ctx.shadowBlur = 8 + glow * 12;
     ctx.lineWidth = 3;
-    ctx.strokeStyle = `rgba(224,24,143,${0.7 + glow * 0.3})`;
+    ctx.strokeStyle = `rgba(223,11,129,${0.7 + glow * 0.3})`;
     ctx.stroke();
     ctx.shadowBlur = 0;
   } else {
     ctx.lineWidth = targeted ? 3 : 1.5;
-    ctx.strokeStyle = targeted ? "#e0188f" : "#2a2030";
+    ctx.strokeStyle = targeted ? "#df0b81" : "#2a2030";
     ctx.stroke();
   }
   ctx.restore();
@@ -360,14 +360,14 @@ function drawEnemyCard(
   ctx.lineWidth = 3.5;
   ctx.strokeStyle = "rgba(255,255,255,0.95)";
   ctx.strokeText(e.def.name, L.cx, L.top + 20);
-  ctx.fillStyle = "#1a1024";
+  ctx.fillStyle = "#1c1b1b";
   ctx.fillText(e.def.name, L.cx, L.top + 20);
 
   // === HP / ブレイクゲージ ===
   const barX = L.left + 12, barW = L.w - 24, barY = L.top + 32;
-  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#e0188f", "#e6d9e0");
+  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#df0b81", "#e6d9e0");
   const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
-  bar(ctx, barX, barY + 9, barW, 3, bg, "#16b8d8", "#d6e6ea");
+  bar(ctx, barX, barY + 9, barW, 3, bg, "#00c2d4", "#d6e6ea");
 
   // === スプライト（震え・赤点滅・怯み・被弾を反映） ===
   let trembleX = 0, trembleY = 0;
@@ -425,7 +425,7 @@ function drawEnemyCard(
     const r = 16 + (urgent ? Math.abs(Math.sin(Date.now() / 120)) * 2.5 : 0);
     ctx.beginPath();
     ctx.arc(L.cx, ccy, r, 0, Math.PI * 2);
-    ctx.fillStyle = urgent ? "#d61c8a" : "#15101c";
+    ctx.fillStyle = urgent ? "#df0b81" : "#15101c";
     ctx.fill();
     ctx.lineWidth = 2;
     ctx.strokeStyle = urgent ? "#ff5db0" : "#3a3048";
@@ -442,7 +442,7 @@ function drawEnemyCard(
   // === ターゲットマーカー（カード下に黄色い三角） ===
   if (targeted) {
     const ty = L.top + L.h + 8;
-    ctx.fillStyle = "#e0188f";
+    ctx.fillStyle = "#df0b81";
     ctx.beginPath();
     ctx.moveTo(L.cx, ty + 8);
     ctx.lineTo(L.cx - 8, ty);
@@ -532,7 +532,7 @@ function drawTargetArrows(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (b.aliveEnemies.length <= 1) return;
   const y = 166;
   const pulse = 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 400));
-  ctx.fillStyle = `rgba(224,24,143,${0.5 + pulse * 0.4})`;
+  ctx.fillStyle = `rgba(223,11,129,${0.5 + pulse * 0.4})`;
   // 左
   ctx.beginPath();
   ctx.moveTo(14, y); ctx.lineTo(26, y - 9); ctx.lineTo(26, y + 9); ctx.closePath();
