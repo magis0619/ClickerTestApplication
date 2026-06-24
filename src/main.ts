@@ -1,9 +1,12 @@
 import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
-import { SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite } from "./render/sprites.ts";
+import {
+  SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite,
+  CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite,
+} from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
-  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, SKILL_KIND_LABEL, RARITY_ORDER,
+  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview,
   PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS, SHOP_CHESTS, REST_EN_RECOVER,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
@@ -11,6 +14,7 @@ import {
 import { audio } from "./audio/audio.ts";
 import type {
   Rarity, SfxEvent, SkillKind, Skill, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
+  EnemyKind, StageDef,
 } from "./game/types.ts";
 
 /** インスタンスの武器名・レアリティ（テンプレートから取得） */
@@ -124,16 +128,16 @@ function doGuard(): void {
   if (res === "none") audio.sfxGuard();
 }
 
-/** 詳細を開いている武器UID（再描画後も維持） */
-const expandedWeapons = new Set<string>();
 /** 削除確認中の武器UID（2タップ目で確定） */
 let pendingDeleteUid: string | null = null;
-/** インベントリ：レアリティフィルタ（all=すべて） */
-let invRarity: Rarity | "all" = "all";
+/** インベントリ：系統フィルタ（all=すべて） */
+let invClass: WeaponClass | "all" = "all";
 /** インベントリ：レア度の並び（true=降順） */
 let invSortDesc = true;
 /** インベントリ：ロック中のみ表示 */
 let invLockedOnly = false;
+/** ダンジョン選択：選択中のゾーン番号 */
+let stageSel = 0;
 /** 鍛冶屋：強化対象に選んだ武器UID（null=一覧から選ぶ画面） */
 let forgeTargetUid: string | null = null;
 /** 鍛冶屋：素材に選んだ武器UID */
@@ -149,11 +153,7 @@ function levelTag(inst: WeaponInstance): string {
 
 // ===== オーディオ =====
 window.addEventListener("pointerdown", () => audio.init());
-const muteBtn = document.createElement("button");
-muteBtn.className = "mute-btn";
-muteBtn.textContent = "♪ ON";
-muteBtn.addEventListener("click", () => { audio.init(); muteBtn.textContent = audio.toggleMute() ? "♪ OFF" : "♪ ON"; });
-document.querySelector(".topbar")?.appendChild(muteBtn);
+const topbarEl = document.querySelector(".topbar") as HTMLElement;
 
 /** 対象を前後に切り替える（左右矢印・Tキー共通） */
 function cycleTarget(dir: number): void {
@@ -201,11 +201,16 @@ function buildControls(): void {
   renderedScreen = game.screen;
   // バトル枠（canvas）は戦闘・リザルトのみ表示し、メニュー系画面では隠す
   canvas.style.display = (game.screen === "battle" || game.screen === "result") ? "block" : "none";
-  // 戦闘中はライト基調のターミナル風テーマに切替え、上部バーを表示
+  // 戦闘中はバトル専用テーマ、メニュー系はターミナル風ライトテーマ(theme-nb)
   const inBattle = game.screen === "battle";
+  const themed = inBattle || game.screen !== "result"; // result以外は全てテーマ適用
+  const menuThemed = themed && !inBattle; // メニュー系（共通上部バーを出す）
   document.body.classList.toggle("in-battle", inBattle);
+  document.body.classList.toggle("theme-nb", menuThemed);
   battleTop.style.display = inBattle ? "" : "none";
   if (!inBattle) battleTop.innerHTML = "";
+  if (menuThemed) buildTopHeader();
+  else { topbarEl.innerHTML = ""; topbarEl.className = "topbar"; }
   switch (game.screen) {
     case "title": buildTitle(); break;
     case "stageSelect": buildStageSelect(); break;
@@ -218,7 +223,6 @@ function buildControls(): void {
 }
 
 function buildTitle(): void {
-  controls.appendChild(topBar());
   const hero = document.createElement("div");
   hero.className = "title-hero";
   const spr = makeSpriteCanvas(WARDEN, 6);
@@ -228,20 +232,63 @@ function buildTitle(): void {
   cap.innerHTML = `<div class="title-logo">ASTRAL WARDEN</div><div class="title-sub">タイミングアクションRPG</div>`;
   hero.appendChild(cap);
   controls.appendChild(hero);
-  controls.appendChild(bigButton("⚔ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
+  controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
   controls.appendChild(bottomNav());
 }
 
-/** 上部の情報バー（戦闘力＋所持ゴールド） */
-function topBar(): HTMLElement {
-  const bar = document.createElement("div");
-  bar.className = "top-bar";
-  const power = (["slash", "pierce", "crush"] as WeaponClass[])
+/** 共通の最上部バー（BATTLE_ROYALE_V1 ＋ 所持ゴールド ＋ 設定/ヘルプ） */
+function buildTopHeader(): void {
+  topbarEl.innerHTML = "";
+  topbarEl.className = "topbar nb-topbar";
+  const brand = document.createElement("div");
+  brand.className = "nb-brand";
+  brand.textContent = "BATTLE_ROYALE_V1";
+  const right = document.createElement("div");
+  right.className = "nb-top-right";
+  const gold = document.createElement("span");
+  gold.className = "nb-top-gold";
+  gold.innerHTML = `<span class="gold-amt">${game.gold.toLocaleString()}</span><span class="gold-unit">G</span>`;
+  const gear = document.createElement("button");
+  gear.className = "nb-icon-btn";
+  gear.textContent = "⚙";
+  gear.addEventListener("click", () => { audio.init(); gear.classList.toggle("muted", audio.toggleMute()); });
+  const help = document.createElement("button");
+  help.className = "nb-icon-btn";
+  help.textContent = "?";
+  right.appendChild(gold);
+  right.appendChild(gear);
+  right.appendChild(help);
+  topbarEl.appendChild(brand);
+  topbarEl.appendChild(right);
+}
+
+/** 画面見出し（任意のSCREENタグ＋大きな斜体タイトル） */
+function screenHead(title: string, tag?: string): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "nb-head";
+  let html = "";
+  if (tag) html += `<span class="nb-screen-tag">${tag}</span>`;
+  html += `<h2 class="nb-title">${title}</h2>`;
+  wrap.innerHTML = html;
+  return wrap;
+}
+
+/** セクション見出し（左に大文字ラベル、右に任意の要素） */
+function sectionLabel(text: string, right?: HTMLElement): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "nb-section";
+  const lbl = document.createElement("span");
+  lbl.className = "nb-section-lbl";
+  lbl.textContent = text;
+  row.appendChild(lbl);
+  if (right) row.appendChild(right);
+  return row;
+}
+
+/** プレイヤーの戦闘力（装備中3系統の実効攻撃合計） */
+function playerPower(): number {
+  return (["slash", "pierce", "crush"] as WeaponClass[])
     .reduce((s, c) => s + (game.equippedWeapon(c)?.attack ?? 0), 0);
-  bar.innerHTML =
-    `<span class="tb-power">⚔ 戦闘力 <b>${power}</b></span>` +
-    `<span class="tb-gold"><span class="gold-amt">${game.gold.toLocaleString()}</span><span class="gold-unit">G</span></span>`;
-  return bar;
 }
 
 /** 下部ナビゲーション（ホーム/ダンジョン/インベントリ/ショップ） */
@@ -275,11 +322,7 @@ function rarityGlowClass(r: Rarity): string {
 
 // ===== 鍛冶屋（武器強化） =====
 function buildForge(): void {
-  controls.appendChild(topBar());
-  const head = document.createElement("h2");
-  head.className = "screen-title";
-  head.textContent = "🔨 鍛冶屋";
-  controls.appendChild(head);
+  controls.appendChild(screenHead("MASTER FORGE", "🔧 SCREEN_21"));
 
   const target = forgeTargetUid
     ? game.save.inventory.find((it) => it.uid === forgeTargetUid)
@@ -517,70 +560,81 @@ function buildAwakenSection(target: WeaponInstance): void {
 }
 
 function buildShop(): void {
-  controls.appendChild(topBar());
-  const head = document.createElement("h2");
-  head.className = "screen-title";
-  head.textContent = "🛒 ショップ";
-  controls.appendChild(head);
+  controls.appendChild(screenHead("GRAND BAZAAR", "SCREEN_19"));
 
-  // 宝箱（購入＝即開封。レアリティ帯の武器がランダムで出る）
-  const chestHead = document.createElement("div");
-  chestHead.className = "shop-subhead";
-  chestHead.textContent = "🎁 宝箱（購入で即開封）";
-  controls.appendChild(chestHead);
-  const chestList = document.createElement("div");
-  chestList.className = "shop-list";
-  for (const chest of SHOP_CHESTS) chestList.appendChild(chestRow(chest));
-  controls.appendChild(chestList);
+  // FLASH DEALS = 宝箱（横スクロールの大カード／購入で即開封）
+  controls.appendChild(sectionLabel("FLASH DEALS", timerChip()));
+  const deals = document.createElement("div");
+  deals.className = "deal-row";
+  for (const chest of SHOP_CHESTS) deals.appendChild(dealCard(chest));
+  controls.appendChild(deals);
 
-  // 武器（直接購入。一度買うと売り切れ）
-  const wpnHead = document.createElement("div");
-  wpnHead.className = "shop-subhead";
-  wpnHead.textContent = "🗡 武器";
-  controls.appendChild(wpnHead);
+  // DAILY ARMORY = 武器（行リスト／一度買うと売り切れ）
+  controls.appendChild(sectionLabel("DAILY ARMORY"));
   const list = document.createElement("div");
-  list.className = "shop-list";
+  list.className = "armory-list";
   for (const item of SHOP_ITEMS) {
     const w = getWeapon(item.baseId);
-    if (w) list.appendChild(shopRow(item, w));
+    if (w) list.appendChild(armoryRow(item, w));
   }
   controls.appendChild(list);
   controls.appendChild(bottomNav());
 }
 
-/** ショップの宝箱1種（レアリティ色＋価格＋開封ボタン） */
-function chestRow(chest: ShopChest): HTMLElement {
+/** FLASH DEALS の締切タイマー（その日の終わりまで・装飾） */
+function timerChip(): HTMLElement {
+  const now = new Date();
+  const end = new Date(now); end.setHours(24, 0, 0, 0);
+  const sec = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000));
+  const hh = String(Math.floor(sec / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+  const ss = String(sec % 60).padStart(2, "0");
+  const chip = document.createElement("span");
+  chip.className = "deal-timer";
+  chip.textContent = `⏱ ${hh}:${mm}:${ss}`;
+  return chip;
+}
+
+/** FLASH DEAL（宝箱）の大カード。購入で即開封 */
+function dealCard(chest: ShopChest): HTMLElement {
   const color = isRainbowRarity(chest.rarity) ? "#ff7de9" : RARITY_COLOR[chest.rarity];
   const card = document.createElement("div");
-  card.className = ("shop-card chest-card " + rarityGlowClass(chest.rarity)).trim();
+  card.className = ("deal-card " + rarityGlowClass(chest.rarity)).trim();
 
-  const icon = document.createElement("div");
-  icon.className = "shop-icon";
-  const cv = makeSpriteCanvas(chestSprite(color, false), 3);
+  const img = document.createElement("div");
+  img.className = "deal-img";
+  const cv = makeSpriteCanvas(chestSprite(color, false), 5);
   cv.className = "wpn-sprite";
-  icon.appendChild(cv);
-  card.appendChild(icon);
+  img.appendChild(cv);
+  const ribbon = document.createElement("span");
+  ribbon.className = "deal-ribbon" + (isRainbowRarity(chest.rarity) ? " rainbow-text" : "");
+  ribbon.textContent = RARITY_LABEL[chest.rarity];
+  img.appendChild(ribbon);
+  card.appendChild(img);
 
-  const info = document.createElement("div");
-  info.className = "shop-info";
-  info.innerHTML =
-    `<div class="shop-name">${chest.name}</div>` +
-    `<div ${rarityAttr(chest.rarity, "shop-stars")}>${rarityStars(chest.rarity)} ` +
-    `<span class="shop-rlabel">${RARITY_LABEL[chest.rarity]}の武器</span></div>` +
-    `<div class="shop-stat">${RARITY_LABEL[chest.rarity]}帯の武器がランダムで出現</div>`;
-  card.appendChild(info);
+  const name = document.createElement("div");
+  name.className = "deal-name";
+  name.textContent = chest.name;
+  card.appendChild(name);
 
+  const sub = document.createElement("div");
+  sub.className = "deal-sub";
+  sub.textContent = `${RARITY_LABEL[chest.rarity]}帯 ランダム`;
+  card.appendChild(sub);
+
+  const foot = document.createElement("div");
+  foot.className = "deal-foot";
+  const price = document.createElement("span");
+  price.className = "deal-price";
+  price.textContent = `${chest.price.toLocaleString()} G`;
   const buy = document.createElement("button");
-  buy.className = "shop-buy";
+  buy.className = "deal-buy";
+  buy.textContent = "🛒";
   buy.disabled = game.gold < chest.price;
-  buy.innerHTML =
-    `<span class="shop-price">${chest.price.toLocaleString()} G</span>` +
-    `<span class="shop-buy-lbl">開封</span>`;
-  buy.addEventListener("click", () => {
-    const inst = game.buyChest(chest);
-    if (inst) openChestModal(inst);
-  });
-  card.appendChild(buy);
+  buy.addEventListener("click", () => { const inst = game.buyChest(chest); if (inst) openChestModal(inst); });
+  foot.appendChild(price);
+  foot.appendChild(buy);
+  card.appendChild(foot);
   return card;
 }
 
@@ -611,318 +665,377 @@ function openChestModal(inst: WeaponInstance): void {
   window.setTimeout(() => openChest(chest, reward, color, rarity, 7), 350);
 }
 
-/** ショップの1商品（武器画像＋情報＋価格/購入ボタン） */
-function shopRow(item: ShopItem, w: Weapon): HTMLElement {
+/** DAILY ARMORY の1行（武器アイコン＋情報＋BUY/SOLD） */
+function armoryRow(item: ShopItem, w: Weapon): HTMLElement {
   const sold = game.isSoldOut(item.baseId);
-  const card = document.createElement("div");
-  card.className = ("shop-card wclass-" + w.weapon + " " + rarityGlowClass(w.rarity)).trim();
-  if (sold) card.classList.add("shop-sold");
+  const row = document.createElement("div");
+  row.className = "armory-row" + (sold ? " sold" : "");
 
   const icon = document.createElement("div");
-  icon.className = "shop-icon";
-  icon.appendChild(weaponSpriteEl(item.baseId, w.weapon, 3));
-  card.appendChild(icon);
+  icon.className = "armory-icon";
+  icon.appendChild(weaponSpriteEl(item.baseId, w.weapon, 2));
+  row.appendChild(icon);
 
   const info = document.createElement("div");
-  info.className = "shop-info";
+  info.className = "armory-info";
   info.innerHTML =
-    `<div class="shop-name">${w.name}</div>` +
-    `<div ${rarityAttr(w.rarity, "shop-stars")}>${rarityStars(w.rarity)} ` +
-    `<span class="shop-rlabel">${RARITY_LABEL[w.rarity]}・${WEAPON_LABEL[w.weapon]}</span></div>` +
-    `<div class="shop-stat">⚔ 攻撃力 ${w.attack}${w.critChance ? `　会心 ${w.critChance}%` : ""}　Break ${w.breakPower}</div>`;
-  card.appendChild(info);
+    `<div class="armory-name">${w.name}</div>` +
+    `<div class="armory-sub">${RARITY_LABEL[w.rarity]}・${WEAPON_LABEL[w.weapon]}　ATK ${w.attack}${w.critChance ? `　CRIT ${w.critChance}%` : ""}</div>` +
+    `<div class="armory-price">${item.price.toLocaleString()} G</div>`;
+  row.appendChild(info);
 
   const buy = document.createElement("button");
-  buy.className = "shop-buy";
+  buy.className = "armory-buy";
+  buy.textContent = sold ? "SOLD" : "BUY";
   buy.disabled = sold || game.gold < item.price;
-  buy.innerHTML = sold
-    ? `<span class="shop-buy-lbl">売切</span>`
-    : `<span class="shop-price">${item.price.toLocaleString()} G</span>` +
-      `<span class="shop-buy-lbl">購入</span>`;
   buy.addEventListener("click", () => {
     if (game.buyWeapon(item.baseId, item.price)) { audio.sfxPerfect(); buildControls(); }
   });
-  card.appendChild(buy);
-
-  // 売り切れの帯（カード上部に SOLD OUT）
-  if (sold) {
-    const banner = document.createElement("div");
-    banner.className = "shop-sold-banner";
-    banner.textContent = "SOLD OUT";
-    card.appendChild(banner);
-  }
-  return card;
+  row.appendChild(buy);
+  return row;
 }
 
-const STAGE_EMOJI = ["🌲", "🏛️", "👑", "❄️", "♾️", "🔥", "⚔️"];
+/** 敵種別→ダンジョンの属性タグ（色つきチップ）と代表スプライト */
+const KIND_TAG: Record<EnemyKind, { label: string; cls: string }> = {
+  carapace: { label: "🛡 ARMOR", cls: "tag-armor" },
+  phantom: { label: "👻 PHANTOM", cls: "tag-phantom" },
+  aerial: { label: "🌪 AERIAL", cls: "tag-aerial" },
+};
+const KIND_SPRITE: Record<EnemyKind, Sprite> = { carapace: CARAPACE, phantom: PHANTOM, aerial: AERIAL };
+
+function stageKinds(s: StageDef): EnemyKind[] {
+  const set = new Set<EnemyKind>();
+  for (const wave of s.waves) for (const e of wave) set.add(e.kind);
+  return [...set];
+}
+function stageThumbSprite(s: StageDef): Sprite {
+  for (let i = s.waves.length - 1; i >= 0; i--) {
+    if (s.waves[i].some((e) => e.boss)) return BOSS;
+  }
+  const last = s.waves[s.waves.length - 1]?.[0];
+  return last ? KIND_SPRITE[last.kind] : BOSS;
+}
 
 function buildStageSelect(): void {
-  controls.appendChild(topBar());
-  const head = document.createElement("h2");
-  head.className = "screen-title";
-  head.textContent = "⚔ ステージ選択";
-  controls.appendChild(head);
+  controls.appendChild(screenHead("DUNGEON HUB"));
+  if (!game.stageUnlocked(stageSel)) stageSel = 0;
 
   const list = document.createElement("div");
-  list.className = "stage-list";
-  STAGES.forEach((s, i) => {
-    const unlocked = game.stageUnlocked(i);
-    const cleared = game.save.bestStage > i;
-    const diff = Math.min(5, i + 2);
-    const card = document.createElement("div");
-    card.className = "stage-card" + (unlocked ? "" : " locked");
-
-    // サムネイル
-    const thumb = document.createElement("div");
-    thumb.className = "st-thumb";
-    thumb.textContent = STAGE_EMOJI[i] ?? "⚔️";
-    card.appendChild(thumb);
-
-    // 情報
-    const info = document.createElement("div");
-    info.className = "st-info";
-    const bossName = s.endless
-      ? "" : s.waves[s.waves.length - 1]?.find((e) => e.boss)?.name ?? s.waves[s.waves.length - 1]?.[0]?.name ?? "";
-    const sub = s.endless
-      ? `最高到達 <b>${game.save.bestFloor}</b> 階　/　敵はランダム出現`
-      : `ボス: ${bossName}`;
-    info.innerHTML =
-      `<div class="st-no">STAGE ${i + 1}</div>` +
-      `<div class="st-name">${s.name}</div>` +
-      `<div class="st-meta"><span class="st-stars">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` +
-      `<span class="st-lv">推奨Lv ${s.recommendLv ?? (i + 1) * 5}</span></div>` +
-      `<div class="st-desc">${s.desc}</div>` +
-      `<div class="st-sub">${sub}</div>`;
-    // ドロップ可能性のある武器を画像で表示
-    const drops = stageDropPreview(i);
-    if (drops.length && unlocked) {
-      const dropRow = document.createElement("div");
-      dropRow.className = "st-drops";
-      const label = document.createElement("span");
-      label.className = "st-drops-label";
-      label.textContent = "ドロップ";
-      dropRow.appendChild(label);
-      for (const id of drops.slice(0, 5)) {
-        const w = getWeapon(id);
-        if (!w) continue;
-        const slot = document.createElement("span");
-        slot.className = "st-drop";
-        slot.appendChild(weaponSpriteEl(id, w.weapon, 2));
-        dropRow.appendChild(slot);
-      }
-      info.appendChild(dropRow);
-    }
-    card.appendChild(info);
-
-    // 右上バッジ（CLEAR / 未解放）
-    if (cleared) {
-      const badge = document.createElement("div");
-      badge.className = "st-badge st-clear";
-      badge.textContent = "CLEAR!";
-      card.appendChild(badge);
-    } else if (!unlocked) {
-      const badge = document.createElement("div");
-      badge.className = "st-badge st-locked";
-      badge.textContent = "🔒 未解放";
-      card.appendChild(badge);
-    }
-
-    // 挑戦ボタン
-    if (unlocked) {
-      const go = document.createElement("button");
-      go.className = "st-go";
-      go.textContent = "挑戦 ▶";
-      go.addEventListener("click", () => withFade(() => game.startStage(i)));
-      card.appendChild(go);
-    }
-    list.appendChild(card);
-  });
+  list.className = "zone-list";
+  STAGES.forEach((s, i) => list.appendChild(zoneCard(s, i)));
   controls.appendChild(list);
+
+  controls.appendChild(powerPanel());
+
+  const enter = document.createElement("button");
+  enter.className = "nb-cta";
+  enter.innerHTML = "▶ ENTER DUNGEON";
+  enter.disabled = !game.stageUnlocked(stageSel);
+  enter.addEventListener("click", () => withFade(() => game.startStage(stageSel)));
+  controls.appendChild(enter);
+
   controls.appendChild(bottomNav());
 }
 
+/** ゾーン（ステージ）カード。タップで選択 */
+function zoneCard(s: StageDef, i: number): HTMLElement {
+  const unlocked = game.stageUnlocked(i);
+  const cleared = game.save.bestStage > i;
+  const card = document.createElement("div");
+  card.className = "zone-card" + (unlocked ? "" : " locked") + (i === stageSel ? " sel" : "");
+  const zno = String(i + 1).padStart(2, "0");
+
+  if (!unlocked) {
+    card.innerHTML =
+      `<div class="zone-top"><span class="zone-tag">ZONE ${zno}</span>` +
+      `<span class="zone-status st-locked">🔒 LOCKED</span></div>` +
+      `<div class="zone-locked-name">??? LOCKED ZONE</div>`;
+    return card;
+  }
+
+  const statusTxt = cleared ? "CLEAR" : s.endless ? `${game.save.bestFloor}F` : "OPEN";
+  const top = document.createElement("div");
+  top.className = "zone-top";
+  top.innerHTML =
+    `<span class="zone-tag">ZONE ${zno}</span>` +
+    `<span class="zone-status-wrap"><span class="zone-status-lbl">STATUS</span>` +
+    `<span class="zone-status">${statusTxt}</span></span>`;
+  card.appendChild(top);
+
+  const name = document.createElement("div");
+  name.className = "zone-name";
+  name.textContent = s.name;
+  card.appendChild(name);
+
+  const body = document.createElement("div");
+  body.className = "zone-body";
+  const thumb = document.createElement("div");
+  thumb.className = "zone-thumb";
+  thumb.appendChild(makeSpriteCanvas(stageThumbSprite(s), 4));
+  body.appendChild(thumb);
+
+  const meta = document.createElement("div");
+  meta.className = "zone-meta";
+  const tags = document.createElement("div");
+  tags.className = "zone-tags";
+  for (const k of stageKinds(s)) {
+    const chip = document.createElement("span");
+    chip.className = "zone-chip " + KIND_TAG[k].cls;
+    chip.textContent = KIND_TAG[k].label;
+    tags.appendChild(chip);
+  }
+  if (s.endless) {
+    const chip = document.createElement("span");
+    chip.className = "zone-chip tag-endless";
+    chip.textContent = "♾ ENDLESS";
+    tags.appendChild(chip);
+  }
+  meta.appendChild(tags);
+  const drops = stageDropPreview(i);
+  if (drops.length) {
+    const loot = document.createElement("div");
+    loot.className = "zone-loot";
+    loot.innerHTML = `<span class="zone-loot-lbl">LOOT:</span>`;
+    for (const id of drops.slice(0, 4)) {
+      const w = getWeapon(id);
+      if (!w) continue;
+      const sl = document.createElement("span");
+      sl.className = "zone-loot-item";
+      sl.appendChild(weaponSpriteEl(id, w.weapon, 2));
+      loot.appendChild(sl);
+    }
+    meta.appendChild(loot);
+  }
+  body.appendChild(meta);
+  card.appendChild(body);
+
+  card.addEventListener("click", () => { stageSel = i; buildControls(); });
+  return card;
+}
+
+/** Power Comparison パネル（プレイヤー戦闘力 vs ステージ推奨） */
+function powerPanel(): HTMLElement {
+  const s = STAGES[stageSel];
+  const rec = s?.recommendLv ?? (stageSel + 1) * 5;
+  const power = playerPower();
+  const ref = Math.max(1, rec * 3);
+  const pct = Math.max(5, Math.min(100, Math.round((power / ref) * 100)));
+  const chance = pct >= 80 ? "HIGH" : pct >= 50 ? "MED" : "LOW";
+  const chanceCls = pct >= 80 ? "sv-high" : pct >= 50 ? "sv-med" : "sv-low";
+  const segN = 12;
+  const filled = Math.round((pct / 100) * segN);
+  let segs = "";
+  for (let k = 0; k < segN; k++) segs += `<span class="bt-seg${k < filled ? " on" : ""}"></span>`;
+  const panel = document.createElement("div");
+  panel.className = "power-panel";
+  panel.innerHTML =
+    `<div class="power-head"><span class="power-title">Power Comparison</span>` +
+    `<span class="power-vs">LV ${power} vs ${s?.name ?? ""} (LV ${rec})</span></div>` +
+    `<div class="bt-seg-bar bt-seg-hp">${segs}</div>` +
+    `<div class="power-foot"><span class="power-surv ${chanceCls}">SURVIVAL CHANCE: ${chance}</span>` +
+    `<span class="power-pct">${pct}%</span></div>`;
+  return panel;
+}
+
 function buildInventory(): void {
-  controls.appendChild(topBar());
+  controls.appendChild(screenHead("ARSENAL"));
 
-  const head = document.createElement("div");
-  head.className = "inv-titlebar";
-  head.innerHTML =
-    `<h2 class="screen-title">🗡 インベントリ</h2>` +
-    `<span class="inv-count">所持 ${game.save.inventory.length} / 100</span>`;
-  controls.appendChild(head);
+  // 所持容量バー（INVENTORY CAPACITY）
+  const count = game.save.inventory.length;
+  const max = 100, segN = 20;
+  const filled = Math.min(segN, Math.round((count / max) * segN));
+  let segs = "";
+  for (let k = 0; k < segN; k++) segs += `<span class="bt-seg${k < filled ? " on" : ""}"></span>`;
+  const cap = document.createElement("div");
+  cap.className = "ars-cap";
+  cap.innerHTML =
+    `<div class="ars-cap-row"><span class="ars-cap-lbl">INVENTORY CAPACITY</span>` +
+    `<span class="ars-cap-num">${count} / ${max}</span></div>` +
+    `<div class="bt-seg-bar bt-seg-en">${segs}</div>`;
+  controls.appendChild(cap);
 
-  // フィルタ/ソートのツールバー
+  // 系統タブ（ALL / 斬 / 突 / 打）
+  const tabs = document.createElement("div");
+  tabs.className = "ars-tabs";
+  tabs.appendChild(classTab("all", "ALL"));
+  tabs.appendChild(classTab("slash", "斬撃"));
+  tabs.appendChild(classTab("pierce", "刺突"));
+  tabs.appendChild(classTab("crush", "打撃"));
+  controls.appendChild(tabs);
+
+  // ツール（ソート・ロックのみ）
   const tools = document.createElement("div");
-  tools.className = "inv-tools";
+  tools.className = "ars-tools";
   const sortBtn = document.createElement("button");
-  sortBtn.className = "inv-tool";
-  sortBtn.textContent = invSortDesc ? "レア度 降順 ▼" : "レア度 昇順 ▲";
+  sortBtn.className = "ars-tool";
+  sortBtn.textContent = invSortDesc ? "レア度 ▼" : "レア度 ▲";
   sortBtn.addEventListener("click", () => { invSortDesc = !invSortDesc; buildControls(); });
   const lockBtn = document.createElement("button");
-  lockBtn.className = "inv-tool" + (invLockedOnly ? " inv-tool-on" : "");
-  lockBtn.textContent = invLockedOnly ? "🔒 ロックのみ" : "🔓 すべて表示";
+  lockBtn.className = "ars-tool" + (invLockedOnly ? " on" : "");
+  lockBtn.textContent = invLockedOnly ? "🔒 ロックのみ" : "🔓 すべて";
   lockBtn.addEventListener("click", () => { invLockedOnly = !invLockedOnly; buildControls(); });
   tools.appendChild(sortBtn);
   tools.appendChild(lockBtn);
   controls.appendChild(tools);
 
-  // レアリティのフィルタチップ
-  const chips = document.createElement("div");
-  chips.className = "inv-chips";
-  chips.appendChild(rarityChip("all", "すべて"));
-  for (const r of [...RARITY_ORDER].reverse()) chips.appendChild(rarityChip(r, rarityStars(r)));
-  controls.appendChild(chips);
-
-  // 一覧（全武器を対象にフィルタ＋ソート）
+  // グリッド（フィルタ＋ソート）
   let items = game.save.inventory.slice();
-  if (invRarity !== "all") items = items.filter((it) => instRarity(it) === invRarity);
+  if (invClass !== "all") items = items.filter((it) => getWeapon(it.baseId)?.weapon === invClass);
   if (invLockedOnly) items = items.filter((it) => game.isLocked(it.uid));
   items.sort((a, b) => (invSortDesc ? rarityDesc(a, b) : -rarityDesc(a, b)));
 
-  const group = document.createElement("div");
-  group.className = "inv-group";
-  if (items.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "inv-empty";
-    empty.textContent = "（該当する武器はありません）";
-    group.appendChild(empty);
-  }
-  for (const inst of items) group.appendChild(weaponRow(inst, true));
-  controls.appendChild(group);
+  const grid = document.createElement("div");
+  grid.className = "ars-grid";
+  for (const inst of items) grid.appendChild(arsenalCard(inst));
+  // CRAFT NEW（ショップへ）
+  const craft = document.createElement("button");
+  craft.className = "ars-craft";
+  craft.innerHTML = `<span class="ars-craft-plus">＋</span><span>CRAFT NEW</span>`;
+  craft.addEventListener("click", () => { game.goShop(); buildControls(); });
+  grid.appendChild(craft);
+  controls.appendChild(grid);
 
   controls.appendChild(bottomNav());
 }
 
-/** レアリティ絞り込みチップ */
-function rarityChip(r: Rarity | "all", label: string): HTMLElement {
+/** 系統フィルタタブ */
+function classTab(cls: WeaponClass | "all", label: string): HTMLElement {
   const b = document.createElement("button");
-  const on = invRarity === r;
-  b.className = "inv-chip" + (on ? " inv-chip-on" : "");
-  if (r !== "all") {
-    b.classList.add("rarity-chip");
-    if (isRainbowRarity(r)) b.classList.add("rainbow-text");
-    else b.style.color = RARITY_COLOR[r];
-  }
+  b.className = "ars-tab" + (invClass === cls ? " on" : "");
   b.textContent = label;
-  b.addEventListener("click", () => { invRarity = r; buildControls(); });
+  b.addEventListener("click", () => { invClass = cls; buildControls(); });
   return b;
 }
 
-/** 武器1本のカード（ヘッダー＋装備/詳細ボタン＋展開する詳細） */
-function weaponRow(inst: WeaponInstance, equippable: boolean): HTMLElement {
+/** ARSENAL グリッドの武器カード。タップで詳細モーダル */
+function arsenalCard(inst: WeaponInstance): HTMLElement {
   const w = getWeapon(inst.baseId)!;
-  const equipped = game.save.equipped[w.weapon] === inst.uid;
-  const card = document.createElement("div");
-  // エピック以上はカード自体をレアリティ色で発光
-  card.className = ("wpn-card " + rarityGlowClass(w.rarity)).trim();
-
-  const head = document.createElement("div");
-  head.className = "wpn-row" + (equipped ? " wpn-on" : "");
-  const rarity = instRarity(inst);
-  const locked = game.isLocked(inst.uid);
   const eff = effectiveWeapon(inst) ?? w;
-  const skillNames = inst.skillIds.map((id) => getSkill(id)?.name).filter(Boolean).join(" → ");
-  // 左：大きい武器ドット絵 ／ 右（中央より右）：攻撃力・スキルを大きく
-  head.innerHTML =
-    `<span class="wpn-icon wclass-${w.weapon}"></span>` +
-    `<span class="wpn-left">` +
-    `<span class="wpn-name">${instName(inst)}${equipped ? ` <span class="wpn-eqtag">装備中</span>` : ""}</span>` +
-    `<span ${rarityAttr(rarity, "wpn-stars")}>${rarityStars(rarity)} ` +
-    `<span class="wpn-rlabel">${RARITY_LABEL[rarity]}</span></span>` +
-    levelTag(inst) + `</span>` +
-    `<span class="wpn-right">` +
-    `<span class="wpn-atk">⚔ 攻撃力 <b>${eff.attack}</b>${eff.critChance ? `　会心 ${eff.critChance}%` : ""}</span>` +
-    `<span class="wpn-skills">${skillNames || "スキルなし"}</span></span>` +
-    `<span class="wpn-lock${locked ? " on" : ""}">${locked ? "🔒" : ""}</span>`;
-  // 系統の絵文字に代えて、武器ごとのドット絵を大きく表示
-  head.querySelector(".wpn-icon")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 4));
-  card.appendChild(head);
-
-  const acts = document.createElement("div");
-  acts.className = "wpn-acts";
-  if (equippable) {
-    const eq = document.createElement("button");
-    eq.className = "wpn-act";
-    eq.textContent = equipped ? "装備中" : "装備";
-    eq.disabled = equipped;
-    eq.addEventListener("click", () => { if (game.equip(inst.uid)) buildControls(); });
-    acts.appendChild(eq);
-  }
-  const det = document.createElement("button");
-  det.className = "wpn-act";
-  const open = expandedWeapons.has(inst.uid);
-  det.textContent = open ? "詳細 ▲" : "詳細 ▼";
-  det.addEventListener("click", () => {
-    if (expandedWeapons.has(inst.uid)) expandedWeapons.delete(inst.uid);
-    else expandedWeapons.add(inst.uid);
-    buildControls();
-  });
-  acts.appendChild(det);
-
-  // 削除ロックの切替（インベントリのみ）
-  if (equippable) {
-    const lock = document.createElement("button");
-    const locked = game.isLocked(inst.uid);
-    lock.className = "wpn-act wpn-lockbtn" + (locked ? " on" : "");
-    lock.textContent = locked ? "🔒 ロック中" : "🔓 ロック";
-    lock.addEventListener("click", () => { game.toggleLock(inst.uid); buildControls(); });
-    acts.appendChild(lock);
-  }
-
-  // 削除（インベントリのみ・装備中/ロック中は不可・2タップ確認）
-  if (equippable && game.canDelete(inst.uid)) {
-    const del = document.createElement("button");
-    del.className = "wpn-act wpn-del";
-    const confirming = pendingDeleteUid === inst.uid;
-    del.textContent = confirming ? "本当に削除？" : "削除";
-    if (confirming) del.classList.add("wpn-del-confirm");
-    del.addEventListener("click", () => {
-      if (pendingDeleteUid === inst.uid) {
-        pendingDeleteUid = null;
-        game.deleteWeapon(inst.uid);
-        expandedWeapons.delete(inst.uid);
-      } else {
-        pendingDeleteUid = inst.uid;
-      }
-      buildControls();
-    });
-    acts.appendChild(del);
-  }
-  card.appendChild(acts);
-
-  if (open) card.appendChild(weaponDetail(inst));
+  const r = instRarity(inst);
+  const equipped = game.save.equipped[w.weapon] === inst.uid;
+  const locked = game.isLocked(inst.uid);
+  const card = document.createElement("button");
+  card.className = ("ars-card wclass-" + w.weapon + " " + rarityGlowClass(r)).trim();
+  card.innerHTML =
+    `<div class="ars-card-top"><span ${rarityAttr(r, "ars-card-rar")}>${RARITY_LABEL[r]}</span>` +
+    `<span class="ars-card-fav">${locked ? "★" : ""}</span></div>` +
+    `<div class="ars-card-img"></div>` +
+    `<div class="ars-card-name">${instName(inst)}</div>` +
+    (equipped
+      ? `<div class="ars-card-eq">EQUIPPED</div>`
+      : `<div class="ars-card-stats"><span>ATK ${eff.attack}</span><span>Lv ${inst.level ?? 1}</span></div>`);
+  card.querySelector(".ars-card-img")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
+  card.addEventListener("click", () => openWeaponModal(inst.uid));
   return card;
 }
 
-/** 武器の詳細パラメータ＋スキル説明 */
-function weaponDetail(inst: WeaponInstance): HTMLElement {
+/** 武器詳細モーダル（PLASMA RIPPER 風：画像・ステータス・改造ログ・操作） */
+function openWeaponModal(uid: string): void {
+  const inst = game.save.inventory.find((it) => it.uid === uid);
+  if (!inst) return;
   const w = getWeapon(inst.baseId)!;
-  const box = document.createElement("div");
-  box.className = "wpn-detail";
+  const eff = effectiveWeapon(inst) ?? w;
+  const r = instRarity(inst);
+  const equipped = game.save.equipped[w.weapon] === inst.uid;
+  const locked = game.isLocked(inst.uid);
 
-  const rarity = instRarity(inst);
-  const meta = document.createElement("div");
-  meta.className = "wd-meta";
-  meta.innerHTML =
-    `<div ${rarityAttr(rarity, "wd-stars")}>${rarityStars(rarity)} ` +
-    `<span class="wd-rlabel">${RARITY_LABEL[rarity]}</span>　<span class="wd-cls">${WEAPON_LABEL[w.weapon]}</span></div>` +
-    `<div>${w.desc}</div>` +
-    `<div class="wd-rand">⚔ 攻撃力 <b>${w.attack}</b>　会心率 <b>${w.critChance}%</b>　Break <b>${w.breakPower}</b></div>` +
-    `<div class="wd-note">武器を押すたびに ①→②→… の順でスキルが発動します</div>`;
-  box.appendChild(meta);
+  const overlay = document.createElement("div");
+  overlay.className = "wpn-modal";
+  const sheet = document.createElement("div");
+  sheet.className = ("wpn-sheet " + rarityGlowClass(r)).trim();
 
+  const head = document.createElement("div");
+  head.className = "wpn-sheet-head";
+  head.innerHTML =
+    `<div class="wpn-sheet-title">${instName(inst)}</div><button class="wpn-sheet-x">×</button>`;
+  sheet.appendChild(head);
+
+  const chips = document.createElement("div");
+  chips.className = "wpn-sheet-chips";
+  chips.innerHTML =
+    `<span ${rarityAttr(r, "wpn-chip")}>${RARITY_LABEL[r]}</span>` +
+    `<span class="wpn-chip wpn-chip-cls">${WEAPON_LABEL[w.weapon]}</span>` +
+    `<span class="wpn-chip wpn-chip-lv">${levelTag(inst)}</span>` +
+    (equipped ? `<span class="wpn-chip wpn-chip-eq">EQUIPPED</span>` : "");
+  sheet.appendChild(chips);
+
+  const img = document.createElement("div");
+  img.className = "wpn-sheet-img";
+  img.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 6));
+  sheet.appendChild(img);
+
+  const stats = document.createElement("div");
+  stats.className = "wpn-sheet-stats";
+  stats.innerHTML =
+    statBox("ATK", `${eff.attack}`) + statBox("CRIT", `${eff.critChance}%`) + statBox("BREAK", `${eff.breakPower}`);
+  sheet.appendChild(stats);
+
+  // Modification Log = スキル
+  const log = document.createElement("div");
+  log.className = "wpn-sheet-log";
+  log.innerHTML = `<div class="wpn-log-head">Modification Log</div>`;
   inst.skillIds.forEach((id, i) => {
-    const s = getSkill(id);
-    if (!s) return;
+    const s = getSkill(id); if (!s) return;
     const row = document.createElement("div");
-    row.className = "wd-skill";
+    row.className = "wpn-log-row";
     row.innerHTML =
-      `<div class="wd-sk-head">${i + 1}. ${KIND_ICON[s.kind]} ${s.name} ` +
-      `<span class="wd-kind">[${SKILL_KIND_LABEL[s.kind]}]</span> <span class="wd-cost">EN ${s.enCost}</span></div>` +
-      `<div class="wd-sk-desc">${skillDescription(s)}</div>`;
-    box.appendChild(row);
+      `<span class="wpn-log-no">${i + 1}</span>` +
+      `<span class="wpn-log-name">${KIND_ICON[s.kind]} ${s.name}</span>` +
+      `<span class="wpn-log-desc">${skillDescription(s)}</span>` +
+      `<span class="wpn-log-en">EN ${s.enCost}</span>`;
+    log.appendChild(row);
   });
-  return box;
+  if (inst.skillIds.length === 0) {
+    const row = document.createElement("div");
+    row.className = "wpn-log-row";
+    row.textContent = "（スキルなし）";
+    log.appendChild(row);
+  }
+  sheet.appendChild(log);
+
+  // アクション
+  const acts = document.createElement("div");
+  acts.className = "wpn-sheet-acts";
+  const eq = document.createElement("button");
+  eq.className = "nb-cta wpn-act-eq";
+  eq.textContent = equipped ? "装備中" : "装備する";
+  eq.disabled = equipped;
+  eq.addEventListener("click", () => { if (game.equip(inst.uid)) { overlay.remove(); buildControls(); openWeaponModal(uid); } });
+  acts.appendChild(eq);
+  const mini = document.createElement("div");
+  mini.className = "wpn-sheet-mini";
+  const lock = document.createElement("button");
+  lock.className = "wpn-mini" + (locked ? " on" : "");
+  lock.textContent = locked ? "🔒 ロック中" : "🔓 ロック";
+  lock.addEventListener("click", () => { game.toggleLock(inst.uid); overlay.remove(); buildControls(); openWeaponModal(uid); });
+  mini.appendChild(lock);
+  if (game.canDelete(inst.uid)) {
+    const del = document.createElement("button");
+    del.className = "wpn-mini wpn-mini-del";
+    const confirming = pendingDeleteUid === inst.uid;
+    del.textContent = confirming ? "本当に削除?" : "削除";
+    if (confirming) del.classList.add("confirm");
+    del.addEventListener("click", () => {
+      if (pendingDeleteUid === inst.uid) {
+        pendingDeleteUid = null; game.deleteWeapon(inst.uid); overlay.remove(); buildControls();
+      } else {
+        pendingDeleteUid = inst.uid; overlay.remove(); buildControls(); openWeaponModal(uid);
+      }
+    });
+    mini.appendChild(del);
+  }
+  acts.appendChild(mini);
+  sheet.appendChild(acts);
+
+  overlay.appendChild(sheet);
+  head.querySelector(".wpn-sheet-x")?.addEventListener("click", () => { pendingDeleteUid = null; overlay.remove(); });
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) { pendingDeleteUid = null; overlay.remove(); } });
+  document.body.appendChild(overlay);
+}
+
+/** モーダルのステータスボックス */
+function statBox(label: string, val: string): string {
+  return `<div class="wpn-stat"><div class="wpn-stat-val">${val}</div><div class="wpn-stat-lbl">${label}</div></div>`;
 }
 
 function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {

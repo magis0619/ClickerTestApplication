@@ -1636,3 +1636,396 @@ body.in-battle {
   color: #15101c;
   font-size: 12px;
 }
+
+/* =====================================================================
+   THEME-NB — メニュー画面（ダンジョン/ショップ/鍛冶屋/インベントリ）の
+   ターミナル風ライトテーマ。body.theme-nb で有効化。
+   ===================================================================== */
+body.theme-nb {
+  background: #ece4e7;
+  color: #15101c;
+}
+.theme-nb #controls { padding-bottom: 90px; }
+
+/* ---- 共通最上部バー ---- */
+.topbar.nb-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 0;
+  padding: 8px 2px 10px;
+  margin-bottom: 10px;
+  border-bottom: 3px solid #15101c;
+}
+.nb-brand {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.5px; color: #e0188f;
+}
+.nb-top-right { display: flex; align-items: center; gap: 8px; }
+.nb-top-gold { display: flex; align-items: baseline; gap: 2px; }
+.nb-top-gold .gold-amt { font-size: 16px; color: #15101c; text-shadow: none; }
+.nb-top-gold .gold-unit { color: #8a7f90; }
+.nb-icon-btn {
+  width: 30px; height: 30px; font-size: 15px; font-weight: 900;
+  border: 2px solid #15101c; background: #faf7f8; color: #15101c; cursor: pointer;
+}
+.nb-icon-btn.muted { background: #15101c; color: #faf7f8; }
+
+/* ---- 画面見出し ---- */
+.nb-head { margin: 4px 0 14px; }
+.nb-screen-tag {
+  display: inline-block;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 12px; font-weight: 900; letter-spacing: 1px;
+  color: #0a7f97; background: #b8f0fa; border: 2px solid #15101c;
+  padding: 2px 8px; margin-bottom: 6px;
+}
+.nb-title {
+  margin: 0;
+  font-size: 30px; font-weight: 900; font-style: italic; letter-spacing: 0.5px;
+  color: #15101c; line-height: 1;
+}
+.nb-title::after {
+  content: ""; display: block; width: 54px; height: 4px;
+  background: #15101c; margin-top: 8px;
+}
+
+/* ---- セクション見出し ---- */
+.nb-section {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 18px 0 8px;
+}
+.nb-section-lbl {
+  font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #15101c;
+}
+
+/* ---- 大CTAボタン ---- */
+.nb-cta {
+  width: 100%; padding: 16px; margin-top: 12px;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; letter-spacing: 1px;
+  color: #fff; background: #e0188f;
+  border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c; cursor: pointer;
+}
+.nb-cta:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.nb-cta:disabled { background: #b7afb6; box-shadow: 5px 5px 0 #b7afb6; color: #ece7ea; cursor: not-allowed; }
+
+/* ---- ボトムナビ（ライト・ネオブルータリズム） ---- */
+.theme-nb .bottom-nav {
+  background: #faf7f8; border: none; border-top: 3px solid #15101c; border-radius: 0;
+  box-shadow: none;
+}
+.theme-nb .nav-item { color: #6a6270; }
+.theme-nb .nav-on { background: #e0188f; color: #fff; }
+.theme-nb .nav-lbl { font-family: "Courier New", ui-monospace, monospace; font-weight: 800; }
+
+/* ---- ホーム ---- */
+.theme-nb .title-logo { color: #e0188f; }
+.theme-nb .title-sub { color: #5a5260; }
+.theme-nb .menu-btn {
+  background: #e0188f; color: #fff; border: 2.5px solid #15101c;
+  box-shadow: 5px 5px 0 #15101c; border-radius: 0;
+  font-family: "Courier New", ui-monospace, monospace; font-weight: 900;
+}
+.theme-nb .menu-btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+
+/* =====================================================================
+   DUNGEON HUB（ダンジョン選択）
+   ===================================================================== */
+.zone-list { display: flex; flex-direction: column; gap: 14px; }
+.zone-card {
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c;
+  padding: 12px; cursor: pointer; transition: transform 0.05s, box-shadow 0.05s;
+}
+.zone-card.sel { box-shadow: 5px 5px 0 #e0188f; border-color: #e0188f; }
+.zone-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #15101c; }
+.zone-card.locked {
+  background: #e7e1e4; border-style: dashed; box-shadow: none; cursor: not-allowed; opacity: 0.8;
+}
+.zone-top { display: flex; align-items: center; justify-content: space-between; }
+.zone-tag {
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 12px; font-weight: 900; letter-spacing: 1px;
+  color: #eafaf6; background: #1f6b63; border: 2px solid #15101c; padding: 2px 8px;
+}
+.zone-status-wrap { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.zone-status-lbl { font-family: "Courier New", monospace; font-size: 9px; color: #8a7f90; letter-spacing: 1px; }
+.zone-status { font-family: "Courier New", monospace; font-size: 18px; font-weight: 900; color: #e0188f; }
+.zone-status.st-locked { font-size: 13px; color: #8a7f90; }
+.zone-name { font-size: 22px; font-weight: 900; color: #15101c; margin: 6px 0 8px; }
+.zone-locked-name { font-size: 18px; font-weight: 900; color: #9a909c; margin-top: 8px; }
+.zone-body { display: flex; gap: 12px; }
+.zone-thumb {
+  width: 76px; height: 76px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #15101c;
+}
+.zone-thumb canvas { image-rendering: pixelated; height: 60px; width: auto; }
+.zone-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.zone-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.zone-chip {
+  font-family: "Courier New", monospace; font-size: 11px; font-weight: 800;
+  border: 2px solid #15101c; padding: 2px 7px;
+}
+.tag-armor { background: #ffd0dc; color: #b01040; }
+.tag-phantom { background: #e6d4ff; color: #6a28b0; }
+.tag-aerial { background: #c8eefc; color: #0a7f97; }
+.tag-endless { background: #fff0a8; color: #8a6a00; }
+.zone-loot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.zone-loot-lbl { font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; color: #5a5260; }
+.zone-loot-item {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: #fff7c0; border: 2px solid #15101c;
+}
+.zone-loot-item .wpn-sprite { height: 24px; width: auto; }
+
+.power-panel {
+  margin-top: 16px; padding: 10px 12px;
+  background: #15101c; color: #eafff6; border: 2.5px solid #15101c;
+}
+.power-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.power-title { font-family: "Courier New", monospace; font-size: 14px; font-weight: 900; color: #ff66b6; letter-spacing: 0.5px; }
+.power-vs { font-family: "Courier New", monospace; font-size: 11px; color: #b9b2c2; text-align: right; }
+.power-panel .bt-seg-bar { margin: 8px 0 6px; height: 16px; }
+.power-panel .bt-seg { background: #3a3048; border-color: #15101c; }
+.power-panel .bt-seg.on { background: #e0188f; border-color: #ff66b6; }
+.power-foot { display: flex; align-items: center; justify-content: space-between; }
+.power-surv { font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; }
+.sv-high { color: #4fe0a0; }
+.sv-med { color: #ffce3a; }
+.sv-low { color: #ff7a8a; }
+.power-pct { font-family: "Courier New", monospace; font-size: 14px; font-weight: 900; color: #eafff6; }
+
+/* =====================================================================
+   GRAND BAZAAR（ショップ）
+   ===================================================================== */
+.deal-timer {
+  font-family: "Courier New", monospace; font-size: 12px; font-weight: 900;
+  color: #fff; background: #d61c1c; border: 2px solid #15101c; padding: 2px 8px;
+}
+.deal-row {
+  display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.deal-card {
+  flex: 0 0 200px;
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c;
+  padding: 10px; display: flex; flex-direction: column; gap: 6px;
+}
+.deal-img {
+  position: relative; height: 110px;
+  display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #15101c;
+}
+.deal-img .wpn-sprite { height: 80px; width: auto; }
+.deal-ribbon {
+  position: absolute; top: 6px; right: -2px;
+  font-family: "Courier New", monospace; font-size: 11px; font-weight: 900;
+  color: #fff; background: #e0188f; border: 2px solid #15101c; padding: 1px 8px;
+}
+.deal-name { font-size: 16px; font-weight: 900; color: #15101c; }
+.deal-sub { font-size: 11px; color: #5a5260; }
+.deal-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.deal-price { font-family: "Courier New", monospace; font-size: 16px; font-weight: 900; color: #0a7f97; }
+.deal-buy {
+  width: 40px; height: 36px; font-size: 16px;
+  background: #e0188f; color: #fff; border: 2px solid #15101c; box-shadow: 3px 3px 0 #15101c; cursor: pointer;
+}
+.deal-buy:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #15101c; }
+.deal-buy:disabled { background: #b7afb6; box-shadow: 3px 3px 0 #b7afb6; cursor: not-allowed; }
+
+.armory-list { display: flex; flex-direction: column; gap: 10px; }
+.armory-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px;
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c;
+}
+.armory-row.sold { opacity: 0.55; }
+.armory-icon {
+  width: 48px; height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #15101c;
+}
+.armory-icon .wpn-sprite { height: 40px; width: auto; }
+.armory-info { flex: 1; min-width: 0; }
+.armory-name { font-family: "Courier New", monospace; font-size: 15px; font-weight: 900; color: #15101c; }
+.armory-sub { font-size: 11px; color: #5a5260; margin: 1px 0; }
+.armory-price { font-family: "Courier New", monospace; font-size: 15px; font-weight: 900; color: #e0188f; }
+.armory-buy {
+  flex-shrink: 0; padding: 10px 16px;
+  font-family: "Courier New", monospace; font-size: 13px; font-weight: 900;
+  color: #fff; background: #15101c; border: 2px solid #15101c; cursor: pointer;
+}
+.armory-buy:active { transform: translateY(1px); }
+.armory-buy:disabled { background: #b7afb6; border-color: #b7afb6; color: #ece7ea; cursor: not-allowed; }
+
+/* =====================================================================
+   MASTER FORGE（鍛冶屋）— 既存構造をライトテーマで上書き
+   ===================================================================== */
+.theme-nb .forge-hint { color: #5a5260; }
+.theme-nb .forge-list { display: flex; flex-direction: column; gap: 10px; }
+.theme-nb .forge-row {
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; border-radius: 0;
+}
+.theme-nb .forge-row-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
+.theme-nb .forge-row-name { color: #15101c; }
+.theme-nb .forge-row-meta { color: #5a5260; }
+.theme-nb .forge-row-meta b { color: #e0188f; }
+.theme-nb .forge-row-go { color: #e0188f; }
+
+.theme-nb .forge-target {
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 5px 5px 0 #15101c; border-radius: 0;
+}
+.theme-nb .forge-target-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
+.theme-nb .forge-target-name {
+  font-family: "Courier New", monospace; font-size: 22px; color: #e0188f;
+}
+.theme-nb .forge-target-stat { color: #15101c; }
+.theme-nb .forge-target-stat b { color: #e0188f; }
+.theme-nb .forge-cap { color: #8a7f90; }
+
+.theme-nb .forge-exp-label { color: #5a5260; }
+.theme-nb .forge-exp-bar { background: #ddd2d9; border: 1px solid #c2b6bf; border-radius: 0; }
+.theme-nb .forge-exp-fill { background: #16c2e0; }
+
+.theme-nb .forge-back {
+  background: #faf7f8; color: #5a5260; border: 2px solid #15101c; border-radius: 0;
+}
+.theme-nb .forge-section { background: #faf7f8; border: 2px solid #15101c; border-radius: 0; }
+.theme-nb .forge-sect-head { color: #15101c; }
+.theme-nb .forge-sect-sub { color: #8a7f90; }
+.theme-nb .forge-summary .forge-sum-exp { color: #0a7f97; }
+.theme-nb .forge-summary .forge-sum-lv { color: #e0188f; }
+.theme-nb .forge-apply {
+  background: #e0188f; color: #fff; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; border-radius: 0;
+}
+.theme-nb .forge-apply:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.theme-nb .forge-apply:disabled { background: #b7afb6; box-shadow: 4px 4px 0 #b7afb6; color: #ece7ea; }
+.theme-nb .forge-awaken { border-color: #8a3ad0; }
+.theme-nb .forge-awaken-btn { background: #8a3ad0; box-shadow: 4px 4px 0 #15101c; }
+.theme-nb .forge-awaken-desc { color: #5a5260; }
+.theme-nb .forge-awaken-desc b { color: #8a3ad0; }
+.theme-nb .forge-mat {
+  background: #fff; border: 2px solid #15101c; border-radius: 0;
+}
+.theme-nb .forge-mat-on { background: #fff6d8; border-color: #e0188f; }
+.theme-nb .forge-mat-icon { background: #1a1226; border: 2px solid #15101c; border-radius: 0; }
+.theme-nb .forge-mat-name { color: #15101c; }
+.theme-nb .forge-mat-exp { color: #0a7f97; }
+.theme-nb .forge-mat-check { border: 2px solid #15101c; color: #e0188f; border-radius: 0; }
+.theme-nb .forge-mat-on .forge-mat-check { background: #e0188f; color: #fff; }
+.theme-nb .inv-empty { color: #8a7f90; }
+.theme-nb .wpn-lv { color: #15101c; background: #c8eefc; border: 1px solid #15101c; }
+.theme-nb .wpn-rlabel { color: #5a5260; }
+.theme-nb .wpn-eqtag { color: #e0188f; border-color: #e0188f; }
+
+/* =====================================================================
+   ARSENAL（インベントリ）
+   ===================================================================== */
+.ars-cap { margin-bottom: 12px; }
+.ars-cap-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
+.ars-cap-lbl { font-family: "Courier New", monospace; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #15101c; }
+.ars-cap-num { font-family: "Courier New", monospace; font-size: 13px; font-weight: 900; color: #e0188f; }
+
+.ars-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+.ars-tab {
+  flex: 1; padding: 9px 4px;
+  font-family: "Courier New", monospace; font-size: 13px; font-weight: 900;
+  color: #15101c; background: #faf7f8; border: 2px solid #15101c; cursor: pointer;
+}
+.ars-tab.on { background: #15101c; color: #fff; }
+.ars-tools { display: flex; gap: 8px; margin-bottom: 12px; }
+.ars-tool {
+  flex: 1; padding: 8px;
+  font-size: 12px; font-weight: 800; color: #15101c;
+  background: #faf7f8; border: 2px solid #15101c; cursor: pointer;
+}
+.ars-tool.on { background: #fff6d8; border-color: #e0188f; color: #b01070; }
+
+.ars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ars-card {
+  position: relative; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; text-align: left;
+  background: #faf7f8; border: 2.5px solid #15101c; box-shadow: 4px 4px 0 #15101c; cursor: pointer;
+}
+.ars-card:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #15101c; }
+.ars-card-top { display: flex; align-items: center; justify-content: space-between; }
+.ars-card-rar { font-family: "Courier New", monospace; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; }
+.ars-card-fav { color: #e0188f; font-size: 13px; }
+.ars-card-img {
+  height: 70px; display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #15101c;
+}
+.ars-card-img .wpn-sprite { height: 56px; width: auto; }
+.ars-card-name { font-size: 13px; font-weight: 800; color: #15101c; line-height: 1.1; }
+.ars-card-stats {
+  display: flex; justify-content: space-between;
+  font-family: "Courier New", monospace; font-size: 12px; font-weight: 800; color: #5a5260;
+}
+.ars-card-eq {
+  font-family: "Courier New", monospace; font-size: 12px; font-weight: 900; text-align: center;
+  color: #fff; background: #e0188f; border: 2px solid #15101c; padding: 2px 0;
+}
+.ars-craft {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 150px;
+  background: transparent; border: 2.5px dashed #b09aa8; color: #9a8b96;
+  font-family: "Courier New", monospace; font-size: 13px; font-weight: 800; cursor: pointer;
+}
+.ars-craft:hover { border-color: #e0188f; color: #e0188f; }
+.ars-craft-plus { font-size: 26px; }
+
+/* ---- 武器詳細モーダル ---- */
+.wpn-modal {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(10, 6, 18, 0.7);
+  animation: fadeIn 0.2s ease;
+}
+.wpn-sheet {
+  width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto;
+  background: #faf7f8; border: 3px solid #15101c; box-shadow: 7px 7px 0 #15101c; padding: 14px;
+}
+.wpn-sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.wpn-sheet-title { font-size: 22px; font-weight: 900; font-style: italic; color: #15101c; }
+.wpn-sheet-x {
+  width: 32px; height: 32px; font-size: 18px; font-weight: 900;
+  background: #faf7f8; color: #15101c; border: 2px solid #15101c; cursor: pointer;
+}
+.wpn-sheet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.wpn-chip { font-family: "Courier New", monospace; font-size: 11px; font-weight: 900; border: 2px solid #15101c; padding: 2px 8px; }
+.wpn-chip-cls { background: #c8eefc; color: #0a7f97; }
+.wpn-chip-lv { background: #fff; color: #15101c; }
+.wpn-chip-eq { background: #e0188f; color: #fff; }
+.wpn-sheet-img {
+  height: 150px; display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #15101c; margin-bottom: 12px;
+}
+.wpn-sheet-img .wpn-sprite { height: 120px; width: auto; }
+.wpn-sheet-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #15101c; }
+.wpn-stat-val { font-family: "Courier New", monospace; font-size: 20px; font-weight: 900; color: #e0188f; }
+.wpn-stat-lbl { font-family: "Courier New", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; letter-spacing: 1px; }
+.wpn-sheet-log { margin-bottom: 12px; }
+.wpn-log-head { font-family: "Courier New", monospace; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: #15101c; margin-bottom: 6px; }
+.wpn-log-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px; margin-bottom: 5px;
+  background: #fff; border: 2px solid #15101c;
+}
+.wpn-log-no {
+  flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+  font-family: "Courier New", monospace; font-size: 11px; font-weight: 900;
+  color: #fff; background: #e0188f; border: 1px solid #15101c;
+}
+.wpn-log-name { flex-shrink: 0; font-size: 12px; font-weight: 800; color: #15101c; }
+.wpn-log-desc { flex: 1; min-width: 0; font-size: 11px; color: #5a5260; }
+.wpn-log-en { flex-shrink: 0; font-family: "Courier New", monospace; font-size: 11px; font-weight: 800; color: #0a7f97; }
+.wpn-sheet-acts { display: flex; flex-direction: column; gap: 8px; }
+.wpn-sheet-acts .nb-cta { margin-top: 0; }
+.wpn-sheet-mini { display: flex; gap: 8px; }
+.wpn-mini {
+  flex: 1; padding: 10px; font-size: 13px; font-weight: 800;
+  background: #faf7f8; color: #15101c; border: 2px solid #15101c; cursor: pointer;
+}
+.wpn-mini.on { background: #fff6d8; border-color: #e0188f; color: #b01070; }
+.wpn-mini-del { color: #d61c1c; }
+.wpn-mini-del.confirm { background: #d61c1c; color: #fff; border-color: #d61c1c; }
