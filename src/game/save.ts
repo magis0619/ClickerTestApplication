@@ -1,7 +1,8 @@
 import type { SaveData, WeaponInstance, WeaponClass } from "./types.ts";
 import { starterInventory, getWeapon } from "./data.ts";
 
-const KEY = "astral-warden-save-v6";
+// バランス調整（武器弱体化）に伴い保存データを初期化するためバージョンを更新
+const KEY = "astral-warden-save-v7";
 
 /** 初期セーブ：標準武器を1本ずつ所持・装備 */
 export function defaultSave(): SaveData {
