@@ -43,8 +43,8 @@ let guardCard: HTMLButtonElement | null = null;
 let battleLog: HTMLElement | null = null;
 /** 戦闘中のHP/AP（セグメント）バー。毎フレーム更新する */
 let battleHud: {
-  hpLabel: HTMLElement; hpSegs: HTMLElement[]; crit: HTMLElement;
-  enLabel: HTMLElement; enSegs: HTMLElement[]; enWrap: HTMLElement;
+  hpLabel: HTMLElement; hpSegs: HTMLElement[]; crit: HTMLElement; hpFill: HTMLElement;
+  enLabel: HTMLElement; enSegs: HTMLElement[]; enWrap: HTMLElement; enFill: HTMLElement;
 } | null = null;
 let renderedScreen = "";
 
@@ -1130,7 +1130,10 @@ function buildBattle(): void {
   hpRow.appendChild(hpLabel);
   hpRow.appendChild(crit);
   const hpBar = document.createElement("div");
-  hpBar.className = "bt-seg-bar bt-seg-hp";
+  hpBar.className = "bt-seg-bar bt-seg-hp bt-seg-fluid";
+  const hpFill = document.createElement("div");
+  hpFill.className = "bt-seg-fill";
+  hpBar.appendChild(hpFill);
   const hpSegs: HTMLElement[] = [];
   for (let i = 0; i < HP_SEGMENTS; i++) {
     const s = document.createElement("span");
@@ -1144,7 +1147,10 @@ function buildBattle(): void {
   enLabel.className = "bt-stat-label";
   enRow.appendChild(enLabel);
   const enBar = document.createElement("div");
-  enBar.className = "bt-seg-bar bt-seg-en";
+  enBar.className = "bt-seg-bar bt-seg-en bt-seg-fluid";
+  const enFill = document.createElement("div");
+  enFill.className = "bt-seg-fill";
+  enBar.appendChild(enFill);
   const enSegs: HTMLElement[] = [];
   for (let i = 0; i < PLAYER_MAX_EN; i++) {
     const s = document.createElement("span");
@@ -1157,7 +1163,7 @@ function buildBattle(): void {
   hud.appendChild(enRow);
   hud.appendChild(enBar);
   controls.appendChild(hud);
-  battleHud = { hpLabel, hpSegs, crit, enLabel, enSegs, enWrap: enBar };
+  battleHud = { hpLabel, hpSegs, crit, hpFill, enLabel, enSegs, enWrap: enBar, enFill };
 
   // ===== 攻撃カード3つ ＋ ガード/休憩の縦列 を横一列に =====
   const grid = document.createElement("div");
@@ -1279,14 +1285,15 @@ function updateBattleHud(): void {
   if (!battleHud || !game.battle) return;
   const b = game.battle;
   const hp = Math.max(0, Math.ceil(b.playerHp));
-  const hpRatio = b.playerHp / PLAYER_MAX_HP;
+  const hpRatio = Math.max(0, Math.min(1, b.playerHp / PLAYER_MAX_HP));
   battleHud.hpLabel.textContent = `HP [${hp}/${PLAYER_MAX_HP}]`;
-  const hpFilled = Math.ceil(Math.max(0, Math.min(1, hpRatio)) * battleHud.hpSegs.length);
-  battleHud.hpSegs.forEach((s, i) => s.classList.toggle("on", i < hpFilled));
+  // 連続フィルの幅を更新（CSSのtransitionでぬるっと増減）
+  battleHud.hpFill.style.width = `${hpRatio * 100}%`;
   battleHud.crit.style.visibility = hpRatio <= 0.25 ? "visible" : "hidden";
   const en = Math.floor(b.playerEn);
+  const enRatio = Math.max(0, Math.min(1, b.playerEn / PLAYER_MAX_EN));
   battleHud.enLabel.textContent = `AP [${en}/${PLAYER_MAX_EN}]`;
-  battleHud.enSegs.forEach((s, i) => s.classList.toggle("on", i < en));
+  battleHud.enFill.style.width = `${enRatio * 100}%`;
   battleHud.enWrap.classList.toggle("focus", b.freeNextEn);
 }
 

@@ -27,6 +27,7 @@ import {
   PERFECT_FLINCH_MS,
   PERFECT_BREAK_BONUS,
   ATTACK_WINDUP_MS,
+  SKILL_BANNER_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -150,6 +151,11 @@ export class Battle {
   windupT = 0;
   /** 溜め中の攻撃。windupT が 0 になった瞬間に解決（着弾）する */
   private pendingAttack: { skill: Skill; mods?: WeaponMods; combo?: ComboDef } | null = null;
+  /**
+   * スキル発動時に出す「スキル名バナー」。プレイヤー右に左からフェードインする。
+   * combo=true の連携スキルは金色の特別演出にする。
+   */
+  skillBanner: { text: string; combo: boolean; ttl: number; max: number } | null = null;
   /** プレイヤーの被弾リアクション（のけぞり＋フラッシュ）残り時間(ms) */
   playerHitT = 0;
   /** ヒットストップ（一瞬の静止）残り時間(ms)。>0 の間ゲーム進行を凍結 */
@@ -227,6 +233,8 @@ export class Battle {
     this.freeNextEn = false; // 消費（集中はこの後に再セット）
     // 直近スキルを記録（次の連携判定に使う）。攻撃は着弾を待たずチェーンを確定
     this.lastSkill = cls ? { kind: skill.kind, cls } : null;
+    // スキル名バナーを表示（連携成立時は金色の特別演出）。溜め中から出して期待感を煽る
+    this.skillBanner = { text: skill.name, combo: !!combo, ttl: SKILL_BANNER_MS, max: SKILL_BANNER_MS };
 
     switch (skill.kind) {
       case "charge":
@@ -573,6 +581,10 @@ export class Battle {
       }
     }
     if (this.lungeT > 0) this.lungeT -= dtMs;
+    if (this.skillBanner) {
+      this.skillBanner.ttl -= dtMs;
+      if (this.skillBanner.ttl <= 0) this.skillBanner = null;
+    }
     if (this.playerHitT > 0) this.playerHitT -= dtMs;
     if (this.perfectFxT > 0) this.perfectFxT -= dtMs;
     for (const e of this.enemies) {

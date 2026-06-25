@@ -1499,6 +1499,17 @@ body.in-battle {
 .bt-seg-en .bt-seg.on { background: #00c2d4; border-color: #0e8fa8; }
 .bt-seg-en.focus .bt-seg.on { background: #ffce3a; border-color: #c79a16; }
 
+/* バトルのHP/APは連続フィルで「ぬるっと」増減（セグメントは仕切りとして上に重ねる） */
+.bt-seg-fluid { position: relative; overflow: hidden; background: #ddd2d9; }
+.bt-seg-fluid .bt-seg-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0;
+  transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+}
+.bt-seg-fluid.bt-seg-hp .bt-seg-fill { background: #df0b81; }
+.bt-seg-fluid.bt-seg-en .bt-seg-fill { background: #00c2d4; }
+.bt-seg-fluid.bt-seg-en.focus .bt-seg-fill { background: #ffce3a; }
+.bt-seg-fluid .bt-seg { background: transparent; position: relative; z-index: 1; }
+
 /* ----- スキルカード 2x2 ----- */
 .bt-skills {
   display: grid;

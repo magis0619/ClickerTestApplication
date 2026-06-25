@@ -353,6 +353,9 @@ export const PERFECT_BREAK_BONUS = 14;
  */
 export const ATTACK_WINDUP_MS = 380;
 
+/** スキル名バナー（発動時にプレイヤー右へ左からフェードイン）の表示時間(ms) */
+export const SKILL_BANNER_MS = 1100;
+
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;

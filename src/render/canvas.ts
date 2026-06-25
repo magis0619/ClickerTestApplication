@@ -180,6 +180,7 @@ export function render(
   ctx.restore();
 
   drawPlayerHud(ctx, b);
+  drawSkillBanner(ctx, b);
   if (stage) {
     ctx.textAlign = "right";
     ctx.font = "bold 11px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
@@ -837,6 +838,82 @@ function drawDamageBurst(
   ctx.fillText(num, 0, 1);
 
   ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
+/**
+ * スキル発動時の「スキル名バナー」をプレイヤーの右に描く。
+ * 左から滑り込みながらフェードイン。連携スキルは金色＋火花でワクワク感を出す。
+ */
+function drawSkillBanner(ctx: CanvasRenderingContext2D, b: Battle): void {
+  const sb = b.skillBanner;
+  if (!sb) return;
+  const age = sb.max - sb.ttl;
+  // 出現（左からスライド＋フェードイン）と消える間際のフェードアウト
+  const appear = Math.min(1, age / 180);
+  const ease = 1 - Math.pow(1 - appear, 3); // easeOutCubic
+  const fadeOut = Math.min(1, sb.ttl / FLOAT_FADE_MS);
+  const alpha = Math.min(appear, fadeOut);
+  const baseX = 116 + (1 - ease) * -24; // 左(-24px)から定位置へ滑り込む
+  const y = sb.combo ? 300 : 302;
+  const fontStack = "'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
+
+  ctx.save();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = alpha;
+
+  if (sb.combo) {
+    // ===== 連携：金色の特別演出 =====
+    // 「⚡連携」タグ
+    ctx.font = `900 13px ${fontStack}`;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#5a3d00";
+    ctx.strokeText("⚡ 連携", baseX, y - 24);
+    const tg = ctx.createLinearGradient(baseX, y - 34, baseX, y - 16);
+    tg.addColorStop(0, "#fff3c4");
+    tg.addColorStop(1, "#ffb01f");
+    ctx.fillStyle = tg;
+    ctx.fillText("⚡ 連携", baseX, y - 24);
+
+    // スキル名（金グラデ＋ゴールドグロー＋濃い縁取り）
+    ctx.font = `900 24px ${fontStack}`;
+    ctx.shadowColor = "#ffcf3f";
+    ctx.shadowBlur = 18 * alpha;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#5a3d00";
+    ctx.strokeText(sb.text, baseX, y);
+    const g = ctx.createLinearGradient(baseX, y - 22, baseX, y + 4);
+    g.addColorStop(0, "#fff7d6");
+    g.addColorStop(0.5, "#ffd34d");
+    g.addColorStop(1, "#f59a12");
+    ctx.fillStyle = g;
+    ctx.fillText(sb.text, baseX, y);
+    ctx.shadowBlur = 0;
+
+    // 火花（テキスト周りで瞬く金の粒）
+    const w = ctx.measureText(sb.text).width;
+    const tsec = age / 1000;
+    for (let i = 0; i < 6; i++) {
+      const px = baseX - 6 + ((i * 53) % (w + 24));
+      const py = y - 14 + Math.sin(tsec * 9 + i * 1.7) * 12;
+      const tw = 0.5 + 0.5 * Math.sin(tsec * 11 + i * 2.3);
+      ctx.globalAlpha = alpha * tw;
+      ctx.fillStyle = i % 2 ? "#fff6cf" : "#ffd24d";
+      const s = 1.4 + tw * 1.8;
+      ctx.fillRect(px - s / 2, py - s / 2, s, s);
+    }
+  } else {
+    // ===== 通常スキル：白縁の黒字でシンプルに =====
+    ctx.font = `800 19px ${fontStack}`;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#ffffff";
+    ctx.strokeText(sb.text, baseX, y);
+    ctx.fillStyle = "#1c1b1b";
+    ctx.fillText(sb.text, baseX, y);
+  }
+
   ctx.restore();
 }
 
