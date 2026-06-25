@@ -215,7 +215,18 @@ function buildControls(): void {
     case "result": buildResult(); break;
   }
   // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
-  if (screenChanged) window.scrollTo(0, 0);
+  if (screenChanged) {
+    window.scrollTo(0, 0);
+    // 各画面移動はフェードイン(0.1秒)。ただしバトルへの遷移は演出を挟まず即表示
+    if (game.screen !== "battle") {
+      controls.style.setProperty("--screen-tdur", "100ms");
+      controls.classList.remove("screen-enter");
+      void controls.offsetWidth; // リフローでアニメーションを再生し直す
+      controls.classList.add("screen-enter");
+    } else {
+      controls.classList.remove("screen-enter");
+    }
+  }
 }
 
 function buildTitle(): void {
@@ -1154,7 +1165,12 @@ function buildBattle(): void {
   for (const cls of CLASSES) {
     const card = document.createElement("button");
     card.className = `sk-card wclass-${cls}`;
-    card.addEventListener("click", () => attackWith(cls));
+    // 攻撃は指を当てた瞬間（pointerdown）に即反応。押し込み演出は pressFx のまま
+    card.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;   // 左クリック／タッチのみ
+      e.preventDefault();           // 直後の click 二重発火・フォーカス移動を防ぐ
+      attackWith(cls);
+    });
     pressFx(card);
     const inst = game.equippedInstance(cls);
 

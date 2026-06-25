@@ -1235,9 +1235,13 @@ button.wpn-row:hover { background: #241f55; }
   justify-content: center;
   gap: 18px;
   background: rgba(6, 4, 16, 0.86);
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 0.15s ease;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 画面遷移のフェードイン（バトルへの遷移を除く各画面移動）。時間は --screen-tdur で指定 */
+.screen-enter { animation: screenFade var(--screen-tdur, 100ms) ease both; }
+@keyframes screenFade { from { opacity: 0; } to { opacity: 1; } }
 .chest-modal-slot {
   width: 180px;
   height: 200px;
