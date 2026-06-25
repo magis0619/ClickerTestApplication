@@ -102,9 +102,13 @@ export function getWeapon(id: string): Weapon | undefined { return WEAPONS.find(
 export function skillCountForRarity(r: Rarity): number {
   return rarityIndex(r) >= rarityIndex("epic") ? 2 : 1;
 }
-/** スキル抽選の重み（低レアほど出やすい。高レアは大幅に出にくい） */
+/**
+ * スキル抽選の重み（低レアほど出やすい。レアリティで階段状に変化）。
+ * アストラル武器プール（全スキル対象・合計重み100）での1スキルあたり出現率：
+ * common 33% / uncommon 9% / rare 6% / epic 4% / legend 2% / astral 1%
+ */
 const SKILL_DRAW_WEIGHT: Record<Rarity, number> = {
-  common: 100, uncommon: 38, rare: 12, epic: 1.6, legend: 0.4, astral: 2.7,
+  common: 33, uncommon: 9, rare: 6, epic: 4, legend: 2, astral: 1,
 };
 /** 武器レアリティ以下のスキルから、低レア寄りの重みで count 個（重複なし）抽選 */
 export function rollSkills(weaponRarity: Rarity, count: number): string[] {
