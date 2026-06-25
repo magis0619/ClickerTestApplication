@@ -9,6 +9,39 @@ import {
   CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, ENEMY_BY_ID, type Sprite,
 } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
+import stageClearUrl from "../assets/stage_clear.png";
+import defeatedUrl from "../assets/defeated.png";
+import perfectUrl from "../assets/perfect.png";
+
+/** バナー演出用のドット絵画像（白を透過したPNG）。読み込めたものだけ使う */
+function loadImg(url: string): HTMLImageElement {
+  const img = new Image();
+  img.src = url;
+  return img;
+}
+const BADGE_CLEAR = loadImg(stageClearUrl);
+const BADGE_DEFEATED = loadImg(defeatedUrl);
+const BADGE_PERFECT = loadImg(perfectUrl);
+/** 画像が表示可能か */
+function imgReady(img: HTMLImageElement): boolean { return img.complete && img.naturalWidth > 0; }
+/**
+ * バナー画像を中央(cx,cy)に、指定の高さ(targetH)へ収めて描く。
+ * pop=拡大率、alpha=不透明度、glow指定時はその色で発光させる。
+ */
+function drawBadgeImage(
+  ctx: CanvasRenderingContext2D, img: HTMLImageElement,
+  cx: number, cy: number, targetH: number, pop: number, alpha: number, glow?: string,
+): void {
+  const scale = (targetH / img.naturalHeight) * pop;
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.imageSmoothingEnabled = false; // ドット絵をくっきり拡大
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 26; }
+  ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+  ctx.restore();
+}
 
 const W = 480;
 const H = 400;
@@ -238,6 +271,10 @@ function drawDefeatBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   // 弾んで飛び出す→定位置で微振動。出だしはフェードイン
   const pop = age < 180 ? 2.6 - 1.6 * (age / 180) : 1 + 0.1 * Math.max(0, Math.sin((age - 180) / 70));
   const alpha = Math.min(1, age / 160);
+  if (imgReady(BADGE_DEFEATED)) {
+    drawBadgeImage(ctx, BADGE_DEFEATED, W / 2, 150, 96, pop, alpha, "#ff4d63");
+    return;
+  }
   ctx.save();
   ctx.translate(W / 2, 150);
   ctx.scale(pop, pop);
@@ -880,6 +917,12 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
   const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
   const cy = 138;
 
+  // STAGE CLEAR は専用のドット絵バナーで表示
+  if (f.text === "STAGE CLEAR" && imgReady(BADGE_CLEAR)) {
+    drawBadgeImage(ctx, BADGE_CLEAR, W / 2, cy, 116, pop, alpha, "#ff5db6");
+    return;
+  }
+
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(W / 2, cy);
@@ -1078,6 +1121,11 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   ctx.textAlign = "center";
   // 消える直前まで不透明を保ち、1秒ほどはっきり残す
   const baseAlpha = Math.min(1, b.lastGuardTtl / FLOAT_FADE_MS);
+  // PERFECT は専用のドット絵バナーで表示
+  if (entry.perfect && imgReady(BADGE_PERFECT)) {
+    drawBadgeImage(ctx, BADGE_PERFECT, W / 2, 150, 104, pop, baseAlpha, "#8effe0");
+    return;
+  }
   ctx.save();
   ctx.translate(W / 2, 150);
   ctx.scale(pop, pop);
