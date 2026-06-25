@@ -104,7 +104,7 @@ export function skillCountForRarity(r: Rarity): number {
 }
 /** スキル抽選の重み（低レアほど出やすい。高レアは大幅に出にくい） */
 const SKILL_DRAW_WEIGHT: Record<Rarity, number> = {
-  common: 100, uncommon: 38, rare: 12, epic: 1.6, legend: 0.4, astral: 0.12,
+  common: 100, uncommon: 38, rare: 12, epic: 1.6, legend: 0.4, astral: 2.7,
 };
 /** 武器レアリティ以下のスキルから、低レア寄りの重みで count 個（重複なし）抽選 */
 export function rollSkills(weaponRarity: Rarity, count: number): string[] {
