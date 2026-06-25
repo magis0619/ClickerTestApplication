@@ -250,6 +250,55 @@ export const BOSS_TEL: Sprite = {
   ],
 };
 
+// ===== レアモンスター（煌びやかな宝玉竜）=====
+const RARE_PAL: Record<string, string> = {
+  o: "#0c0a18", // 輪郭
+  G: "#ffd95c", // 金（明）
+  d: "#b8860b", // 金（暗）
+  b: "#8a6510", // 脚
+  c: "#5fe0ff", // 宝石シアン
+  m: "#ff7de9", // 宝石マゼンタ
+  e: "#ff3b6b", // 目
+  E: "#ffd5e0", // 目（威嚇・発光）
+  w: "#ffffff", // きらめき・牙
+};
+
+/** レアモンスター：ジュエルドレイク（宝石をまとった竜） */
+export const RARE: Sprite = {
+  palette: RARE_PAL,
+  rows: [
+    ".w..ooooo..w.",
+    "..odGGGGGdo..",
+    ".odGcGmGcGdo.",
+    "odGGGGGGGGGdo",
+    "oGcGGeeGGcGGo",
+    "oGGGGGGGGGGGo",
+    "odGmGGGGGmGdo",
+    ".odGGGGGGGdo.",
+    "..oddGGGddo..",
+    "w..obo.obo..w",
+    "...oo...oo...",
+  ],
+};
+
+/** レアモンスター：予兆/攻撃フレーム（牙をむき宝石が輝く） */
+export const RARE_TEL: Sprite = {
+  palette: RARE_PAL,
+  rows: [
+    "w...ooooo...w",
+    "..odGGGGGdo..",
+    ".odGcGmGcGdo.",
+    "odGGGGGGGGGdo",
+    "oGcGGEEGGcGGo",
+    "oGGGwwwwwGGGo",
+    "odGmGGGGGmGdo",
+    ".odGGGGGGGdo.",
+    "..oddGGGddo..",
+    "w..obo.obo..w",
+    "...oo...oo...",
+  ],
+};
+
 // ===== UIアイコン（ボタン用のドット絵） =====
 const SHIELD_PAL: Record<string, string> = {
   o: "#0c0a18", // 輪郭

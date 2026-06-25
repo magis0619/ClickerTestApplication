@@ -145,6 +145,11 @@ const RARITY_DROP_MULT: Record<Rarity, number> = {
 /** 敵の撃破ドロップを判定（率で外れあり。高レア武器ほど出にくい） */
 export function rollEnemyDrop(def: EnemyDef): WeaponInstance | undefined {
   if (!def.dropWeaponId || !def.dropRate) return undefined;
+  // レアモンスターは出会うこと自体が稀なので、絞り込み倍率を無視して dropRate そのままで落とす
+  if (def.rare) {
+    if (Math.random() * 100 >= def.dropRate) return undefined;
+    return makeInstance(def.dropWeaponId);
+  }
   const w = getWeapon(def.dropWeaponId);
   const rmult = w ? RARITY_DROP_MULT[w.rarity] : 1;
   const eff = def.dropRate * DROP_RATE_MULT * rmult;
@@ -256,12 +261,28 @@ export function effectiveWeapon(inst: WeaponInstance): Weapon | undefined {
 interface RawEnemy {
   id: string; name: string; kind: EnemyKind; maxHp: number; attack: number;
   telegraphMs: number; countStart: number; breakThreshold: number;
-  dropWeaponId?: string; dropRate?: number; boss?: boolean;
+  dropWeaponId?: string; dropRate?: number; boss?: boolean; rare?: boolean;
 }
 const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(
   (enemiesJson as RawEnemy[]).map((e) => [e.id, e as EnemyDef]),
 );
 export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id]; }
+
+// ===== レアモンスター出現 =====
+/** レアモンスターのID（煌びやかで強い・レア武器を落とす） */
+export const RARE_ENEMY_ID = "gem_drake";
+/** 通常戦闘にレアモンスターが混ざる確率（ボス戦を除く） */
+export const RARE_SPAWN_CHANCE = 0.1;
+/**
+ * 通常戦闘の編成に、低確率でレアモンスターを追加する。
+ * ボス戦には乱入させない。出現すれば群れに1体加わる。
+ */
+export function withRareSpawn(enemies: EnemyDef[], isBoss: boolean): EnemyDef[] {
+  const rare = ENEMY_MAP[RARE_ENEMY_ID];
+  if (isBoss || !rare) return enemies;
+  if (Math.random() < RARE_SPAWN_CHANCE) return [...enemies, rare];
+  return enemies;
+}
 
 // ===== ステージ（stages.json から読み込み） =====
 interface RawStage { name: string; desc: string; waves: string[][]; endless?: boolean; recommendLv?: number; }

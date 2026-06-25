@@ -2,6 +2,7 @@ import { Battle } from "./engine.ts";
 import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
+  withRareSpawn,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type {
@@ -158,10 +159,10 @@ export class Game {
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     if (this.isEndless) {
       this.endlessFloor = 1;
-      this.battle = new Battle(endlessFloorEnemies(1));
+      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false));
       this.battle.announce("1階", "#9fd9ff");
     } else {
-      this.battle = new Battle(this.currentStage.waves[0]);
+      this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
     }
     this.screen = "battle";
   }
@@ -291,7 +292,7 @@ export class Game {
       const en = this.battle.playerEn;
       this.endlessFloor += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
-      this.battle = new Battle(endlessFloorEnemies(this.endlessFloor), hp, en);
+      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en);
       this.battle.announce(`${this.endlessFloor}階`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
@@ -306,7 +307,7 @@ export class Game {
       const en = this.battle.playerEn;
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
-      this.battle = new Battle(this.currentStage.waves[this.waveIndex], hp, en);
+      this.battle = new Battle(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), hp, en);
       this.battle.announce(
         this.isBossWave ? "BOSS BATTLE" : `WAVE ${this.waveIndex + 1} / ${this.waveCount}`,
         this.isBossWave ? "#ff6b6b" : "#ffd35f",

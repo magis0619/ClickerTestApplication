@@ -75,6 +75,8 @@ export interface EnemyDef {
   /** ドロップ率(%) */
   dropRate?: number;
   boss?: boolean;
+  /** レアモンスター（強く・煌びやかで、レア武器を落とす特別な敵） */
+  rare?: boolean;
 }
 
 /** レアリティ（高いほど強く、出にくい） */

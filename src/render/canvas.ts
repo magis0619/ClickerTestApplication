@@ -6,7 +6,7 @@ import {
 } from "../game/data.ts";
 import {
   WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
-  CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, type Sprite,
+  CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, type Sprite,
 } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
 
@@ -78,6 +78,7 @@ const ENEMY_TEL_SPRITE: Record<EnemyKind, Sprite> = {
 /** 状態に応じて敵のフレーム（待機/予兆）を選ぶ */
 function enemyFrame(e: EnemyState): Sprite {
   const acting = e.inTelegraph || e.atkAnimT > 0;
+  if (e.def.rare) return acting ? RARE_TEL : RARE;
   if (e.def.boss) return acting ? BOSS_TEL : BOSS;
   return acting ? ENEMY_TEL_SPRITE[e.def.kind] : ENEMY_SPRITE[e.def.kind];
 }
@@ -330,6 +331,48 @@ function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
 }
 
 /** 敵1体をカード形式で描画（枠・弱点バッジ・名前・HP・スプライト・カウント） */
+/** レアモンスターの足元に脈打つ金色オーラを描く */
+function drawRareAura(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  const t = Date.now() / 1000;
+  const pulse = 0.6 + 0.4 * Math.sin(t * 3);
+  ctx.save();
+  const r = 40 + pulse * 8;
+  const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, r);
+  g.addColorStop(0, `rgba(255,221,120,${0.35 * pulse})`);
+  g.addColorStop(0.6, `rgba(255,200,80,${0.14 * pulse})`);
+  g.addColorStop(1, "rgba(255,200,80,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** レアモンスターの周囲で瞬く宝石のきらめき（4方向の星形） */
+function drawRareGlitter(ctx: CanvasRenderingContext2D, L: EnemyLayout): void {
+  const t = Date.now() / 1000;
+  const cols = ["#fff6cf", "#ffd24d", "#5fe0ff", "#ff7de9"];
+  const N = 7;
+  ctx.save();
+  for (let i = 0; i < N; i++) {
+    const ph = i * 1.7;
+    const tw = 0.5 + 0.5 * Math.sin(t * 4 + ph); // 瞬き
+    if (tw < 0.12) continue;
+    const ang = ph + t * 0.6;
+    const rad = 30 + (i % 3) * 16;
+    const x = L.cx + Math.cos(ang) * rad * 1.1;
+    const y = (L.top + L.h * 0.5) + Math.sin(ang) * rad * 0.7;
+    const s = (1.6 + (i % 2) * 1.4) * tw;
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = cols[i % cols.length];
+    // 4芒星（十字＋中心）
+    ctx.fillRect(x - s, y - 0.6, s * 2, 1.2);
+    ctx.fillRect(x - 0.6, y - s, 1.2, s * 2);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
 function drawEnemyCard(
   ctx: CanvasRenderingContext2D,
   e: EnemyState,
@@ -337,8 +380,8 @@ function drawEnemyCard(
   imminent: boolean,
   targeted: boolean,
 ): void {
-  const sprite = e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
-  const scale = e.def.boss ? 5 : 4;
+  const sprite = e.def.rare ? RARE : e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
+  const scale = e.def.boss || e.def.rare ? 5 : 4;
 
   // 撃破演出：カード枠は出さず、ノックバック→フェード→宝箱（ドロップ）
   if (!e.alive) {
@@ -423,9 +466,10 @@ function drawEnemyCard(
   let tint: { color: string; alpha: number } | undefined;
   if (e.hitFlash > 0) {
     tint = { color: "#ffffff", alpha: Math.min(0.85, e.hitFlash / 260) };
-  } else if (danger > 0.5 && !e.isBroken) {
-    const blink = 0.5 + 0.5 * Math.sin(Date.now() / (e.inTelegraph ? 70 : 130));
-    tint = { color: "#ff2020", alpha: ((danger - 0.5) / 0.5) * 0.6 * blink };
+  } else if (e.inTelegraph) {
+    // 攻撃前：はっきり点滅して警告する（赤⇄明をくっきり切り替え）
+    const on = Math.floor(Date.now() / 120) % 2 === 0;
+    tint = { color: "#ff2626", alpha: on ? 0.78 : 0.12 };
   }
   // 種別ごとのアイドルアニメ（浮遊・呼吸）＋攻撃の踏み込み
   const at = Date.now() / 1000 + e.phase;
@@ -435,10 +479,14 @@ function drawEnemyCard(
   else { sy = 1 + Math.sin(at * 1.6) * 0.05; sx = 1 - Math.sin(at * 1.6) * 0.04; }
   const atkLunge = e.atkAnimT > 0 ? Math.sin(Math.PI * (1 - e.atkAnimT / 300)) * -18 : 0;
   const recoil = e.hitFlash > 0 ? (e.hitFlash / 260) * 7 : 0; // 被弾でのけぞる（右へ）
+  // レアモンスター：足元に金色のオーラ（煌びやかさ）
+  if (e.def.rare && !e.isBroken) drawRareAura(ctx, L.cx, L.footY - 24);
   drawSpriteAnim(ctx, enemyFrame(e), L.cx + flinch + trembleX + flinchKnock + atkLunge + recoil, L.footY + trembleY, scale, {
     flip: true, tint, bob, sx, sy, rot,
   });
   ctx.globalAlpha = 1;
+  // レアモンスター：周囲に瞬く宝石のきらめき
+  if (e.def.rare && e.alive) drawRareGlitter(ctx, L);
 
   // === 攻撃カウントバッジ（カード下端中央） ===
   const cy = L.top + L.h - 4;
