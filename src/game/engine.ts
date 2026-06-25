@@ -29,6 +29,7 @@ import {
   ATTACK_WINDUP_MS,
   SKILL_BANNER_MS,
   LOSE_ANIM_MS,
+  WIN_HOLD_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -57,8 +58,8 @@ export interface FloatText {
   /** 出現位置（enemyの場合はインデックス） */
   anchor: "player" | "center" | number;
   rise: number;
-  /** 表示種別。damage=爆発エフェクト付きの数値 / text=通常テキスト */
-  kind?: "damage" | "text";
+  /** 表示種別。damage=爆発エフェクト付きの数値 / text=通常テキスト / announce=中央の大型バナー */
+  kind?: "damage" | "text" | "announce";
   /** ダメージ強調（会心/弱点/渾身）＝爆発を大きく */
   big?: boolean;
   /** 会心ヒット＝吹き出しの色を変える */
@@ -181,6 +182,8 @@ export class Battle {
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
   private winPending = false;
+  /** クリア表示を見せてからwonに移すための待機タイマー(ms) */
+  private winHoldT = 0;
   /** 敗北演出中フラグ。スロー＋敗北宣言を見せてから lost へ移す */
   losePending = false;
   /** 敗北演出の残り時間(ms)。0 で phase=lost に確定 */
@@ -549,7 +552,9 @@ export class Battle {
     // 全滅した瞬間に「STAGE CLEAR」表示。ただし撃破アニメを見せてからwonへ移す
     if (this.phase === "fighting" && this.aliveEnemies.length === 0 && !this.winPending) {
       this.winPending = true;
-      this.pushFloat("STAGE CLEAR", "#66ddff", "center");
+      this.winHoldT = WIN_HOLD_MS;
+      // クリアを大型バナーで告知（撃破アニメ→待機の間ずっと見せる）
+      this.floats.push({ text: "CLEAR", color: "#66e6ff", kind: "announce", ttl: 2200, max: 2200, anchor: "center", rise: 0 });
     }
   }
 
@@ -636,10 +641,11 @@ export class Battle {
       return;
     }
 
-    // 全滅していたら、撃破アニメ完了を待って勝利確定
+    // 全滅していたら、撃破アニメ完了→クリア表示の待機を経て勝利確定
     if (this.winPending) {
       if (this.enemies.every((e) => e.deathT <= 0)) {
-        this.phase = "won";
+        this.winHoldT -= dtMs;
+        if (this.winHoldT <= 0) this.phase = "won";
       }
       return;
     }
@@ -683,19 +689,27 @@ export class Battle {
     });
   }
 
-  /** ダメージ数値（爆発エフェクト付き）。長めに残して手応えを出す */
+  /**
+   * ダメージ数値（爆発エフェクト付き）。連続ヒット（2回攻撃など）は
+   * 同じ敵の上で左右に扇状へ振り分け、数値が重ならないようにする。
+   */
   private pushDamage(dmg: number, anchor: FloatText["anchor"], big: boolean, crit: boolean): void {
+    // この敵に今出ているダメージ表記の数で、左右交互＋上方向にずらす
+    const n = this.floats.filter((f) => f.kind === "damage" && f.anchor === anchor).length;
+    const step = Math.ceil(n / 2);          // 0,1,1,2,2,...
+    const dir = n % 2 === 1 ? -1 : 1;       // 中央→左→右→左→右
+    const dx = n === 0 ? 0 : dir * step * 46;
     this.floats.push({
       text: dmg.toLocaleString(), color: "", kind: "damage", big, crit,
       anchor, ttl: DAMAGE_TTL, max: DAMAGE_TTL,
-      rise: this.stackOffset(anchor, 30),
-      dx: (Math.random() * 2 - 1) * 22,
+      rise: n * 18,
+      dx,
     });
   }
 
-  /** ウェーブ開始など、画面中央に大きく告知する */
+  /** ウェーブ開始など、画面中央に大きく告知する（大型バナー） */
   announce(text: string, color: string): void {
-    this.floats.push({ text, color, ttl: 1600, max: 1600, anchor: "center", rise: 0 });
+    this.floats.push({ text, color, kind: "announce", ttl: 1700, max: 1700, anchor: "center", rise: 0 });
     this.whiteFlashT = 120;
   }
 }

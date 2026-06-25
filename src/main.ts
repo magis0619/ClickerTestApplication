@@ -65,6 +65,18 @@ function withFade(action: () => void): void {
   }, 340);
 }
 
+/** 直近に描画していた戦闘インスタンス。ウェーブ切替の検知に使う */
+let lastBattleRef: typeof game.battle = null;
+/** 次ウェーブへ移った瞬間、黒からぬるっと明転させる（フェードイン） */
+function fadeInBattle(): void {
+  fadeEl.style.transition = "none";
+  fadeEl.classList.add("show"); // いったん即座に真っ黒へ
+  requestAnimationFrame(() => {
+    fadeEl.style.transition = ""; // CSS既定の0.34sへ戻す
+    requestAnimationFrame(() => fadeEl.classList.remove("show"));
+  });
+}
+
 const KIND_ICON: Record<SkillKind, string> = { attack: "⚔", charge: "▲", focus: "◎" };
 const WEAPON_ICON: Record<WeaponClass, string> = { slash: "⚔", pierce: "🗡", crush: "🔨" };
 /** 戦闘スキルカードの英字見出し（モックに合わせた SLASH / PIERCE / STRIKE） */
@@ -244,7 +256,9 @@ function buildTitle(): void {
   hero.appendChild(cap);
   controls.appendChild(hero);
   controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
-  controls.appendChild(secondaryButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); }));
+  const howBtn = bigButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); });
+  howBtn.classList.add("menu-btn-sec");
+  controls.appendChild(howBtn);
   controls.appendChild(bottomNav());
 }
 
@@ -1126,6 +1140,7 @@ function buildBattleTop(): void {
 }
 
 function buildBattle(): void {
+  lastBattleRef = game.battle; // この戦闘を基準に（ウェーブ切替の二重フェードを防ぐ）
   buildBattleTop();
 
   // ===== HP / AP セグメントバー =====
@@ -1713,6 +1728,12 @@ function loop(now: number): void {
     if (game.lastWon) audio.sfxWin(); else audio.sfxLose();
   }
   if (game.screen !== renderedScreen) buildControls();
+
+  // ウェーブが切り替わった（新しい戦闘に入れ替わった）瞬間は黒からぬるっと明転
+  if (game.screen === "battle" && game.battle && game.battle !== lastBattleRef) {
+    lastBattleRef = game.battle;
+    fadeInBattle();
+  }
 
   // バトル枠（canvas）は戦闘中のみ描画
   if (game.screen === "battle" && game.battle) {

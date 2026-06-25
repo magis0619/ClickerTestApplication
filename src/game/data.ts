@@ -392,6 +392,9 @@ export const SKILL_BANNER_MS = 1100;
 /** 敗北演出（スロー＋敗北宣言）の長さ(ms)。これが終わるとリザルトへ遷移する */
 export const LOSE_ANIM_MS = 1500;
 
+/** 戦闘クリア後、CLEARバナーを見せてから次のウェーブ／リザルトへ移すまでの待機(ms) */
+export const WIN_HOLD_MS = 1000;
+
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;

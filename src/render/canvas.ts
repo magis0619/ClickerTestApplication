@@ -1,4 +1,4 @@
-import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
+import { Battle, EnemyState, DEATH_ANIM_MS, type FloatText } from "../game/engine.ts";
 import {
   KIND_LABEL, WEAKNESS, WEAPON_LABEL,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
@@ -831,6 +831,7 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
   drawPlayerLog(ctx, b); // 味方の表記は右側ログへ
   for (const f of b.floats) {
     if (f.anchor === "player") continue; // ログで描画済み
+    if (f.kind === "announce") { drawAnnounce(ctx, f); continue; } // 中央の大型バナー
     let pos: { x: number; y: number };
     if (f.anchor === "center") pos = { x: W / 2, y: H / 2 };
     else pos = slots[f.anchor] ?? { x: W / 2, y: H / 2 };
@@ -863,6 +864,58 @@ function drawFloats(ctx: CanvasRenderingContext2D, b: Battle, slots: { x: number
     ctx.fillText(f.text, 0, 0);
     ctx.restore();
   }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * ウェーブ開始・CLEAR などの大型バナー告知。PERFECT と同等の大きさ(44px)で、
+ * 暗幕＋上下のアクセントラインを敷いたデザイン基準のバナーとして描く。
+ */
+function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
+  const age = f.max - f.ttl;
+  // 小さく弾けて大きく → 落ち着く（オーバーシュート）
+  const t = Math.min(1, age / 280);
+  const back = (x: number) => 1 + 2.0 * Math.pow(x - 1, 3) + 1.1 * Math.pow(x - 1, 2);
+  const pop = 0.5 + 0.5 * back(t);
+  const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
+  const cy = 138;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(W / 2, cy);
+  ctx.scale(pop, pop);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const size = 44;
+  ctx.font = `900 ${size}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
+  const tw = ctx.measureText(f.text).width;
+  const bw = tw + 64;
+  const bh = 62;
+
+  // 暗幕の帯
+  ctx.fillStyle = "rgba(10,8,20,0.58)";
+  roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 8);
+  ctx.fill();
+  // 上下のアクセントライン（告知色）
+  ctx.fillStyle = f.color;
+  ctx.fillRect(-bw / 2, -bh / 2, bw, 4);
+  ctx.fillRect(-bw / 2, bh / 2 - 4, bw, 4);
+
+  // 文字（厚い暗色アウトライン＋告知色のグロー＋白い本体）
+  ctx.lineJoin = "round";
+  ctx.shadowColor = f.color;
+  ctx.shadowBlur = 22;
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "#0c0a18";
+  ctx.strokeText(f.text, 0, 2);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = f.color;
+  ctx.strokeText(f.text, 0, 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(f.text, 0, 2);
+  ctx.restore();
   ctx.globalAlpha = 1;
 }
 

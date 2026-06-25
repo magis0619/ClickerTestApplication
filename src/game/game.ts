@@ -164,6 +164,8 @@ export class Game {
       this.battle.announce("1階", "#9fd9ff");
     } else {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
+      // バトル開始時にステージ名を大型バナーで告知（ボス単体ステージは BOSS 表記）
+      this.battle.announce(this.isBossWave ? "BOSS BATTLE" : this.currentStage.name, this.isBossWave ? "#ff6b6b" : "#ffd35f");
     }
     this.screen = "battle";
   }
