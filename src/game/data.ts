@@ -61,14 +61,12 @@ export function skillDescription(s: Skill): string {
 }
 
 // ===== スキル連携（連携技：a→bの順で発動すると追撃が発生する） =====
-// スキルは抽選でランダムに入手するため、連携は「スキル種類」で定義して
-// どんな武器構成でも成立しうるようにする。
-// 「ためる/集中 → 攻撃」はターンを使う仕込みなので汎用（どの攻撃でも成立）。
-// 攻撃どうしの連携は“特定スキルの並び”だけに限定し、簡単に出過ぎないようにする。
+// スキルは抽選でランダムに入手するため、連携は「スキルの並び」で定義する。
+// 攻撃どうしの連携は“特定スキルの並び”に限定し、簡単に出過ぎないようにする。
 export const COMBOS: ComboDef[] = [
-  { id: "smite",  name: "連携・渾身", first: "charge", second: "attack", bonusHits: 1, desc: "ためる → 攻撃 で追撃1" },
-  { id: "ambush", name: "連携・奇襲", first: "focus",  second: "attack", bonusHits: 2, desc: "集中 → 攻撃 で追撃2" },
   // 攻撃どうしの連携（特定スキル限定）
+  { id: "spread", name: "連携・拡散", firstId: "single_hit", secondId: "double_target", bonusHits: 1, desc: "1回攻撃 → 2体攻撃 で追撃1" },
+  { id: "twin",   name: "連携・連斬", firstId: "double_hit",  secondId: "double_hit",    bonusHits: 2, desc: "2回攻撃 → 2回攻撃 で追撃2" },
   { id: "rush",   name: "連携・連撃", firstId: "single_hit", secondId: "double_hit", bonusHits: 1, desc: "1回攻撃 → 2回攻撃 で追撃1" },
   { id: "storm",  name: "連携・乱舞", firstId: "double_hit", secondId: "triple_hit", bonusHits: 2, desc: "2回攻撃 → 3回攻撃 で追撃2" },
   { id: "pierce", name: "連携・連環", firstId: "crit_up",    secondId: "crit_double", bonusHits: 1, desc: "会心40% → 会心2倍 で追撃1" },
