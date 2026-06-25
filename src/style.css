@@ -2241,3 +2241,70 @@ body.theme-nb {
 .theme-nb .result-panel .reset-btn { background: #ffffff; color: #1c1b1b; }
 .theme-nb .result-panel .guard-btn:active,
 .theme-nb .result-panel .reset-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
+
+/* =========================================================
+   チュートリアル（遊び方）— ライト・ネオブルータリズム
+   ========================================================= */
+.howto-text {
+  font-size: 13px; line-height: 1.65; color: #3a3340; margin: 0 0 12px;
+}
+.howto-text b { color: #df0b81; }
+.howto-gold { color: #b8860b; font-weight: 900; }
+
+.howto-sec {
+  background: #ffffff; border: 2px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b;
+  padding: 12px; margin-bottom: 14px;
+}
+.howto-sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.howto-sec-no {
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 13px; font-weight: 900; color: #fff; background: #df0b81;
+  border: 2px solid #1c1b1b; padding: 1px 7px;
+}
+.howto-sec-title { font-size: 16px; font-weight: 900; color: #1c1b1b; letter-spacing: 0.3px; }
+.howto-sec-body { display: flex; flex-direction: column; gap: 9px; }
+
+.howto-step { display: flex; align-items: flex-start; gap: 10px; }
+.howto-step-ico {
+  flex: 0 0 auto; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; background: #fdf2f8; border: 2px solid #1c1b1b;
+}
+.howto-step-text { display: flex; flex-direction: column; gap: 2px; }
+.howto-step-lbl { font-size: 13.5px; font-weight: 900; color: #1c1b1b; }
+.howto-step-desc { font-size: 12.5px; line-height: 1.55; color: #5a5260; }
+.howto-step-desc b, .howto-step-lbl b { color: #df0b81; }
+
+/* 弱点（3すくみ） */
+.howto-weak { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+.howto-weak-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #fafafa; border: 2px solid #1c1b1b; padding: 6px 10px;
+}
+.howto-weak-cls {
+  flex: 0 0 92px; font-size: 13px; font-weight: 900; color: #1c1b1b;
+}
+.howto-weak-arrow { font-weight: 900; color: #df0b81; font-size: 16px; }
+.howto-weak-enemy { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #1c1b1b; }
+.howto-weak-enemy canvas { image-rendering: pixelated; height: 30px; width: auto; }
+
+/* 連携技 */
+.howto-combo-list { display: flex; flex-direction: column; gap: 7px; }
+.howto-combo {
+  display: flex; flex-direction: column; gap: 2px;
+  background: #fffaf0; border: 2px solid #1c1b1b; border-left: 6px solid #b8860b; padding: 7px 10px;
+}
+.howto-combo-name { font-size: 13px; font-weight: 900; color: #9a6f0b; }
+.howto-combo-desc { font-size: 12.5px; color: #5a5260; }
+
+/* キーボード操作 */
+.howto-keys { display: flex; flex-direction: column; gap: 8px; }
+.howto-key-row { display: flex; align-items: center; gap: 10px; }
+.howto-key {
+  flex: 0 0 auto; min-width: 86px; text-align: center;
+  font-family: "Space Mono", ui-monospace, monospace; font-size: 13px; font-weight: 900;
+  color: #1c1b1b; background: #eef6ff; border: 2px solid #1c1b1b; box-shadow: 2px 2px 0 #1c1b1b;
+  padding: 4px 8px;
+}
+.howto-key-desc { font-size: 13px; color: #3a3340; font-weight: 700; }
+
+.howto-go { margin-top: 6px; }

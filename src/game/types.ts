@@ -144,7 +144,7 @@ export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" 
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "title" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result";
+export type Screen = "title" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result" | "howto";
 
 /** ショップで購入できる武器とその価格 */
 export interface ShopItem {

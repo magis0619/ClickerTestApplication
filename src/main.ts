@@ -6,9 +6,9 @@ import {
 } from "./render/sprites.ts";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
-  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR,
-  getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview,
-  PLAYER_MAX_HP, PLAYER_MAX_EN, SHOP_ITEMS, SHOP_CHESTS,
+  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
+  getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview, COMBOS,
+  PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, PERFECT_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
@@ -216,6 +216,7 @@ function buildControls(): void {
     case "shop": buildShop(); break;
     case "battle": buildBattle(); break;
     case "result": buildResult(); break;
+    case "howto": buildHowTo(); break;
   }
   // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
   if (screenChanged) {
@@ -243,6 +244,7 @@ function buildTitle(): void {
   hero.appendChild(cap);
   controls.appendChild(hero);
   controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
+  controls.appendChild(secondaryButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); }));
   controls.appendChild(bottomNav());
 }
 
@@ -265,6 +267,7 @@ function buildTopHeader(): void {
   const help = document.createElement("button");
   help.className = "nb-icon-btn";
   help.textContent = "?";
+  help.addEventListener("click", () => { game.goHowTo(); buildControls(); });
   right.appendChild(gold);
   right.appendChild(gear);
   right.appendChild(help);
@@ -1498,6 +1501,164 @@ function buildResultPanel(): void {
 }
 
 // ===== UI部品 =====
+// ===== チュートリアル（遊び方） =====
+/** 遊び方の1セクション（番号付き見出し＋本文ノード） */
+function howSection(no: string, title: string, body: HTMLElement): HTMLElement {
+  const sec = document.createElement("div");
+  sec.className = "howto-sec";
+  const head = document.createElement("div");
+  head.className = "howto-sec-head";
+  head.innerHTML = `<span class="howto-sec-no">${no}</span><span class="howto-sec-title">${title}</span>`;
+  sec.appendChild(head);
+  body.classList.add("howto-sec-body");
+  sec.appendChild(body);
+  return sec;
+}
+
+/** アイコン＋見出し＋説明の1ステップ行 */
+function howStep(icon: string, label: string, desc: string): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "howto-step";
+  row.innerHTML =
+    `<span class="howto-step-ico">${icon}</span>` +
+    `<span class="howto-step-text"><b class="howto-step-lbl">${label}</b>` +
+    `<span class="howto-step-desc">${desc}</span></span>`;
+  return row;
+}
+
+/** プレーンな説明段落 */
+function howText(html: string): HTMLElement {
+  const p = document.createElement("div");
+  p.className = "howto-text";
+  p.innerHTML = html;
+  return p;
+}
+
+function buildHowTo(): void {
+  controls.appendChild(screenHead("HOW TO PLAY", "📖 SCREEN_00", "howto-title"));
+
+  controls.appendChild(howText(
+    "<b>ASTRAL WARDEN</b> はターン制のタイミングアクションRPG。" +
+    "弱点を突いて攻撃し、敵の合図に合わせてガードしながら戦い抜こう。",
+  ));
+
+  // 1. 戦闘の流れ
+  const flow = document.createElement("div");
+  flow.appendChild(howStep("⚔", "自分のターン：攻撃する", "武器カードをタップしてスキルを発動。武器は斬撃・刺突・打撃の3系統を切り替えて使える。"));
+  flow.appendChild(howStep("❗", "敵の予兆：ガードする", "敵に「！」が出たら攻撃の合図。このあいだは<b>ガードしかできない</b>（ターン制）。"));
+  flow.appendChild(howStep("🛡", "受け切って反撃へ", "ガードが成功したら、また自分のターン。これを繰り返して敵を倒す。"));
+  controls.appendChild(howSection("01", "戦闘の流れ", flow));
+
+  // 2. 弱点（3すくみ）
+  const weak = document.createElement("div");
+  weak.appendChild(howText(`武器の系統には得意な相手がいる。弱点を突くとダメージ<b>×${WEAKNESS_MULTIPLIER}</b>！`));
+  const triangle = document.createElement("div");
+  triangle.className = "howto-weak";
+  // WEAKNESS は「敵種 → 弱点の武器系統」。表示は「武器系統 → 強い敵種」に並べ替える
+  (["slash", "pierce", "crush"] as WeaponClass[]).forEach((cls) => {
+    const kind = (Object.keys(WEAKNESS) as EnemyKind[]).find((k) => WEAKNESS[k] === cls)!;
+    const row = document.createElement("div");
+    row.className = "howto-weak-row";
+    const left = document.createElement("span");
+    left.className = "howto-weak-cls";
+    left.innerHTML = `${WEAPON_ICON[cls]} ${WEAPON_LABEL[cls]}`;
+    const arrow = document.createElement("span");
+    arrow.className = "howto-weak-arrow";
+    arrow.textContent = "→";
+    const right = document.createElement("span");
+    right.className = "howto-weak-enemy";
+    const spr = makeSpriteCanvas(KIND_SPRITE[kind], 3);
+    right.appendChild(spr);
+    const enLbl = document.createElement("span");
+    enLbl.textContent = KIND_LABEL[kind];
+    right.appendChild(enLbl);
+    row.appendChild(left);
+    row.appendChild(arrow);
+    row.appendChild(right);
+    triangle.appendChild(row);
+  });
+  weak.appendChild(triangle);
+  weak.appendChild(howText("敵カード（または画面左右の矢印）をタップして<b>狙う相手を選択</b>できる。"));
+  controls.appendChild(howSection("02", "弱点を突く", weak));
+
+  // 3. AP（スキルコスト）と休憩
+  const ap = document.createElement("div");
+  ap.appendChild(howStep("✦", `AP（最大${PLAYER_MAX_EN}）`, "スキルの発動にはAPを消費する。強力なスキルほど多く必要。"));
+  ap.appendChild(howStep("💤", "REST（休憩）", `攻撃せずに休むと AP が <b>+${REST_EN_RECOVER}</b> 回復。AP切れになる前に休もう（休憩中も敵は動く）。`));
+  controls.appendChild(howSection("03", "APとスキル", ap));
+
+  // 4. ガードのタイミング
+  const guard = document.createElement("div");
+  guard.appendChild(howText("ガードは<b>タイミング</b>で結果が変わる。引きつけるほど見返りが大きい。"));
+  guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP <b>+${PERFECT_EN_RECOVER}</b> 回復し、敵をひるませる。`));
+  guard.appendChild(howStep("⭐", "JUST（早め）", "被ダメージを大きく軽減しAPも少し回復。"));
+  guard.appendChild(howStep("🛡", "GUARD（通常）", "被ダメージを軽減。タイミングを逃しても守りにはなる。"));
+  controls.appendChild(howSection("04", "ガードのコツ", guard));
+
+  // 5. ブレイク
+  const brk = document.createElement("div");
+  brk.appendChild(howText(
+    "敵には体力ゲージの下に<b>ブレイクゲージ</b>がある。攻撃で削り切ると<b>ブレイク状態</b>になり、" +
+    "大きな隙ができて与ダメージが伸びる。パーフェクトガードもブレイクを蓄積させる。",
+  ));
+  controls.appendChild(howSection("05", "ブレイク", brk));
+
+  // 6. 連携技
+  const combo = document.createElement("div");
+  combo.appendChild(howText("特定のスキルを<b>続けて</b>出すと<span class='howto-gold'>連携技</span>が発動し、追撃が入る。"));
+  const clist = document.createElement("div");
+  clist.className = "howto-combo-list";
+  for (const c of COMBOS) {
+    const item = document.createElement("div");
+    item.className = "howto-combo";
+    item.innerHTML =
+      `<span class="howto-combo-name">${c.name}</span>` +
+      `<span class="howto-combo-desc">${c.desc}</span>`;
+    clist.appendChild(item);
+  }
+  combo.appendChild(clist);
+  controls.appendChild(howSection("06", "連携技", combo));
+
+  // 7. レアモンスター
+  const rare = document.createElement("div");
+  rare.appendChild(howText(
+    "ときどき<span class='howto-gold'>煌びやかなレアモンスター</span>が出現する。手強いが、" +
+    "倒すと<b>レア武器</b>を確実に落とす。見かけたら積極的に狙おう。",
+  ));
+  controls.appendChild(howSection("07", "レアモンスター", rare));
+
+  // 8. 育成
+  const grow = document.createElement("div");
+  grow.appendChild(howStep("🎒", "インベントリ", "手に入れた武器を確認・装備。系統ごとに1本ずつ装備できる。"));
+  grow.appendChild(howStep("🔨", "鍛冶屋", "余った武器を素材にしてレベルアップ。上限に達したら同じ武器で「覚醒」して限界突破。"));
+  grow.appendChild(howStep("🛒", "ショップ", "ゴールドで武器や宝箱を購入。宝箱からはレアリティ帯のランダム武器が出る。"));
+  controls.appendChild(howSection("08", "武器を育てる", grow));
+
+  // 9. 操作（キーボード）
+  const keys = document.createElement("div");
+  keys.className = "howto-keys";
+  const kmap: [string, string][] = [
+    ["1 / 2 / 3", "斬撃 / 刺突 / 打撃で攻撃"],
+    ["Space", "ガード"],
+    ["R", "休憩（AP回復）"],
+    ["T", "ターゲット切替"],
+  ];
+  for (const [k, d] of kmap) {
+    const row = document.createElement("div");
+    row.className = "howto-key-row";
+    row.innerHTML = `<kbd class="howto-key">${k}</kbd><span class="howto-key-desc">${d}</span>`;
+    keys.appendChild(row);
+  }
+  controls.appendChild(howSection("09", "キーボード操作（PC）", keys));
+
+  // 出発ボタン
+  const go = bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); });
+  go.classList.add("howto-go");
+  controls.appendChild(go);
+
+  controls.appendChild(bottomNav());
+}
+
 function bigButton(text: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.className = "menu-btn";

@@ -40,6 +40,7 @@ export class Game {
   goInventory(): void { this.screen = "inventory"; }
   goForge(): void { this.screen = "forge"; }
   goShop(): void { this.screen = "shop"; }
+  goHowTo(): void { this.screen = "howto"; }
 
   /** 所持ゴールド */
   get gold(): number { return this.save.gold; }
