@@ -299,6 +299,808 @@ export const RARE_TEL: Sprite = {
   ],
 };
 
+// ===================================================================
+// 敵キャラごとの固有ドット絵
+// 種別共通スプライト（CARAPACE/AERIAL/PHANTOM/BOSS）の使い回しでは
+// 名前と見た目が合わない敵を、1体ずつ専用に描き起こす。
+// 各敵は base（待機）と tel（予兆/攻撃）の2フレームを持つ。
+// ===================================================================
+
+// --- 甲殻種（carapace） ---
+
+const STRAW_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#d6b24a", S: "#f2d878", d: "#9a7a2a", e: "#3a2810",
+};
+/** ストローゴーレム：藁束を編んだ人形 */
+export const STRAW_GOLEM: Sprite = {
+  palette: STRAW_PAL,
+  rows: [
+    "..s.o..o.s..",
+    "...ossso....",
+    "..osSSSso...",
+    "..oseoeso...",
+    "..ossSsso...",
+    "s.oosssoo.s.",
+    ".sosSSSos.s.",
+    "...osSso....",
+    "...osSso....",
+    "..osoosoo...",
+    "..o.s..s.o..",
+  ],
+};
+export const STRAW_GOLEM_TEL: Sprite = {
+  palette: STRAW_PAL,
+  rows: [
+    "o.s.o..o.s.o",
+    "o..ossso..o.",
+    ".s.osSSso.s.",
+    "...oseeeso..",
+    "...osSsSso..",
+    "..oosssooo..",
+    "..osSSSso...",
+    "...osSso....",
+    "...osSso....",
+    "..osoosoo...",
+    "..o.s..s.o..",
+  ],
+};
+
+const STONE_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#8a8f9c", S: "#c2c7d4", d: "#565b68", e: "#9fe8ff",
+};
+/** ストーンセンチネル：石塊の門番 */
+export const STONE_SENTINEL: Sprite = {
+  palette: STONE_PAL,
+  rows: [
+    "..oooooooo..",
+    "..osSSSSso..",
+    "..oseooeso..",
+    "..osSSSSso..",
+    "..odSSSSdo..",
+    "o.oosssoo.o.",
+    "ososSSSosos.",
+    "o.odSSSdo.o.",
+    "...osSso....",
+    "..oss.sso...",
+    "..oo...oo...",
+  ],
+};
+export const STONE_SENTINEL_TEL: Sprite = {
+  palette: STONE_PAL,
+  rows: [
+    "o.oooooooo.o",
+    "o.osSSSSso.o",
+    "..oseeeeso..",
+    "..osSSSSso..",
+    "..odSSSSdo..",
+    "oooosssoooo.",
+    "ososSSSosos.",
+    "o.odSSSdo.o.",
+    "...osSso....",
+    "..oss.sso...",
+    "..oo...oo...",
+  ],
+};
+
+const SANDCRAB_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#e58a3a", S: "#ffb86a", d: "#a85518", e: "#2a1408",
+};
+/** サンドクラブ：砂地の蟹（大きな鋏） */
+export const SAND_CRAB: Sprite = {
+  palette: SANDCRAB_PAL,
+  rows: [
+    "............",
+    "oo......oo..",
+    "doo....ood..",
+    ".doo..ood.eo",
+    "..oddddoo.o.",
+    ".odsSSSSdo..",
+    "odsSSeeSSsdo",
+    "odsSSSSSSsdo",
+    ".oddddddddo.",
+    "o.o.o..o.o.o",
+    ".o.o.oo.o.o.",
+  ],
+};
+export const SAND_CRAB_TEL: Sprite = {
+  palette: SANDCRAB_PAL,
+  rows: [
+    "oo........oo",
+    "soo......oos",
+    "dsoo....oosd",
+    "..oo....oo..",
+    "...oddddo...",
+    ".odsSSSSdo..",
+    "odsSeeeeSsdo",
+    "odsSSSSSSsdo",
+    ".oddddddddo.",
+    "o.o.o..o.o.o",
+    ".o.o.oo.o.o.",
+  ],
+};
+
+const MUD_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#7c5a2e", S: "#a8854a", d: "#4a3418", e: "#ffe08a",
+};
+/** マッドビートル：泥にまみれた甲虫 */
+export const MUD_BEETLE: Sprite = {
+  palette: MUD_PAL,
+  rows: [
+    "...o....o...",
+    "....o..o....",
+    "..oodssdoo..",
+    ".odsSeeSsdo.",
+    "odsSSssSSsdo",
+    "osSsssssSSso",
+    "odsSssssSsdo",
+    ".oddddddddo.",
+    "obo.oooo.obo",
+    ".o.o....o.o.",
+    "............",
+  ],
+};
+export const MUD_BEETLE_TEL: Sprite = {
+  palette: MUD_PAL,
+  rows: [
+    ".o......o...",
+    "..o....o....",
+    "...o..o.....",
+    "..oodssdoo..",
+    ".odsSeeSsdo.",
+    "odsSSeeSSsdo",
+    "osSsssssSSso",
+    ".oddddddddo.",
+    "obo.oooo.obo",
+    "o.o......o.o",
+    "............",
+  ],
+};
+
+const ICECR_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#6fc8e0", S: "#d4f4ff", d: "#357f9c", e: "#ffffff",
+};
+/** アイスクローラー：氷殻の這うもの */
+export const ICE_CRAWLER: Sprite = {
+  palette: ICECR_PAL,
+  rows: [
+    "....S..S....",
+    "..S.oo.oo.S.",
+    "...odssdo...",
+    "..odSSSSdo..",
+    ".odSSeeSSdo.",
+    "odSSSSSSSSdo",
+    "odsSSSSSSsdo",
+    ".oddddddddo.",
+    "obo.oo.o.obo",
+    ".o.o.oo.o.o.",
+    "S..........S",
+  ],
+};
+export const ICE_CRAWLER_TEL: Sprite = {
+  palette: ICECR_PAL,
+  rows: [
+    "S.S.oo.oo.S.",
+    "..S.oo.o.S..",
+    "...odssdo...",
+    "..odSSSSdo..",
+    ".odSeeeeSdo.",
+    "odSSSSSSSSdo",
+    "odsSSSSSSsdo",
+    ".oddddddddo.",
+    "obo.oo.o.obo",
+    "o.o.o..o.o.o",
+    "S.S......S.S",
+  ],
+};
+
+const IRON_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#7a818c", S: "#b0b6c0", d: "#474d57", g: "#4a8c5a", G: "#74c887", e: "#ffe08a",
+};
+/** アイアントータス：鉄甲の亀 */
+export const IRON_TORTOISE: Sprite = {
+  palette: IRON_PAL,
+  rows: [
+    "............",
+    "...oooooo...",
+    "..odSSSSdo..",
+    ".odSdSSdSdo.",
+    "odSSSSSSSSdo",
+    "ogo.dssd.ogo",
+    "oGgodssdoggo",
+    ".oo.oddo.oo.",
+    "...oGeeGo...",
+    "....oggo....",
+    "............",
+  ],
+};
+export const IRON_TORTOISE_TEL: Sprite = {
+  palette: IRON_PAL,
+  rows: [
+    "............",
+    "...oooooo...",
+    "..odSSSSdo..",
+    ".odSdSSdSdo.",
+    "odSSSSSSSSdo",
+    "ggo.dssd.ogg",
+    "Gggodssdoggg",
+    ".oo.oddo.oo.",
+    "..oGeeeeGo..",
+    "...ogGGgo...",
+    "....o..o....",
+  ],
+};
+
+// --- 霊体種（phantom） ---
+
+const DUSTIMP_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#c9954f", S: "#e6b977", d: "#8a5e2a", h: "#5a3a1a", e: "#ff5a3a",
+};
+/** ダストインプ：埃まみれの小鬼 */
+export const DUST_IMP: Sprite = {
+  palette: DUSTIMP_PAL,
+  rows: [
+    "..h......h..",
+    "..ho....oh..",
+    "...osssso...",
+    "..osSeeSso..",
+    "..osSSSSso..",
+    "..oosddoo...",
+    "h.osSSSSso.h",
+    "oso.osso.oso",
+    "....osso....",
+    "...oo..oo...",
+    "...o....o...",
+  ],
+};
+export const DUST_IMP_TEL: Sprite = {
+  palette: DUSTIMP_PAL,
+  rows: [
+    "h.h......h.h",
+    ".oho....oho.",
+    "...osssso...",
+    "..oseeeeso..",
+    "..osSSSSso..",
+    "o.ooseeoo.o.",
+    "oso.SSSS.oso",
+    "...ososo....",
+    "....osso....",
+    "...oo..oo...",
+    "...o....o...",
+  ],
+};
+
+const HOUND_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#e0622a", S: "#ff9a4a", d: "#9a2c10", f: "#ffd35f", e: "#fff0a0",
+};
+/** エンバーハウンド：燃える猟犬 */
+export const EMBER_HOUND: Sprite = {
+  palette: HOUND_PAL,
+  rows: [
+    "f.f.........",
+    ".fof....f.f.",
+    "ofSfo..fofo.",
+    "osSSsooofo..",
+    "osSeSSSSSso.",
+    "odSSSSSSSSdo",
+    ".osSSSSSSso.",
+    "..oo.oo.oo..",
+    "..o..o..o.o.",
+    "............",
+    "............",
+  ],
+};
+export const EMBER_HOUND_TEL: Sprite = {
+  palette: HOUND_PAL,
+  rows: [
+    "f.f...f.f...",
+    "fofo.fofo...",
+    "ofSfofofo.f.",
+    "osSSsoooofof",
+    "oseeSSSSSSso",
+    "odSSffffSSdo",
+    ".osSSSSSSso.",
+    "..oo.oo.oo..",
+    "..o..o..o.o.",
+    "............",
+    "............",
+  ],
+};
+
+const FIMP_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#7fd0e8", S: "#d8f4ff", d: "#357f9c", h: "#2a4a5a", e: "#bfffff",
+};
+/** フロストインプ：氷の小鬼 */
+export const FROST_IMP: Sprite = {
+  palette: FIMP_PAL,
+  rows: [
+    "..h......h..",
+    "..ho....oh..",
+    "...osssso...",
+    "..osSeeSso..",
+    "..osSSSSso..",
+    "..oosddoo...",
+    "h.osSSSSso.h",
+    "oso.osso.oso",
+    "....osso....",
+    "...oo..oo...",
+    "...o....o...",
+  ],
+};
+export const FROST_IMP_TEL: Sprite = {
+  palette: FIMP_PAL,
+  rows: [
+    "h.h......h.h",
+    ".oho....oho.",
+    "...osssso...",
+    "..oseeeeso..",
+    "..osSSSSso..",
+    "o.ooseeoo.o.",
+    "oso.SSSS.oso",
+    "...ososo....",
+    "....osso....",
+    "...oo..oo...",
+    "...o....o...",
+  ],
+};
+
+const BONE_PAL: Record<string, string> = {
+  o: "#0c0a18", w: "#e8e8f0", W: "#ffffff", d: "#9a9ab0", e: "#ff6f3f",
+};
+/** ボーンゴースト：骸骨の亡霊 */
+export const BONE_GHOST: Sprite = {
+  palette: BONE_PAL,
+  rows: [
+    "...oooo...",
+    "..owwwwo..",
+    ".owWWWWwo.",
+    "owweooewo.",
+    "owWeooeWwo",
+    "owwwddwwwo",
+    ".owwwwwwo.",
+    ".odwwwwdo.",
+    "..o.oo.o..",
+    ".o..oo..o.",
+  ],
+};
+export const BONE_GHOST_TEL: Sprite = {
+  palette: BONE_PAL,
+  rows: [
+    "...oooo...",
+    "..owwwwo..",
+    ".owWWWWwo.",
+    "oweeooeewo",
+    "oweeooeewo",
+    "owwoddowwo",
+    ".owwwwwwo.",
+    ".odwwwwdo.",
+    ".o.o..o.o.",
+    "o..o..o..o",
+  ],
+};
+
+const SLURK_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#2a2440", S: "#4a3a6a", d: "#15101f", e: "#ff5a8a",
+};
+/** シャドウラーカー：闇に潜むもの */
+export const SHADOW_LURKER: Sprite = {
+  palette: SLURK_PAL,
+  rows: [
+    "............",
+    "..oo....oo..",
+    ".oSso..osSo.",
+    "osSSsooosSso",
+    "osSeSSSSeSso",
+    "osSSSSSSSSso",
+    ".odSSSSSSdo.",
+    "..oddddddo..",
+    ".o.o.oo.o.o.",
+    "o..o....o..o",
+  ],
+};
+export const SHADOW_LURKER_TEL: Sprite = {
+  palette: SLURK_PAL,
+  rows: [
+    "..o......o..",
+    ".oSo....oSo.",
+    "oSSso..osSSo",
+    "osSSsooosSso",
+    "oseeSSSSeeso",
+    "osSSSSSSSSso",
+    ".odSSSSSSdo.",
+    "..oddddddo..",
+    "o.o.o..o.o.o",
+    ".o..o..o..o.",
+  ],
+};
+
+const SPEC_PAL: Record<string, string> = {
+  o: "#0c0a18", g: "#5aa85a", G: "#a0e0a0", d: "#2f6a3a", e: "#d8ff8a",
+};
+/** ヴァイルスペクター：邪悪な妖霊 */
+export const VILE_SPECTER: Sprite = {
+  palette: SPEC_PAL,
+  rows: [
+    "...oooo...",
+    "..oGGGGo..",
+    ".oGGGGGGo.",
+    "oGGeGGeGGo",
+    "oGddGGddGo",
+    "oGGGGGGGGo",
+    "odGGGGGGdo",
+    ".odGGGGdo.",
+    "..o.oo.o..",
+    ".o.o..o.o.",
+  ],
+};
+export const VILE_SPECTER_TEL: Sprite = {
+  palette: SPEC_PAL,
+  rows: [
+    "...oooo...",
+    "..oGGGGo..",
+    ".oGeGGeGo.",
+    "oGeeGGeeGo",
+    "oGGGddGGGo",
+    "oGGddddGGo",
+    "odGGGGGGdo",
+    ".odGGGGdo.",
+    ".o.o..o.o.",
+    "o..o..o..o",
+  ],
+};
+
+// --- 飛翔種（aerial） ---
+
+const VENOM_PAL: Record<string, string> = {
+  o: "#0c0a18", g: "#7ab83a", G: "#bfe86a", d: "#4a6a1a", e: "#eaff8a", w: "#c8ff5a",
+};
+/** ヴェノムラーカー：毒を滴らせる飛行体 */
+export const VENOM_LURKER: Sprite = {
+  palette: VENOM_PAL,
+  rows: [
+    "o..........o",
+    "Go........oG",
+    "Ggo..oo..oGg",
+    "dGgodggdoGgd",
+    ".dgdgeegdgd.",
+    "..odggggdo..",
+    "...odggdo...",
+    "....oddo....",
+    ".....ww.....",
+    "...w....w...",
+  ],
+};
+export const VENOM_LURKER_TEL: Sprite = {
+  palette: VENOM_PAL,
+  rows: [
+    "Go........oG",
+    "Ggo......oGg",
+    "GGgo.oo.oGGg",
+    "dGGgdggdGGgd",
+    ".dgdgeegdgd.",
+    "..odggggdo..",
+    "...odggdo...",
+    "....oddo....",
+    "..w..ww..w..",
+    ".w..w..w..w.",
+  ],
+};
+
+const FDRAKE_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#6fc8e8", S: "#cfeeff", d: "#357f9c", e: "#ffffff",
+};
+/** フロストドレイク：氷の幼竜 */
+export const FROST_DRAKE: Sprite = {
+  palette: FDRAKE_PAL,
+  rows: [
+    "So........oS",
+    "Sso......osS",
+    "dSsooooooSsd",
+    ".dSsSSSSsSd.",
+    "..oSSeeSSo..",
+    "...oSSSSo..S",
+    "..oSSSSSSoSs",
+    ".oSso..osSso",
+    ".oo......oo.",
+    ".........dd.",
+  ],
+};
+export const FROST_DRAKE_TEL: Sprite = {
+  palette: FDRAKE_PAL,
+  rows: [
+    "Sso......osS",
+    "dSso....osSd",
+    "dSSsoooosSSd",
+    ".dSSSSSSSSd.",
+    "..oSeeeeSo..",
+    "..oSSeeSSo.S",
+    ".oSSSSSSSSSs",
+    "oSso....osSo",
+    ".oo......oo.",
+    "........ddd.",
+  ],
+};
+
+const MOTH_PAL: Record<string, string> = {
+  o: "#0c0a18", w: "#c9a8e6", W: "#ecdcff", b: "#6a4a3a", d: "#7a5a9a", e: "#ffd35f",
+};
+/** スカイモス：天翔ける大蛾 */
+export const SKY_MOTH: Sprite = {
+  palette: MOTH_PAL,
+  rows: [
+    ".d......d...",
+    "oWwo.b.oWwo.",
+    "owWWoboowWWo",
+    "owWWWbbWWWwo",
+    ".owWobbowWo.",
+    "ow.obeebo.wo",
+    "owwobbbbowwo",
+    ".owobbbbowo.",
+    "..o.obbo.o..",
+    ".....bb.....",
+  ],
+};
+export const SKY_MOTH_TEL: Sprite = {
+  palette: MOTH_PAL,
+  rows: [
+    "d.d....d.d..",
+    "oWWwob.oWWwo",
+    "owWWWboowWWWo",
+    "owWWWbbWWWwo",
+    "owWWobboWWwo",
+    "o.obeeeebo.o",
+    "owobbbbbbowo",
+    ".oobbbbboo..",
+    "...obbbbo...",
+    "....obbo....",
+  ],
+};
+
+const HAWK_PAL: Record<string, string> = {
+  o: "#0c0a18", f: "#c89a4a", F: "#ecc878", b: "#3a2a10", k: "#ffcf3f", e: "#fff0a0",
+};
+/** サンダーホーク：雷をまとう鷹 */
+export const THUNDER_HAWK: Sprite = {
+  palette: HAWK_PAL,
+  rows: [
+    "o..........o",
+    "Fo...ff...oF",
+    "FFo.fFFf.oFF",
+    "fFFoFeeFoFFf",
+    ".fFofkkfoFf.",
+    "..oFFFFFFo..",
+    "...oFFFFo...",
+    "...ofFFfo...",
+    "....obbo....",
+    "...ob..bo...",
+  ],
+};
+export const THUNDER_HAWK_TEL: Sprite = {
+  palette: HAWK_PAL,
+  rows: [
+    "Fo........oF",
+    "FFo..ff..oFF",
+    "FFFofFFfoFFF",
+    "fFFoFeeFoFFf",
+    "..ofkkkkfo..",
+    "..oFFFFFFo..",
+    "...oFFFFo...",
+    "...ofFFfo...",
+    "....obbo....",
+    "..ob....bo..",
+  ],
+};
+
+const WYV_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#6a86b0", S: "#a6c2e0", d: "#3a526f", e: "#aef0ff",
+};
+/** ストームワイバーン：嵐を呼ぶ飛竜 */
+export const STORM_WYVERN: Sprite = {
+  palette: WYV_PAL,
+  rows: [
+    "o....ss....o",
+    "do..sSSs..od",
+    "dSo.sSSs.oSd",
+    "dSSosSSsoSSd",
+    ".dSSSeeSSSd.",
+    "..oSSSSSSo..",
+    "...oSSSSo..o",
+    "..oSso.osSos",
+    ".oo......ooS",
+    "..........dd",
+  ],
+};
+export const STORM_WYVERN_TEL: Sprite = {
+  palette: WYV_PAL,
+  rows: [
+    "do...ss...od",
+    "dSo.sSSs.oSd",
+    "dSSosSSsoSSd",
+    "dSSSsSSsSSSd",
+    ".dSSeeeeSSd.",
+    "..oSSSSSSo..",
+    "..oSSSSSSo.o",
+    ".oSso..osSos",
+    "oo........ooS",
+    "...........dd",
+  ],
+};
+
+// --- ボス（boss）：種族・属性ごとに描き分ける ---
+
+const SWARDEN_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#4a8c5a", S: "#7fd07f", d: "#2f5c3a", b: "#caa15a", e: "#ffe08a", y: "#cfe8d0",
+};
+/** シェルウォーデン：緑甲の守将（ボス） */
+export const SHELL_WARDEN: Sprite = {
+  palette: SWARDEN_PAL,
+  rows: [
+    "y....oooo....y",
+    "yo..odssdo..oy",
+    ".odssSSSSssdo.",
+    "odsSSSssSSSsdo",
+    "osSSseessSSSso",
+    "osSssssssssSso",
+    "odssssssssssdo",
+    "odssSSSSSSssdo",
+    ".odddddddddo .",
+    "obbo.oooo.obbo",
+    ".obo......obo.",
+  ],
+};
+export const SHELL_WARDEN_TEL: Sprite = {
+  palette: SWARDEN_PAL,
+  rows: [
+    "y...oooooo...y",
+    "yo.odssssdo.oy",
+    ".odsSSSSSSsdo.",
+    "odsSSSssSSSsdo",
+    "oseeeesseeeeso",
+    "osSssssssssSso",
+    "odsSSSSSSSSsdo",
+    "odssssssssssdo",
+    ".odddddddddo .",
+    "obbo.oooo.obbo",
+    "o.bo......ob.o",
+  ],
+};
+
+const WMON_PAL: Record<string, string> = {
+  o: "#0c0a18", p: "#8a5ad0", P: "#c39aff", d: "#4a2a7a", e: "#ff6f9f", y: "#ffd35f",
+};
+/** レイスモナーク：冠をいただく幽冥の王（ボス） */
+export const WRAITH_MONARCH: Sprite = {
+  palette: WMON_PAL,
+  rows: [
+    ".y.y.yy.y.y.",
+    "..oyoooyo...",
+    "o.oPPPPPPo.o",
+    "Po.oPPPPo.oP",
+    "PPodPeePdoPP",
+    "dPPoPPPPoPPd",
+    ".dPPPPPPPPd.",
+    "..oPPPPPPo..",
+    "..odPPPPdo..",
+    ".o.o.oo.o.o.",
+    "o..o....o..o",
+  ],
+};
+export const WRAITH_MONARCH_TEL: Sprite = {
+  palette: WMON_PAL,
+  rows: [
+    "y.y.yyyy.y.y",
+    ".oyoooooyo..",
+    "ooPPPPPPPPoo",
+    "PoPPeePPeePo",
+    "PPdPePPePdPP",
+    "dPPPPPPPPPPd",
+    ".dPPPPPPPPd.",
+    "..oPPPPPPo..",
+    "..odPPPPdo..",
+    "o.o.o..o.o.o",
+    ".o..o..o..o.",
+  ],
+};
+
+const FDRAG_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#6fc8e8", S: "#d4f4ff", d: "#357f9c", e: "#ffffff", y: "#bfffff",
+};
+/** フロストドラゴン：氷河の竜王（ボス） */
+export const FROST_DRAGON: Sprite = {
+  palette: FDRAG_PAL,
+  rows: [
+    "y..o......o..y",
+    "Sso.dSSSSd.osS",
+    "dSsodSSSSsdosS",
+    ".dSsSSSSSSsSd.",
+    "..oSSeeeeSSo..",
+    "..oSSSSSSSSo.y",
+    ".oSSSSSSSSSSos",
+    "oSSso....osSSo",
+    "oSo........oSo",
+    ".oo........oo.",
+    "..........ddd.",
+  ],
+};
+export const FROST_DRAGON_TEL: Sprite = {
+  palette: FDRAG_PAL,
+  rows: [
+    "y.o........o.y",
+    "Sso.dSSSSd.osS",
+    "dSSodSSSSsdoSS",
+    ".dSSSSSSSSSSd.",
+    "..oSeeeeeeSo..",
+    "..oSSeeeeSSo.y",
+    ".oSSSSSSSSSSos",
+    "oSSso.yy.osSSo",
+    "oSo..yyyy..oSo",
+    ".oo........oo.",
+    ".........dddd.",
+  ],
+};
+
+const STYR_PAL: Record<string, string> = {
+  o: "#0c0a18", s: "#2e2748", S: "#5a4a8a", d: "#14101e", e: "#ff4a7a", y: "#b96bff",
+};
+/** シャドウタイラント：闇を統べる暴君（ボス） */
+export const SHADOW_TYRANT: Sprite = {
+  palette: STYR_PAL,
+  rows: [
+    "y....oooo....y",
+    "yo..oSSSSo..oy",
+    ".odSSSSSSSSdo.",
+    "odSSSssssSSSdo",
+    "oSSseeSSeeSSSo",
+    "oSSSSSSSSSSSSo",
+    "odSSSSSSSSSSdo",
+    "odSSSdddSSSSdo",
+    ".odddddddddo .",
+    "oSSo.oooo.oSSo",
+    ".oSo......oSo.",
+  ],
+};
+export const SHADOW_TYRANT_TEL: Sprite = {
+  palette: STYR_PAL,
+  rows: [
+    "y...oooooo...y",
+    "yo.oSSSSSSo.oy",
+    ".odSSSSSSSSdo.",
+    "odSSSssssSSSdo",
+    "oSeeeeSSeeeeSo",
+    "oSSSSSSSSSSSSo",
+    "odSSSeeeSSSSdo",
+    "odSSSSSSSSSSdo",
+    ".odddddddddo .",
+    "oSSo.oooo.oSSo",
+    "o.So......oS.o",
+  ],
+};
+
+// 敵IDごとの専用スプライト（base=待機 / tel=予兆・攻撃）。
+// ここに無い敵は種別共通スプライト（canvas側）にフォールバックする。
+export const ENEMY_BY_ID: Record<string, { base: Sprite; tel: Sprite }> = {
+  straw_golem:    { base: STRAW_GOLEM,    tel: STRAW_GOLEM_TEL },
+  stone_sentinel: { base: STONE_SENTINEL, tel: STONE_SENTINEL_TEL },
+  sand_crab:      { base: SAND_CRAB,      tel: SAND_CRAB_TEL },
+  mud_beetle:     { base: MUD_BEETLE,     tel: MUD_BEETLE_TEL },
+  ice_crawler:    { base: ICE_CRAWLER,    tel: ICE_CRAWLER_TEL },
+  iron_tortoise:  { base: IRON_TORTOISE,  tel: IRON_TORTOISE_TEL },
+  dust_imp:       { base: DUST_IMP,       tel: DUST_IMP_TEL },
+  ember_hound:    { base: EMBER_HOUND,    tel: EMBER_HOUND_TEL },
+  frost_imp:      { base: FROST_IMP,      tel: FROST_IMP_TEL },
+  bone_ghost:     { base: BONE_GHOST,     tel: BONE_GHOST_TEL },
+  shadow_lurker:  { base: SHADOW_LURKER,  tel: SHADOW_LURKER_TEL },
+  vile_specter:   { base: VILE_SPECTER,   tel: VILE_SPECTER_TEL },
+  venom_lurker:   { base: VENOM_LURKER,   tel: VENOM_LURKER_TEL },
+  frost_drake:    { base: FROST_DRAKE,    tel: FROST_DRAKE_TEL },
+  sky_moth:       { base: SKY_MOTH,       tel: SKY_MOTH_TEL },
+  thunder_hawk:   { base: THUNDER_HAWK,   tel: THUNDER_HAWK_TEL },
+  storm_wyvern:   { base: STORM_WYVERN,   tel: STORM_WYVERN_TEL },
+  shell_warden:   { base: SHELL_WARDEN,   tel: SHELL_WARDEN_TEL },
+  wraith_monarch: { base: WRAITH_MONARCH, tel: WRAITH_MONARCH_TEL },
+  frost_dragon:   { base: FROST_DRAGON,   tel: FROST_DRAGON_TEL },
+  shadow_tyrant:  { base: SHADOW_TYRANT,  tel: SHADOW_TYRANT_TEL },
+};
+
 // ===== UIアイコン（ボタン用のドット絵） =====
 const SHIELD_PAL: Record<string, string> = {
   o: "#0c0a18", // 輪郭

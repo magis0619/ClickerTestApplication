@@ -6,7 +6,7 @@ import {
 } from "../game/data.ts";
 import {
   WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
-  CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, type Sprite,
+  CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, ENEMY_BY_ID, type Sprite,
 } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
 
@@ -75,9 +75,19 @@ const ENEMY_TEL_SPRITE: Record<EnemyKind, Sprite> = {
   aerial: AERIAL_TEL,
   phantom: PHANTOM_TEL,
 };
+/** 待機フレーム（撃破演出などで使う静止画）。敵IDごとの専用→種別→共通の順で解決 */
+function enemyStill(e: EnemyState): Sprite {
+  const custom = ENEMY_BY_ID[e.def.id];
+  if (custom) return custom.base;
+  if (e.def.rare) return RARE;
+  if (e.def.boss) return BOSS;
+  return ENEMY_SPRITE[e.def.kind];
+}
 /** 状態に応じて敵のフレーム（待機/予兆）を選ぶ */
 function enemyFrame(e: EnemyState): Sprite {
   const acting = e.inTelegraph || e.atkAnimT > 0;
+  const custom = ENEMY_BY_ID[e.def.id];
+  if (custom) return acting ? custom.tel : custom.base;
   if (e.def.rare) return acting ? RARE_TEL : RARE;
   if (e.def.boss) return acting ? BOSS_TEL : BOSS;
   return acting ? ENEMY_TEL_SPRITE[e.def.kind] : ENEMY_SPRITE[e.def.kind];
@@ -380,7 +390,7 @@ function drawEnemyCard(
   imminent: boolean,
   targeted: boolean,
 ): void {
-  const sprite = e.def.rare ? RARE : e.def.boss ? BOSS : ENEMY_SPRITE[e.def.kind];
+  const sprite = enemyStill(e);
   const scale = e.def.boss || e.def.rare ? 5 : 4;
 
   // 撃破演出：カード枠は出さず、ノックバック→フェード→宝箱（ドロップ）
