@@ -39,6 +39,8 @@ let battleCards: {
 }[] = [];
 /** 戦闘中のガードカード（敵の予兆中に強調する） */
 let guardCard: HTMLButtonElement | null = null;
+/** 戦闘中の休憩ボタン（敵の予兆中は無効化する） */
+let restCard: HTMLButtonElement | null = null;
 /** 戦闘中の戦況ログバー（COMBAT_LOG） */
 let battleLog: HTMLElement | null = null;
 /** 戦闘中のHP/AP（セグメント）バー。毎フレーム更新する */
@@ -191,6 +193,7 @@ function buildControls(): void {
   battleCards = [];
   battleHud = null;
   guardCard = null;
+  restCard = null;
   battleLog = null;
   const screenChanged = renderedScreen !== game.screen;
   renderedScreen = game.screen;
@@ -762,13 +765,6 @@ function buildStageSelect(): void {
 
   controls.appendChild(powerPanel());
 
-  const enter = document.createElement("button");
-  enter.className = "nb-cta";
-  enter.innerHTML = "▶ ENTER DUNGEON";
-  enter.disabled = !game.stageUnlocked(stageSel);
-  enter.addEventListener("click", () => withFade(() => game.startStage(stageSel)));
-  controls.appendChild(enter);
-
   controls.appendChild(bottomNav());
 }
 
@@ -844,6 +840,18 @@ function zoneCard(s: StageDef, i: number): HTMLElement {
   body.appendChild(meta);
   card.appendChild(body);
 
+  // 各ダンジョンに「入る」ボタンを設置（下部の大ボタンは廃止）
+  const enter = document.createElement("button");
+  enter.className = "zone-enter";
+  enter.innerHTML = "▶ ENTER";
+  enter.addEventListener("click", (e) => {
+    e.stopPropagation();
+    stageSel = i;
+    withFade(() => game.startStage(i));
+  });
+  card.appendChild(enter);
+
+  // カード本体タップは選択（Power Comparison を更新）
   card.addEventListener("click", () => { stageSel = i; buildControls(); });
   return card;
 }
@@ -1242,8 +1250,9 @@ function buildBattle(): void {
   rbtn.className = "bt-act bt-rest2";
   rbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">REST</span>`;
   rbtn.querySelector(".bt-act-ico")?.appendChild(actionIcon(SLEEP));
-  rbtn.addEventListener("click", () => { game.battle?.rest(); audio.sfxGuard(); });
+  rbtn.addEventListener("click", () => { if (game.battle?.rest()) audio.sfxGuard(); });
   pressFx(rbtn);
+  restCard = rbtn;
   grCol.appendChild(gbtn);
   grCol.appendChild(rbtn);
   grid.appendChild(grCol);
@@ -1303,18 +1312,20 @@ function updateWeaponButtons(): void {
   updateBattleHud();
   const b = game.battle;
   const last = b.lastSkill;
+  // 敵の予兆中（!表示）はガードのみ。攻撃カード・休憩は無効化（ターン制）
+  const telegraph = b.anyTelegraph;
   for (const entry of battleCards) {
     const { card, cls, steps, focus, link } = entry;
     const active = game.comboIndex(cls);
     const cur = game.currentSkill(cls);
     // 次に出る段を強調
     steps.forEach((step, i) => step.classList.toggle("sk-step-on", i === active));
-    // ENが足りなければ無効表示（「集中」発動中は次の消費が0なので有効）
+    // ENが足りなければ無効表示（「集中」発動中は次の消費が0なので有効）。予兆中も無効
     const cost = cur ? (b.freeNextEn ? 0 : cur.enCost) : 0;
     const broke = !cur || b.playerEn < cost;
-    card.classList.toggle("disabled", broke);
+    card.classList.toggle("disabled", broke || telegraph);
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
-    const combo = cur && !broke ? matchCombo(last, cur.kind, cls) : undefined;
+    const combo = cur && !broke && !telegraph ? matchCombo(last, cur, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
     // フォーカス枠を次に出る段へ「ぬるっと」移動（位置が変わった時だけ更新）
     const target = steps[active];
@@ -1331,11 +1342,9 @@ function updateWeaponButtons(): void {
     }
     link.classList.toggle("on", !!combo);
   }
-  // GUARD：敵の予兆中は強調
-  if (guardCard) {
-    const telegraph = b.enemies.some((e) => e.alive && e.inTelegraph);
-    guardCard.classList.toggle("guard-now", telegraph);
-  }
+  // GUARD：敵の予兆中は強調。休憩は予兆中は無効
+  if (guardCard) guardCard.classList.toggle("guard-now", telegraph);
+  if (restCard) restCard.classList.toggle("disabled", telegraph);
   // COMBAT_LOG：直近の味方ログを表示
   if (battleLog) {
     const logs = b.floats.filter((fl) => fl.anchor === "player");
@@ -1517,7 +1526,7 @@ window.addEventListener("keydown", (e) => {
   audio.init();
   if (game.screen === "battle" && game.battle) {
     if (e.code === "Space") { e.preventDefault(); doGuard(); return; }
-    if (e.key === "r") { game.battle.rest(); audio.sfxGuard(); return; }
+    if (e.key === "r") { if (game.battle.rest()) audio.sfxGuard(); return; }
     if (e.key === "t") { cycleTarget(1); return; }
     const map: Record<string, WeaponClass> = { "1": "slash", "2": "pierce", "3": "crush" };
     if (map[e.key]) attackWith(map[e.key]);

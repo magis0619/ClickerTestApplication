@@ -63,17 +63,27 @@ export function skillDescription(s: Skill): string {
 // ===== スキル連携（連携技：a→bの順で発動すると追撃が発生する） =====
 // スキルは抽選でランダムに入手するため、連携は「スキル種類」で定義して
 // どんな武器構成でも成立しうるようにする。
+// 「ためる/集中 → 攻撃」はターンを使う仕込みなので汎用（どの攻撃でも成立）。
+// 攻撃どうしの連携は“特定スキルの並び”だけに限定し、簡単に出過ぎないようにする。
 export const COMBOS: ComboDef[] = [
   { id: "smite",  name: "連携・渾身", first: "charge", second: "attack", bonusHits: 1, desc: "ためる → 攻撃 で追撃1" },
   { id: "ambush", name: "連携・奇襲", first: "focus",  second: "attack", bonusHits: 2, desc: "集中 → 攻撃 で追撃2" },
-  { id: "rush",   name: "連携・連撃", first: "attack", second: "attack", diffClass: true, bonusHits: 1, desc: "別系統の攻撃を続けて追撃1" },
+  // 攻撃どうしの連携（特定スキル限定）
+  { id: "rush",   name: "連携・連撃", firstId: "single_hit", secondId: "double_hit", bonusHits: 1, desc: "1回攻撃 → 2回攻撃 で追撃1" },
+  { id: "storm",  name: "連携・乱舞", firstId: "double_hit", secondId: "triple_hit", bonusHits: 2, desc: "2回攻撃 → 3回攻撃 で追撃2" },
+  { id: "pierce", name: "連携・連環", firstId: "crit_up",    secondId: "crit_double", bonusHits: 1, desc: "会心40% → 会心2倍 で追撃1" },
 ];
 
-/** 直近スキル(last)と今出すスキル(kind/cls)で成立する連携を返す（なければ undefined） */
-export function matchCombo(last: LastSkill | null, kind: SkillKind, cls: WeaponClass): ComboDef | undefined {
+/** 直近スキル(last)と今出すスキル(skill/cls)で成立する連携を返す（なければ undefined） */
+export function matchCombo(last: LastSkill | null, skill: Skill, cls: WeaponClass): ComboDef | undefined {
   if (!last) return undefined;
-  return COMBOS.find((c) =>
-    c.first === last.kind && c.second === kind && (!c.diffClass || last.cls !== cls));
+  return COMBOS.find((c) => {
+    const firstOk = c.firstId ? c.firstId === last.id : c.first === last.kind;
+    const secondOk = c.secondId ? c.secondId === skill.id : c.second === skill.kind;
+    if (!firstOk || !secondOk) return false;
+    if (c.diffClass && last.cls === cls) return false;
+    return true;
+  });
 }
 
 // ===== 武器テンプレート（weapons.json から読み込み） =====
@@ -355,6 +365,9 @@ export const ATTACK_WINDUP_MS = 380;
 
 /** スキル名バナー（発動時にプレイヤー右へ左からフェードイン）の表示時間(ms) */
 export const SKILL_BANNER_MS = 1100;
+
+/** 敗北演出（スロー＋敗北宣言）の長さ(ms)。これが終わるとリザルトへ遷移する */
+export const LOSE_ANIM_MS = 1500;
 
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */

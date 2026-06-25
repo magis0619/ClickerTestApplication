@@ -209,7 +209,40 @@ export function render(
     ctx.fillRect(0, 0, W, H);
   }
   drawGuardBadge(ctx, b);
+  drawDefeatBadge(ctx, b);
   if (b.phase !== "fighting") drawResult(ctx, b);
+}
+
+/**
+ * 敗北宣言バナー（敗北演出中＝losePending）。
+ * スロー演出の中で PERFECT と同じくらいの大きさ(44px)で「DEFEATED」を弾ませて出す。
+ */
+function drawDefeatBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
+  if (!b.losePending) return;
+  const age = b.loseAnimMax - b.loseAnimT;
+  // 画面を徐々に暗く沈める（敗北の重さ）
+  const dark = Math.min(0.5, (age / 600) * 0.5);
+  ctx.fillStyle = `rgba(28,6,10,${dark})`;
+  ctx.fillRect(0, 0, W, H);
+  // 弾んで飛び出す→定位置で微振動。出だしはフェードイン
+  const pop = age < 180 ? 2.6 - 1.6 * (age / 180) : 1 + 0.1 * Math.max(0, Math.sin((age - 180) / 70));
+  const alpha = Math.min(1, age / 160);
+  ctx.save();
+  ctx.translate(W / 2, 150);
+  ctx.scale(pop, pop);
+  ctx.textAlign = "center";
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = "#ff4d63";
+  ctx.shadowBlur = 24;
+  ctx.font = "900 44px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "#2a060c";
+  ctx.strokeText("DEFEATED", 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#ffb3bd";
+  ctx.fillText("DEFEATED", 0, 0);
+  ctx.restore();
 }
 
 /** タイトル/メニュー画面用の背景＋見出し */
@@ -370,11 +403,12 @@ function drawEnemyCard(
   ctx.fillStyle = "#1c1b1b";
   ctx.fillText(e.def.name, L.cx, L.top + 20);
 
-  // === HP / ブレイクゲージ ===
-  const barX = L.left + 12, barW = L.w - 24, barY = L.top + 32;
-  bar(ctx, barX, barY, barW, 7, e.hp / e.def.maxHp, "#df0b81", "#e6d9e0");
+  // === HP / ブレイクゲージ（太く・はっきり）===
+  const barX = L.left + 12, barW = L.w - 24, barY = L.top + 30;
+  bar(ctx, barX, barY, barW, 12, e.hp / e.def.maxHp, "#df0b81", "#efe2ea");
   const bg = e.isBroken ? 1 : Math.min(1, e.breakGauge / e.def.breakThreshold);
-  bar(ctx, barX, barY + 9, barW, 3, bg, "#00c2d4", "#d6e6ea");
+  // ブレイク満タン（＝ブレイク中）は金色で目立たせる
+  bar(ctx, barX, barY + 15, barW, 7, bg, e.isBroken ? "#ffcf3f" : "#00c2d4", "#d6e6ea");
 
   // === スプライト（震え・赤点滅・怯み・被弾を反映） ===
   let trembleX = 0, trembleY = 0;
@@ -1016,9 +1050,14 @@ function bar(
 ): void {
   ctx.fillStyle = bgc;
   ctx.fillRect(x, y, w, h);
+  const fw = w * Math.max(0, Math.min(1, ratio));
   ctx.fillStyle = fill;
-  ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), h);
-  ctx.strokeStyle = "rgba(0,0,0,0.35)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+  ctx.fillRect(x, y, fw, h);
+  // 上側に白いハイライト帯を入れて立体感・視認性を上げる
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(x, y, fw, Math.max(1, h * 0.34));
+  // はっきりした黒枠で輪郭を強調
+  ctx.strokeStyle = "rgba(20,12,18,0.8)";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x + 0.75, y + 0.75, w - 1.5, h - 1.5);
 }

@@ -36,15 +36,23 @@ export interface Skill {
 export interface LastSkill {
   kind: SkillKind;
   cls: WeaponClass;
+  /** スキルID（特定スキル同士の連携判定に使う） */
+  id: string;
 }
 
 /** スキル連携（連携技）の定義。first → second の順で出すと追撃が発生する */
 export interface ComboDef {
   id: string;
   name: string;
-  first: SkillKind;
-  second: SkillKind;
-  /** first と別系統の武器で出す必要があるか（連撃用） */
+  /** 1手目の条件：スキルID（特定スキル）。指定時は first(kind) より優先 */
+  firstId?: string;
+  /** 2手目の条件：スキルID（特定スキル）。指定時は second(kind) より優先 */
+  secondId?: string;
+  /** 1手目の条件：スキル種類（ためる/集中などの汎用連携用） */
+  first?: SkillKind;
+  /** 2手目の条件：スキル種類 */
+  second?: SkillKind;
+  /** first と別系統の武器で出す必要があるか */
   diffClass?: boolean;
   /** 連携成立時の追撃ヒット数 */
   bonusHits: number;

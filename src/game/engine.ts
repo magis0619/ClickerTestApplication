@@ -28,6 +28,7 @@ import {
   PERFECT_BREAK_BONUS,
   ATTACK_WINDUP_MS,
   SKILL_BANNER_MS,
+  LOSE_ANIM_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -180,6 +181,12 @@ export class Battle {
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
   private winPending = false;
+  /** 敗北演出中フラグ。スロー＋敗北宣言を見せてから lost へ移す */
+  losePending = false;
+  /** 敗北演出の残り時間(ms)。0 で phase=lost に確定 */
+  loseAnimT = 0;
+  /** 敗北演出の総時間(ms)。バナーの出現アニメ計算に使う */
+  loseAnimMax = LOSE_ANIM_MS;
 
   constructor(
     defs: EnemyDef[],
@@ -213,12 +220,19 @@ export class Battle {
     if (this.enemies[i]?.alive) this.targetIndex = i;
   }
 
+  /** いずれかの敵が予兆中（!表示）か。この間プレイヤーはガードしかできない */
+  get anyTelegraph(): boolean {
+    return this.enemies.some((e) => e.inTelegraph);
+  }
+
   // ===== プレイヤー行動 =====
 
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting") return false;
     if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
+    // 敵の予兆中（!表示）はターン制のためガードのみ。攻撃・ためる・集中は不可
+    if (this.anyTelegraph) { this.pushFloat("ガードで受けろ！", "#ffcc55", "player"); return false; }
     const free = this.freeNextEn; // 「集中」発動中はEN消費なし
     const cost = free ? 0 : skill.enCost;
     if (this.playerEn < cost) {
@@ -227,12 +241,12 @@ export class Battle {
     }
     // 連携判定：直近スキル → 今のスキル の並びで成立するか
     const cls = mods?.weapon;
-    const combo = cls ? matchCombo(this.lastSkill, skill.kind, cls) : undefined;
+    const combo = cls ? matchCombo(this.lastSkill, skill, cls) : undefined;
 
     this.playerEn -= cost;
     this.freeNextEn = false; // 消費（集中はこの後に再セット）
     // 直近スキルを記録（次の連携判定に使う）。攻撃は着弾を待たずチェーンを確定
-    this.lastSkill = cls ? { kind: skill.kind, cls } : null;
+    this.lastSkill = cls ? { kind: skill.kind, cls, id: skill.id } : null;
     // スキル名バナーを表示（連携成立時は金色の特別演出）。溜め中から出して期待感を煽る
     this.skillBanner = { text: skill.name, combo: !!combo, ttl: SKILL_BANNER_MS, max: SKILL_BANNER_MS };
 
@@ -307,15 +321,17 @@ export class Battle {
     return out.slice(0, n);
   }
 
-  /** 休憩：ENを回復（攻撃はしない） */
-  rest(): void {
-    if (this.phase !== "fighting") return;
-    if (this.windupT > 0) return; // 攻撃の溜め中は休憩できない
+  /** 休憩：ENを回復（攻撃はしない）。実行できたら true */
+  rest(): boolean {
+    if (this.phase !== "fighting") return false;
+    if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
+    if (this.anyTelegraph) return false; // 予兆中はガードのみ（ターン制）
     const before = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
     this.lastSkill = null; // 休憩で連携チェーンは途切れる
     this.advanceCounts(); // 休憩も「行動」なので敵カウントを進める
+    return true;
   }
 
   /**
@@ -517,9 +533,15 @@ export class Battle {
     }
     // パーフェクト以外は被弾＝のけぞり演出（生身ガードも軽く反応）
     if (guard !== "perfect") this.playerHitT = guard === "none" ? 320 : 220;
-    if (this.playerHp <= 0) {
-      this.phase = "lost";
-      this.pushFloat("DEFEATED", "#ff5555", "center");
+    if (this.playerHp <= 0 && !this.losePending) {
+      // 即リザルトにせず、スロー＋敗北宣言を見せてから lost へ
+      this.losePending = true;
+      this.loseAnimT = LOSE_ANIM_MS;
+      this.loseAnimMax = LOSE_ANIM_MS;
+      this.hitstopT = Math.max(this.hitstopT, 160); // 一瞬止めてから
+      this.slowT = LOSE_ANIM_MS;                    // 以降スローモーション
+      this.shake(260, 6);
+      this.sfx.push("die");
     }
   }
 
@@ -537,12 +559,26 @@ export class Battle {
   }
 
   update(dtMs: number): void {
+    const realDt = dtMs; // スロー前の実経過時間（敗北演出の尺は実時間で測る）
     // ホワイトアウトは実時間で減衰させる
     if (this.whiteFlashT > 0) this.whiteFlashT = Math.max(0, this.whiteFlashT - dtMs);
 
     // ヒットストップ中はゲーム進行を凍結（パーフェクトの一瞬の溜め）。
     if (this.hitstopT > 0) {
       this.hitstopT -= dtMs;
+      return;
+    }
+
+    // 敗北演出：スロー＋敗北宣言を見せ、尺が終わったら lost を確定（敵の行動は止める）
+    if (this.losePending) {
+      this.loseAnimT -= realDt;
+      // フロート等の演出だけ進める
+      if (this.slowT > 0) { this.slowT = Math.max(0, this.slowT - realDt); dtMs = dtMs * SLOWMO_SCALE; }
+      for (const f of this.floats) { f.ttl -= dtMs; f.rise += dtMs * 0.03; }
+      this.floats = this.floats.filter((f) => f.ttl > 0);
+      if (this.shakeT > 0) this.shakeT -= realDt;
+      if (this.playerHitT > 0) this.playerHitT -= dtMs;
+      if (this.loseAnimT <= 0) this.phase = "lost";
       return;
     }
 
