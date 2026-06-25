@@ -2040,9 +2040,9 @@ body.theme-nb {
   align-items: stretch;
 }
 .bt-skills .sk-card {
-  min-height: 0;
-  padding: 8px 7px 9px;
-  gap: 7px;
+  min-height: 188px;
+  padding: 12px 9px 13px;
+  gap: 9px;
 }
 .sk-card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .bt-skills .sk-title { font-size: 16px; }
@@ -2050,11 +2050,12 @@ body.theme-nb {
 .bt-skills .sk-icon canvas { height: 22px; }
 
 /* スキル段（コンボ表示） */
-.sk-steps { position: relative; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.sk-steps { position: relative; display: flex; flex-direction: column; gap: 7px; flex: 1; }
 .sk-step {
   position: relative;
   display: flex; align-items: center; justify-content: space-between; gap: 4px;
-  padding: 6px 7px;
+  min-height: 40px;
+  padding: 11px 8px;
   background: #fff;
   border: 1.5px solid #1c1b1b;
 }

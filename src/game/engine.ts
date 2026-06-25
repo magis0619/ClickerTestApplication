@@ -26,6 +26,7 @@ import {
   WHITE_FLASH_MS,
   PERFECT_FLINCH_MS,
   PERFECT_BREAK_BONUS,
+  ATTACK_WINDUP_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -145,6 +146,10 @@ export class Battle {
   shakeMag = 0;
   /** プレイヤーの踏み込み演出残り時間(ms) */
   lungeT = 0;
+  /** 攻撃の溜め（クリック→着弾までのラグ）残り時間(ms)。>0 の間は構え中で次の行動を受け付けない */
+  windupT = 0;
+  /** 溜め中の攻撃。windupT が 0 になった瞬間に解決（着弾）する */
+  private pendingAttack: { skill: Skill; mods?: WeaponMods; combo?: ComboDef } | null = null;
   /** プレイヤーの被弾リアクション（のけぞり＋フラッシュ）残り時間(ms) */
   playerHitT = 0;
   /** ヒットストップ（一瞬の静止）残り時間(ms)。>0 の間ゲーム進行を凍結 */
@@ -207,6 +212,7 @@ export class Battle {
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting") return false;
+    if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
     const free = this.freeNextEn; // 「集中」発動中はEN消費なし
     const cost = free ? 0 : skill.enCost;
     if (this.playerEn < cost) {
@@ -219,6 +225,8 @@ export class Battle {
 
     this.playerEn -= cost;
     this.freeNextEn = false; // 消費（集中はこの後に再セット）
+    // 直近スキルを記録（次の連携判定に使う）。攻撃は着弾を待たずチェーンを確定
+    this.lastSkill = cls ? { kind: skill.kind, cls } : null;
 
     switch (skill.kind) {
       case "charge":
@@ -230,16 +238,25 @@ export class Battle {
         this.pushFloat("集中！ 次の行動EN0", "#9fd9ff", "player");
         break;
       case "attack":
-        this.performAttack(skill, mods, combo);
-        break;
+        // 溜め（ラグ）を挟んでから着弾。ダメージと敵カウント進行は resolvePendingAttack で行う
+        this.pendingAttack = { skill, mods, combo };
+        this.windupT = ATTACK_WINDUP_MS;
+        return true;
     }
 
-    // 直近スキルを記録（次の連携判定に使う）
-    this.lastSkill = cls ? { kind: skill.kind, cls } : null;
-
-    this.advanceCounts(); // 行動したので敵カウントを進める
+    this.advanceCounts(); // 行動したので敵カウントを進める（攻撃は着弾時に進める）
     this.checkWin();
     return true;
+  }
+
+  /** 溜め完了：保留していた攻撃を着弾させ、敵カウントを進める */
+  private resolvePendingAttack(): void {
+    const p = this.pendingAttack;
+    this.pendingAttack = null;
+    if (!p || this.phase !== "fighting") return;
+    this.performAttack(p.skill, p.mods, p.combo);
+    this.advanceCounts(); // 行動したので敵カウントを進める
+    this.checkWin();
   }
 
   /** 攻撃スキルを実行：対象数ぶんの敵に、ヒット数ぶん攻撃する。combo成立時は追撃を足す */
@@ -285,6 +302,7 @@ export class Battle {
   /** 休憩：ENを回復（攻撃はしない） */
   rest(): void {
     if (this.phase !== "fighting") return;
+    if (this.windupT > 0) return; // 攻撃の溜め中は休憩できない
     const before = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
@@ -546,6 +564,14 @@ export class Battle {
     this.explosions = this.explosions.filter((ex) => ex.ttl > 0);
     if (this.lastGuardTtl > 0) this.lastGuardTtl -= dtMs;
     if (this.shakeT > 0) this.shakeT -= dtMs;
+    // 攻撃の溜め：0 になった瞬間に着弾（踏み込みモーション＋ダメージ）
+    if (this.windupT > 0) {
+      this.windupT -= dtMs;
+      if (this.windupT <= 0) {
+        this.windupT = 0;
+        this.resolvePendingAttack();
+      }
+    }
     if (this.lungeT > 0) this.lungeT -= dtMs;
     if (this.playerHitT > 0) this.playerHitT -= dtMs;
     if (this.perfectFxT > 0) this.perfectFxT -= dtMs;

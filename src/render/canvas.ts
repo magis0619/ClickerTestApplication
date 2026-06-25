@@ -2,7 +2,7 @@ import { Battle, EnemyState, DEATH_ANIM_MS } from "../game/engine.ts";
 import {
   KIND_LABEL, WEAKNESS, WEAPON_LABEL,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
-  FLOAT_FADE_MS, GUARD_BADGE_MS,
+  FLOAT_FADE_MS, GUARD_BADGE_MS, ATTACK_WINDUP_MS,
 } from "../game/data.ts";
 import {
   WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
@@ -261,22 +261,27 @@ function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   // 被弾を最優先（攻撃中でも割り込んでのけぞる）
   const hurt = b.playerHitT > 0;
   const attacking = !hurt && b.lungeT > 0;
+  // 溜め（windup）：攻撃ボタンを押してから着弾までの構え。後方に引いて力を溜める
+  const windup = !hurt && !attacking && b.windupT > 0;
   // 被弾モーション：強くのけぞって（左後方へ）すぐ戻る＋赤フラッシュ
   const hp = hurt ? b.playerHitT / 320 : 0; // 1→0
   const knock = hurt ? -hp * 18 : 0;
   // 攻撃モーション：序盤に少し引き（windup）→前へ踏み込む→戻る
   const k = attacking ? 1 - b.lungeT / 200 : 0; // 0→1
   const lunge = attacking ? (k < 0.25 ? -k * 24 : Math.sin(Math.PI * k) * 24) : 0;
+  // 溜め中の引き：残り時間が多いほど大きく後方へ引き、着弾直前に少し前傾して溜める
+  const wu = windup ? 1 - b.windupT / ATTACK_WINDUP_MS : 0; // 0→1
+  const wuBack = windup ? -Math.sin(Math.PI * wu) * 12 - 4 : 0;
   // 常時アイドル：呼吸（上下＋伸縮）
   const t = Date.now() / 1000;
   const breathe = Math.sin(t * 2.2);
-  const sprite = hurt ? WARDEN_HURT : attacking ? WARDEN_ATTACK : WARDEN;
+  const sprite = hurt ? WARDEN_HURT : attacking ? WARDEN_ATTACK : windup ? WARDEN_ATTACK : WARDEN;
   const tint = hurt ? { color: "#ff4040", alpha: hp * 0.7 } : undefined;
-  drawSpriteAnim(ctx, sprite, x + lunge + knock, y, 5, {
+  drawSpriteAnim(ctx, sprite, x + lunge + knock + wuBack, y, 5, {
     tint,
-    bob: hurt ? -hp * 3 : attacking ? 0 : breathe * 1.3,
-    sy: hurt ? 1 - hp * 0.06 : attacking ? 1 : 1 + breathe * 0.035,
-    sx: hurt ? 1 + hp * 0.05 : attacking ? 1 : 1 - breathe * 0.025,
+    bob: hurt ? -hp * 3 : attacking ? 0 : windup ? wu * 2 : breathe * 1.3,
+    sy: hurt ? 1 - hp * 0.06 : attacking ? 1 : windup ? 1 - wu * 0.04 : 1 + breathe * 0.035,
+    sx: hurt ? 1 + hp * 0.05 : attacking ? 1 : windup ? 1 + wu * 0.04 : 1 - breathe * 0.025,
   });
   if (b.charge > 1) {
     ctx.textAlign = "center";

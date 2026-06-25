@@ -347,6 +347,12 @@ export const PERFECT_FLINCH_MS = 650;
 /** パーフェクトで敵のブレイクゲージに加算する蓄積量 */
 export const PERFECT_BREAK_BONUS = 14;
 
+/**
+ * 攻撃の「溜め」時間(ms)。攻撃ボタンを押してから実際に着弾するまでのラグ。
+ * この間プレイヤーは構えモーションを取り、ダメージ・敵カウント進行は着弾時に発生する。
+ */
+export const ATTACK_WINDUP_MS = 380;
+
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;
