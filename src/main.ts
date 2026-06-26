@@ -2062,6 +2062,7 @@ function loop(now: number): void {
       index: sIndex, count: sCount,
       wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
       floor: game.isEndless ? game.endlessFloor : undefined,
+      world: cur?.world,
     });
   }
   requestAnimationFrame(loop);

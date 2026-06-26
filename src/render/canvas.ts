@@ -1,6 +1,6 @@
 import { Battle, EnemyState, DEATH_ANIM_MS, type FloatText } from "../game/engine.ts";
 import {
-  KIND_LABEL, WEAKNESS, WEAPON_LABEL,
+  KIND_LABEL, WEAKNESS,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
   FLOAT_FADE_MS, GUARD_BADGE_MS, ATTACK_WINDUP_MS,
 } from "../game/data.ts";
@@ -110,11 +110,65 @@ export function enemySlots(n: number): { x: number; y: number }[] {
   return enemyLayout(n).map((L) => ({ x: L.cx, y: L.footY }));
 }
 
-/** ライトテーマの背景ドットグリッド（ゆっくり上へ流れて奥行きと動きを出す） */
-function drawDotGrid(ctx: CanvasRenderingContext2D): void {
+// ===== バトル背景テーマ（ワールドごとにコンセプト＝色を変える） =====
+interface BattleGlow { color: string; a: number; r: number; sx: number; sy: number; }
+interface BattleTheme {
+  bg: string;            // 地の色
+  grid: string;          // ドットグリッドの色
+  motes: string[];       // 漂う粒の色
+  glows: BattleGlow[];   // ゆっくり動く大きな光のにじみ（彩り）
+}
+
+/** 既定テーマ（紫×ピンクの淡い光） */
+const THEME_DEFAULT: BattleTheme = {
+  bg: "#fcf9f8",
+  grid: "#d8cdd5",
+  motes: ["#ff9ad6", "#c7bce8", "#bcd0f2"],
+  glows: [
+    { color: "#ffc2e8", a: 0.20, r: 230, sx: 0.05, sy: 0.04 },
+    { color: "#cdb6f2", a: 0.18, r: 200, sx: 0.07, sy: 0.05 },
+  ],
+};
+
+/** ワールド1：森（緑×木漏れ日） */
+const THEME_FOREST: BattleTheme = {
+  bg: "#eef7e4",
+  grid: "#c2dcab",
+  motes: ["#7cc35a", "#aee07f", "#5fae3e", "#eaf6a8"],
+  glows: [
+    { color: "#9be870", a: 0.24, r: 250, sx: 0.05, sy: 0.04 },
+    { color: "#3fa85e", a: 0.20, r: 210, sx: 0.07, sy: 0.06 },
+    { color: "#fff2a8", a: 0.14, r: 170, sx: 0.03, sy: 0.05 }, // 木漏れ日
+  ],
+};
+
+/** ワールド番号 → テーマ */
+const BATTLE_THEMES: Record<number, BattleTheme> = { 1: THEME_FOREST };
+function battleTheme(world?: number): BattleTheme {
+  return (world != null && BATTLE_THEMES[world]) || THEME_DEFAULT;
+}
+
+/** 背景の彩り：ゆっくり漂う大きな光のにじみ（テーマ色） */
+function drawBackdropGlow(ctx: CanvasRenderingContext2D, theme: BattleTheme): void {
+  const t = Date.now() / 1000;
+  ctx.save();
+  theme.glows.forEach((g, i) => {
+    const cx = W * (0.3 + 0.4 * Math.sin(t * g.sx * 2 + i * 1.7));
+    const cy = H * (0.32 + 0.4 * Math.cos(t * g.sy * 2 + i * 1.3));
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, g.r);
+    grad.addColorStop(0, hexA(g.color, g.a));
+    grad.addColorStop(1, hexA(g.color, 0));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  });
+  ctx.restore();
+}
+
+/** 背景ドットグリッド（ゆっくり上へ流れて奥行きと動きを出す）。色はテーマ依存 */
+function drawDotGrid(ctx: CanvasRenderingContext2D, theme: BattleTheme): void {
   const step = 16;
   const drift = (Date.now() / 70) % step; // 方眼がゆっくり上方向へスクロール
-  ctx.fillStyle = "#d8cdd5";
+  ctx.fillStyle = theme.grid;
   for (let y = step / 2 - drift; y < H + step; y += step) {
     if (y < -2) continue;
     for (let x = step / 2; x < W; x += step) {
@@ -125,20 +179,21 @@ function drawDotGrid(ctx: CanvasRenderingContext2D): void {
 
 /**
  * 背景に常時漂う光の粒。下から上へゆっくり昇り、横にゆれ、ちらつく。
- * バトル画面に「止まっていない」動きを与える（キャラより奥に描く）。
+ * バトル画面に「止まっていない」動きを与える（キャラより奥に描く）。色はテーマ依存。
  */
-function drawAmbientMotes(ctx: CanvasRenderingContext2D): void {
+function drawAmbientMotes(ctx: CanvasRenderingContext2D, theme: BattleTheme): void {
   const t = Date.now() / 1000;
+  const cols = theme.motes;
   ctx.save();
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 26; i++) {
     const speed = 9 + (i % 5) * 5;                  // 粒ごとの速度差＝奥行き
     const sway = Math.sin(t * 0.6 + i * 1.3) * 12;  // ゆらゆら横ゆれ
     const x = (((i * 79) % W) + sway + W) % W;
     const y = H - ((t * speed + i * 47) % (H + 40)); // 下端→上端へ循環
     const size = 1 + (i % 3);
-    const tw = 0.18 + 0.32 * (0.5 + 0.5 * Math.sin(t * 2.1 + i * 1.7)); // 明滅
+    const tw = 0.18 + 0.34 * (0.5 + 0.5 * Math.sin(t * 2.1 + i * 1.7)); // 明滅
     ctx.globalAlpha = tw;
-    ctx.fillStyle = i % 4 === 0 ? "#ff9ad6" : "#c7bce8";
+    ctx.fillStyle = cols[i % cols.length];
     ctx.fillRect(Math.round(x), Math.round(y), size, size);
   }
   ctx.restore();
@@ -155,7 +210,13 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-const WCLASS_COLOR: Record<string, string> = { slash: "#5fa8ff", pierce: "#7fe070", crush: "#ffb347" };
+/** 弱点色＝攻撃ボタン(SLASH/PIERCE/STRIKE)と同じ系統色。敵カード背景の色味に使う */
+const WEAK_COLOR: Record<string, string> = { slash: "#ff2d8f", pierce: "#1fb6ff", crush: "#ff9e2e" };
+/** "#rrggbb" を rgba(...) 文字列へ（alpha 付き） */
+function hexA(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 
 const ENEMY_SPRITE: Record<EnemyKind, Sprite> = {
   carapace: CARAPACE,
@@ -240,13 +301,15 @@ export function makeSpriteCanvas(sprite: Sprite, scale: number): HTMLCanvasEleme
 export function render(
   ctx: CanvasRenderingContext2D,
   b: Battle,
-  stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number },
+  stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number; world?: number },
 ): void {
-  // ライト基調のターミナル風ビューポート（ドットグリッド）
-  ctx.fillStyle = "#fcf9f8";
+  // ワールドのコンセプトに合わせた背景テーマ（ワールド1＝森：緑）
+  const theme = battleTheme(stage?.world);
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, W, H);
-  drawDotGrid(ctx);
-  drawAmbientMotes(ctx);
+  drawBackdropGlow(ctx, theme);
+  drawDotGrid(ctx, theme);
+  drawAmbientMotes(ctx, theme);
 
   // 地面のライン（淡いグレー）
   ctx.strokeStyle = "#d2c7cf";
@@ -581,9 +644,17 @@ function drawEnemyCard(
   if (sp > 0) ctx.globalAlpha = 1 - sp;
 
   // === カード枠 ===
+  const weak = WEAKNESS[e.def.kind];
   ctx.save();
   roundRect(ctx, L.left, L.top, L.w, L.h, 6);
   ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.fill();
+  // 弱点色をカード背景に薄く敷く（上は淡く、足元ほど濃い縦グラデ）。弱点が一目で分かる
+  const wg = ctx.createLinearGradient(0, L.top, 0, L.top + L.h);
+  wg.addColorStop(0, hexA(WEAK_COLOR[weak], 0.05));
+  wg.addColorStop(1, hexA(WEAK_COLOR[weak], 0.26));
+  roundRect(ctx, L.left, L.top, L.w, L.h, 6);
+  ctx.fillStyle = wg;
   ctx.fill();
   if (imminent && danger > 0.25) {
     // 次に攻撃する敵：マゼンタで強調＋グロー
@@ -601,22 +672,7 @@ function drawEnemyCard(
   }
   ctx.restore();
 
-  // === 弱点バッジ（左上の丸：弱点となる武器系統） ===
-  const weak = WEAKNESS[e.def.kind];
-  const bx = L.left + 16, by = L.top + 16;
-  ctx.beginPath();
-  ctx.arc(bx, by, 12, 0, Math.PI * 2);
-  ctx.fillStyle = "#fbf7f9";
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = WCLASS_COLOR[weak];
-  ctx.stroke();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = "bold 12px monospace";
-  ctx.fillStyle = WCLASS_COLOR[weak];
-  ctx.fillText(WEAPON_LABEL[weak][0], bx, by + 1);
-  ctx.textBaseline = "alphabetic";
+  // 弱点バッジは廃止し、上のカード背景の色味で弱点を示す
 
   // === 名前（大きく・読みやすく：濃い縁取り付き） ===
   ctx.textAlign = "center";
@@ -897,7 +953,7 @@ function drawPlayerHud(ctx: CanvasRenderingContext2D, b: Battle): void {
     ctx.textAlign = "left";
     ctx.font = "bold 11px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
     ctx.fillStyle = "#8a7a90";
-    ctx.fillText(`TARGET: ${t.def.name} [${KIND_LABEL[t.def.kind]}] WEAK:${WEAPON_LABEL[WEAKNESS[t.def.kind]]}`, M, 16);
+    ctx.fillText(`TARGET: ${t.def.name} [${KIND_LABEL[t.def.kind]}]`, M, 16);
   }
 }
 
