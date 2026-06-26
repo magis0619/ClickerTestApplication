@@ -33,6 +33,8 @@ import {
   BOSS_INTRO_MS,
   READY_WAIT_MIN_MS,
   READY_WAIT_MAX_MS,
+  TELEGRAPH_SCALE,
+  TELEGRAPH_MIN_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -82,6 +84,8 @@ export class EnemyState {
   count: number;
   /** 予兆（!）の残り時間(ms)。>0 の間だけガード可能、0で着弾 */
   telegraphT = 0;
+  /** 今回の予兆の総時間(ms)。danger（緊張度）計算の分母に使う */
+  telegraphMax = 0;
   /**
    * カウント0到達後、!（予兆）が出るまでのランダムな待ち時間(ms)。
    * -1=未抽選（まだ「攻撃の順番」が回ってきていない）。順番が回った敵だけ抽選して消化する。
@@ -130,7 +134,8 @@ export class EnemyState {
    */
   get danger(): number {
     if (!this.inTelegraph) return 0;
-    return Math.max(0, Math.min(1, 1 - this.telegraphT / this.def.telegraphMs));
+    const max = this.telegraphMax || this.def.telegraphMs;
+    return Math.max(0, Math.min(1, 1 - this.telegraphT / max));
   }
 }
 
@@ -244,14 +249,25 @@ export class Battle {
     return this.enemies.some((e) => e.inTelegraph);
   }
 
+  /**
+   * 敵の攻撃フェーズ中（カウント0＝攻撃前待機 もしくは 予兆中）か。
+   * この間プレイヤーは攻撃・ためる・集中・休憩ができず、ガード（!に反応）だけ。
+   */
+  get inEnemyAttackPhase(): boolean {
+    return this.enemies.some((e) => e.alive && !e.isBroken && e.count <= 0);
+  }
+
   // ===== プレイヤー行動 =====
 
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting" || this.introT > 0) return false;
     if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
-    // 敵の予兆中（!表示）はターン制のためガードのみ。攻撃・ためる・集中は不可
-    if (this.anyTelegraph) { this.pushFloat("ガードで受けろ！", "#ffcc55", "player"); return false; }
+    // 敵の攻撃フェーズ（カウント0＝攻撃前待機／予兆中）はガードのみ。攻撃・ためる・集中は不可
+    if (this.inEnemyAttackPhase) {
+      this.pushFloat(this.anyTelegraph ? "ガードで受けろ！" : "敵が来るぞ…構えろ！", "#ffcc55", "player");
+      return false;
+    }
     const free = this.freeNextEn; // 「集中」発動中はEN消費なし
     const cost = free ? 0 : skill.enCost;
     if (this.playerEn < cost) {
@@ -344,7 +360,7 @@ export class Battle {
   rest(): boolean {
     if (this.phase !== "fighting" || this.introT > 0) return false;
     if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
-    if (this.anyTelegraph) return false; // 予兆中はガードのみ（ターン制）
+    if (this.inEnemyAttackPhase) return false; // 攻撃前待機／予兆中はガードのみ
     const before = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
@@ -393,7 +409,8 @@ export class Battle {
     e.readyWaitT -= dtMs;
     if (e.readyWaitT <= 0) {
       e.readyWaitT = -1;
-      e.telegraphT = e.def.telegraphMs; // 待ち終わり → 予兆開始（! が出る）
+      // 待ち終わり → 予兆開始（! が出る）。0待ちで溜めたぶん予兆は短く＝すぐ攻撃
+      e.telegraphMax = e.telegraphT = Math.max(TELEGRAPH_MIN_MS, e.def.telegraphMs * TELEGRAPH_SCALE);
       this.sfx.push("warn");
     }
   }

@@ -423,6 +423,12 @@ export const BOSS_INTRO_MS = 2000;
 export const READY_WAIT_MIN_MS = 350;
 export const READY_WAIT_MAX_MS = 2200;
 
+// びっくりマーク（予兆）が出てから着弾までの時間スケール。
+// 0待ちで十分に溜めを取るため、! が出たら「すぐ攻撃」＝短い反応ガード窓にする。
+// 敵ごとの telegraphMs に掛けて使う（速い敵ほど短い）。最低 TELEGRAPH_MIN_MS は確保。
+export const TELEGRAPH_SCALE = 0.55;
+export const TELEGRAPH_MIN_MS = 480;
+
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;

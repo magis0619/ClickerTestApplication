@@ -1553,8 +1553,9 @@ function updateWeaponButtons(): void {
   updateBattleHud();
   const b = game.battle;
   const last = b.lastSkill;
-  // 敵の予兆中（!表示）はガードのみ。攻撃カード・休憩は無効化（ターン制）
-  const telegraph = b.anyTelegraph;
+  // 敵の攻撃フェーズ（カウント0＝攻撃前待機／予兆中）はガードのみ。攻撃カード・休憩は無効化
+  const telegraph = b.anyTelegraph;       // !表示中（ガード強調用）
+  const enemyTurn = b.inEnemyAttackPhase; // 0待ち＋予兆＝攻撃・休憩を封じる
   for (const entry of battleCards) {
     const { card, cls, steps, mark, link } = entry;
     const active = game.comboIndex(cls);
@@ -1564,9 +1565,9 @@ function updateWeaponButtons(): void {
     // ENが足りなければ無効表示（「集中」発動中は次の消費が0なので有効）。予兆中も無効
     const cost = cur ? (b.freeNextEn ? 0 : cur.enCost) : 0;
     const broke = !cur || b.playerEn < cost;
-    card.classList.toggle("disabled", broke || telegraph);
+    card.classList.toggle("disabled", broke || enemyTurn);
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
-    const combo = cur && !broke && !telegraph ? matchCombo(last, cur, cls) : undefined;
+    const combo = cur && !broke && !enemyTurn ? matchCombo(last, cur, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
     // 武器マークを現在の段の上部へ「ぬるぬる」スライド（位置が変わった時だけ更新）
     const target = steps[active];
@@ -1584,7 +1585,7 @@ function updateWeaponButtons(): void {
   }
   // GUARD：敵の予兆中は強調。休憩は予兆中は無効
   if (guardCard) guardCard.classList.toggle("guard-now", telegraph);
-  if (restCard) restCard.classList.toggle("disabled", telegraph);
+  if (restCard) restCard.classList.toggle("disabled", enemyTurn);
 }
 
 /** ボタン用のドット絵アイコン要素を作る */
