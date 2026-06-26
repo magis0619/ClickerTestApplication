@@ -42,7 +42,7 @@ const game = new Game();
 /** 戦闘中の武器カード（2スキルを段表示し、クリック毎にフォーカスが移動） */
 let battleCards: {
   card: HTMLButtonElement; cls: WeaponClass;
-  steps: HTMLElement[]; focus: HTMLElement; link: HTMLElement; focusIdx: number;
+  steps: HTMLElement[]; mark: HTMLElement; link: HTMLElement; focusIdx: number;
 }[] = [];
 /** 戦闘中のガードカード（敵の予兆中に強調する） */
 let guardCard: HTMLButtonElement | null = null;
@@ -1435,17 +1435,17 @@ function buildBattle(): void {
         const step = document.createElement("div");
         step.className = "sk-step";
         step.innerHTML =
-          `<span class="sk-step-icon"></span>` +
           `<span class="sk-step-main"><span class="sk-step-name">${s.name}</span>` +
           `<span class="sk-step-cost">${s.enCost}</span></span>`;
-        if (inst) step.querySelector(".sk-step-icon")!.appendChild(weaponSpriteEl(inst.baseId, cls, 3));
         wrap.appendChild(step);
         steps.push(step);
       }
     }
-    const focus = document.createElement("div");
-    focus.className = "sk-focus";
-    wrap.appendChild(focus);
+    // 武器マーク（1枚だけ。現在の段へ「ぬるぬる」スライドする）
+    const mark = document.createElement("div");
+    mark.className = "sk-mark";
+    if (inst) mark.appendChild(weaponSpriteEl(inst.baseId, cls, 3));
+    wrap.appendChild(mark);
     const link = document.createElement("div");
     link.className = "sk-link";
     link.textContent = "⚡連携";
@@ -1453,7 +1453,7 @@ function buildBattle(): void {
     card.appendChild(wrap);
 
     grid.appendChild(card);
-    battleCards.push({ card, cls, steps, focus, link, focusIdx: -1 });
+    battleCards.push({ card, cls, steps, mark, link, focusIdx: -1 });
   }
 
   controls.appendChild(grid);
@@ -1523,10 +1523,10 @@ function updateWeaponButtons(): void {
   // 敵の予兆中（!表示）はガードのみ。攻撃カード・休憩は無効化（ターン制）
   const telegraph = b.anyTelegraph;
   for (const entry of battleCards) {
-    const { card, cls, steps, focus, link } = entry;
+    const { card, cls, steps, mark, link } = entry;
     const active = game.comboIndex(cls);
     const cur = game.currentSkill(cls);
-    // 次に出る段を強調
+    // 現在の段を強調（背景色がぬるっとクロスフェード）
     steps.forEach((step, i) => step.classList.toggle("sk-step-on", i === active));
     // ENが足りなければ無効表示（「集中」発動中は次の消費が0なので有効）。予兆中も無効
     const cost = cur ? (b.freeNextEn ? 0 : cur.enCost) : 0;
@@ -1535,18 +1535,17 @@ function updateWeaponButtons(): void {
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
     const combo = cur && !broke && !telegraph ? matchCombo(last, cur, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
-    // フォーカス枠を次に出る段へ「ぬるっと」移動（位置が変わった時だけ更新）
+    // 武器マークを現在の段の上部へ「ぬるぬる」スライド（位置が変わった時だけ更新）
     const target = steps[active];
     if (target) {
+      mark.style.display = "";
       if (entry.focusIdx !== active) {
-        focus.style.transform = `translateY(${target.offsetTop}px)`;
-        focus.style.height = `${target.offsetHeight}px`;
+        mark.style.transform = `translate(-50%, ${target.offsetTop + 8}px)`;
         link.style.top = `${target.offsetTop - 9}px`;
         entry.focusIdx = active;
       }
-      focus.classList.add("on");
     } else {
-      focus.classList.remove("on");
+      mark.style.display = "none";
     }
     link.classList.toggle("on", !!combo);
   }

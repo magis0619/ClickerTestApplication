@@ -2177,15 +2177,22 @@ body.theme-nb {
 .sk-step {
   position: relative; flex: 1;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-height: 56px; padding: 8px 6px;
+  min-height: 56px; padding: 34px 6px 8px; /* 上部は武器マーク用に確保 */
   background: #c6c6d0;
   border: 3px solid #1c1b1b;
   border-radius: 8px;
   color: #4a4550;
+  /* 背景色・文字色を「ぬるっと」クロスフェード */
+  transition: background-color 0.26s ease, color 0.2s ease, border-color 0.2s ease;
 }
-.sk-step-icon { display: none; }
-.sk-step-on .sk-step-icon { display: flex; align-items: center; justify-content: center; }
-.sk-step-icon canvas { image-rendering: pixelated; height: 34px; width: auto; }
+/* 武器マーク：現在の段の上部へ滑らかにスライドする1枚 */
+.sk-mark {
+  position: absolute; left: 50%; top: 0; z-index: 3;
+  transform: translate(-50%, 0);
+  transition: transform 0.28s cubic-bezier(0.34, 1.3, 0.5, 1);
+  pointer-events: none;
+}
+.sk-mark canvas { image-rendering: pixelated; height: 34px; width: auto; display: block; }
 /* 名前＋コストを1行に（縦の節約＝段が短くても収まる） */
 .sk-step-main { display: flex; align-items: baseline; justify-content: center; gap: 5px; max-width: 100%; }
 .sk-step-name {

@@ -406,22 +406,86 @@ function drawPlayer(ctx: CanvasRenderingContext2D, b: Battle): void {
   const breathe = Math.sin(t * 2.2);
   const sprite = hurt ? WARDEN_HURT : attacking ? WARDEN_ATTACK : windup ? WARDEN_ATTACK : WARDEN;
   const tint = hurt ? { color: "#ff4040", alpha: hp * 0.7 } : undefined;
-  drawSpriteAnim(ctx, sprite, x + lunge + knock + wuBack, y, 5, {
+  const px = x + lunge + knock + wuBack;
+  // ためる中：CHARGED の文字ではなく、プレイヤーをまとう金色オーラで表現
+  if (b.charge > 1) drawChargeAura(ctx, px, y - 34);
+  drawSpriteAnim(ctx, sprite, px, y, 5, {
     tint,
     bob: hurt ? -hp * 3 : attacking ? 0 : windup ? wu * 2 : breathe * 1.3,
     sy: hurt ? 1 - hp * 0.06 : attacking ? 1 : windup ? 1 - wu * 0.04 : 1 + breathe * 0.035,
     sx: hurt ? 1 + hp * 0.05 : attacking ? 1 : windup ? 1 + wu * 0.04 : 1 - breathe * 0.025,
   });
-  if (b.charge > 1) {
-    ctx.textAlign = "center";
-    ctx.font = "900 12px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,0.9)";
-    ctx.strokeText("CHARGED", x, y - 80);
-    ctx.fillStyle = "#d97a16";
-    ctx.fillText("CHARGED", x, y - 80);
+}
+
+/** ためる中：プレイヤーをまとう金色オーラ＋立ち上る金粉 */
+function drawChargeAura(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  const t = Date.now() / 1000;
+  const pulse = 0.6 + 0.4 * Math.sin(t * 4);
+  ctx.save();
+  // 金色のオーラ（縦長の放射グラデ）
+  const r = 46 + pulse * 10;
+  const g = ctx.createRadialGradient(cx, cy, 6, cx, cy, r);
+  g.addColorStop(0, `rgba(255,224,120,${0.5 * pulse})`);
+  g.addColorStop(0.55, `rgba(255,196,60,${0.22 * pulse})`);
+  g.addColorStop(1, "rgba(255,196,60,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, r * 0.8, r * 1.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // 立ち上る金粉
+  for (let i = 0; i < 8; i++) {
+    const ph = i * 1.4;
+    const rise = ((t * 60 + i * 22) % 70); // 0→70 上昇
+    const sx = cx + Math.sin(t * 2.5 + ph) * (16 + (i % 3) * 6);
+    const sy = cy + 36 - rise;
+    const fade = 1 - rise / 70;
+    ctx.globalAlpha = fade * (0.5 + 0.5 * Math.sin(t * 8 + ph));
+    ctx.fillStyle = i % 2 ? "#fff2c0" : "#ffd24d";
+    const s = 2 + fade * 2.5;
+    ctx.fillRect(sx - s / 2, sy - s / 2, s, s);
   }
+  ctx.restore();
+}
+
+/**
+ * ブレイク状態の大型バナー（過去のハイパーポップ系デザインに準拠：
+ * 太いアウトライン＋金グラデ＋発光＋脈動）。敵カード中央に大きく出す。
+ */
+function drawBreakBadge(ctx: CanvasRenderingContext2D, L: EnemyLayout, turns: number): void {
+  const t = Date.now() / 1000;
+  const pulse = 1 + 0.09 * Math.sin(t * 8);
+  const cx = L.cx, cy = L.top + L.h * 0.5;
+  const fs = Math.min(30, L.w * 0.26);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(pulse, pulse);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.font = `900 ${fs}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
+  ctx.shadowColor = "#ffcf3f";
+  ctx.shadowBlur = 16;
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#5a3d00";
+  ctx.strokeText("BREAK", 0, 0);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#8a5e00";
+  ctx.strokeText("BREAK", 0, 0);
+  ctx.shadowBlur = 0;
+  const g = ctx.createLinearGradient(0, -fs / 2, 0, fs / 2);
+  g.addColorStop(0, "#fff7d6");
+  g.addColorStop(0.5, "#ffd34d");
+  g.addColorStop(1, "#f59a12");
+  ctx.fillStyle = g;
+  ctx.fillText("BREAK", 0, 0);
+  // 残りターン
+  ctx.font = `900 ${Math.round(fs * 0.42)}px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace`;
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#5a3d00";
+  ctx.strokeText(`残り ${turns}`, 0, fs * 0.72);
+  ctx.fillStyle = "#fff2c0";
+  ctx.fillText(`残り ${turns}`, 0, fs * 0.72);
+  ctx.restore();
 }
 
 /** 敵1体をカード形式で描画（枠・弱点バッジ・名前・HP・スプライト・カウント） */
@@ -585,10 +649,7 @@ function drawEnemyCard(
   // === 攻撃カウントバッジ（カード下端中央） ===
   const cy = L.top + L.h - 4;
   if (e.isBroken) {
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#0a9bb5";
-    ctx.font = "700 12px 'Space Mono', 'Hiragino Kaku Gothic ProN', monospace";
-    ctx.fillText(`BREAK ${e.breakTurns}`, L.cx, cy);
+    drawBreakBadge(ctx, L, e.breakTurns);
   } else if (e.inTelegraph) {
     // 予兆：びっくりマーク
     const pulse = 1 + 0.35 * Math.abs(Math.sin(Date.now() / 80));
