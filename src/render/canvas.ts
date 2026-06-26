@@ -229,10 +229,10 @@ export function render(
   // ボス開始警告：画面を暗くする（入りでスッと暗く→終わりで通常の明るさへ戻す）。バナーはこの上に出す
   if (b.introT > 0) {
     const age = b.introMax - b.introT;
-    let a = 0.62;
+    let a = 0.97; // ほぼ真っ暗（背景はほとんど見えない）
     if (age < 220) a *= age / 220;
     if (b.introT < 420) a *= b.introT / 420;
-    ctx.fillStyle = `rgba(8,6,16,${a})`;
+    ctx.fillStyle = `rgba(4,3,9,${a})`;
     ctx.fillRect(0, 0, W, H);
   }
   drawFloats(ctx, b, slots);
@@ -938,7 +938,7 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
     return;
   }
   if (f.text === "BOSS BATTLE" && imgReady(BADGE_BOSS)) {
-    drawBadgeImage(ctx, BADGE_BOSS, W / 2, cy + 6, 240, pop, alpha, "#ff5a2a");
+    drawBadgeImage(ctx, BADGE_BOSS, W / 2, H / 2, 260, pop, alpha, "#ff5a2a");
     return;
   }
 

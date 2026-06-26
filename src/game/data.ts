@@ -393,7 +393,7 @@ export const SKILL_BANNER_MS = 1100;
 export const LOSE_ANIM_MS = 1500;
 
 /** 戦闘クリア後、CLEARバナーを見せてから次のウェーブ／リザルトへ移すまでの待機(ms) */
-export const WIN_HOLD_MS = 1000;
+export const WIN_HOLD_MS = 500;
 
 /** ボス戦開始の警告演出（画面を暗くし BOSS BATTLE を見せる）の長さ(ms) */
 export const BOSS_INTRO_MS = 2000;
