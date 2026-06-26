@@ -2148,6 +2148,8 @@ body.theme-nb {
 .wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #1c1b1b; }
 .wpn-stat-val { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 20px; font-weight: 900; color: #df0b81; }
 .wpn-stat-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; letter-spacing: 1px; }
+.wpn-sheet-desc { font-size: 13px; line-height: 1.5; color: #4a4453; margin-bottom: 12px; padding: 8px 10px; background: #fff; border: 2px solid #1c1b1b; }
+.wpn-sheet-stats:has(.wpn-stat:only-child) { grid-template-columns: 1fr; }
 .wpn-sheet-log { margin-bottom: 12px; }
 .wpn-log-head { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: #1c1b1b; margin-bottom: 6px; }
 .wpn-log-row {

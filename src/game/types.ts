@@ -85,6 +85,19 @@ export interface EnemyDef {
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astral";
 
 /**
+ * 盾。武器とは別枠で装備する防具。スキルは持たず「防御力」のみを持ち、
+ * 被ダメージを軽減する（パーフェクト無効化を除く）。将来パッシブ追加の余地あり。
+ */
+export interface Shield {
+  id: string;
+  name: string;
+  rarity: Rarity;
+  /** 防御力（被ダメージから減算する） */
+  defense: number;
+  desc: string;
+}
+
+/**
  * 武器テンプレート。攻撃力・会心・ブレイク値・レアリティを持つ（レアリティは武器ごとに固定）。
  * 実際の所持品は WeaponInstance（抽選されたスキル付き）。
  */
@@ -171,6 +184,8 @@ export interface SaveData {
   inventory: WeaponInstance[];
   /** 系統ごとに装備中の武器インスタンスUID */
   equipped: Record<WeaponClass, string>;
+  /** 装備中の盾ID（盾は固有でなくIDで管理。空文字＝なし） */
+  equippedShield: string;
   /** これまでにクリアした最深ステージ番号(1始まり、0=未クリア) */
   bestStage: number;
   /** 所持ゴールド（ショップで使用） */

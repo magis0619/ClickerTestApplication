@@ -146,6 +146,8 @@ export class Battle {
   playerEn: number;
   /** ためる中の倍率（1なら通常） */
   charge = 1;
+  /** プレイヤーの防御力（装備盾由来）。被ダメージから減算する */
+  playerDefense = 0;
 
   enemies: EnemyState[];
   targetIndex = 0;
@@ -576,8 +578,8 @@ export class Battle {
         break;
       }
       case "just":
-        // 中間：そこそこ軽減＋EN中回復。PERFECT専用演出は付けない
-        dmg = Math.max(1, Math.round(dmg * JUST_DAMAGE_MULT));
+        // 中間：そこそこ軽減＋EN中回復。PERFECT専用演出は付けない。さらに防御力で軽減
+        dmg = Math.max(1, Math.round(dmg * JUST_DAMAGE_MULT) - this.playerDefense);
         this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + JUST_EN_RECOVER);
         this.pushFloat(`JUST -${dmg}`, "#88ddff", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
@@ -585,8 +587,8 @@ export class Battle {
         this.sfx.push("just");
         break;
       case "guard":
-        // 通常ガード：軽減はするが地味。EN回復もわずか
-        dmg = Math.max(1, Math.round(dmg * GUARD_DAMAGE_MULT));
+        // 通常ガード：軽減はするが地味。EN回復もわずか。さらに防御力で軽減
+        dmg = Math.max(1, Math.round(dmg * GUARD_DAMAGE_MULT) - this.playerDefense);
         this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + GUARD_EN_RECOVER);
         this.pushFloat(`-${dmg}`, "#cccccc", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
@@ -594,6 +596,8 @@ export class Battle {
         this.sfx.push("guard");
         break;
       case "none":
+        // 防御失敗でも防御力ぶんは軽減される（最低1ダメージ）
+        dmg = Math.max(1, dmg - this.playerDefense);
         this.pushFloat(`${dmg}`, "#ff5555", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
         this.shake(340, 7);

@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef, ShopItem, ShopChest,
+  LastSkill, ComboDef, ShopItem, ShopChest, Shield,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -94,6 +94,21 @@ export const WEAPONS: Weapon[] = (weaponsJson as RawWeapon[]).map((w, i) => ({
   attack: w.attack, critChance: w.critChance ?? 0, breakPower: w.breakPower ?? 0, desc: w.desc ?? "",
 }));
 export function getWeapon(id: string): Weapon | undefined { return WEAPONS.find((w) => w.id === id); }
+
+// ===== 盾（防具）：武器とは別枠で装備。スキルなし・防御力のみ =====
+// 防御力は被ダメージから減算される（パーフェクトは元々0なので影響なし）。
+// プレイヤーは最初から全種を所持し、インベントリで付け替える。
+export const SHIELDS: Shield[] = [
+  { id: "sh_wood",    name: "ウッドバックラー",     rarity: "common",   defense: 2,  desc: "軽い木の小盾。最低限の備え。" },
+  { id: "sh_iron",    name: "アイアンガード",       rarity: "uncommon", defense: 5,  desc: "鉄板を張った頑丈な盾。" },
+  { id: "sh_knight",  name: "ナイトエイジス",       rarity: "rare",     defense: 8,  desc: "騎士団の紋章を刻んだ堅盾。" },
+  { id: "sh_obsidian",name: "オブシディアンウォール", rarity: "epic",     defense: 12, desc: "黒曜石の壁。重い一撃も受け止める。" },
+  { id: "sh_astral",  name: "アストラルバリア",     rarity: "legend",   defense: 18, desc: "星辰の力を宿す究極の防壁。" },
+];
+const SHIELD_MAP: Record<string, Shield> = Object.fromEntries(SHIELDS.map((s) => [s.id, s]));
+export function getShield(id: string): Shield | undefined { return SHIELD_MAP[id]; }
+/** 初期装備の盾ID（最弱の木盾） */
+export const DEFAULT_SHIELD_ID = "sh_wood";
 
 // ===== 武器インスタンス生成・スキル抽選 =====
 /** レアリティごとのスキル数：コモン〜レア=1、エピック以上=2 */
@@ -382,7 +397,7 @@ export const GUARD_WINDOW_MS = 430;
 // 通常ガードは「軽減はするが地味」。JUSTは中間。パーフェクトは「完全無効＋HP/EN大回復」。
 export const GUARD_DAMAGE_MULT = 0.55;
 export const JUST_DAMAGE_MULT = 0.25;
-export const PERFECT_HP_RECOVER = 18;
+export const PERFECT_HP_RECOVER = 40;
 
 // ===== パーフェクトガードの演出・怯ませ =====
 /** パーフェクト成功時のヒットストップ（完全静止）時間 */

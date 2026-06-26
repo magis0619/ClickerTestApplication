@@ -1,10 +1,10 @@
 import type { SaveData, WeaponInstance, WeaponClass } from "./types.ts";
-import { starterInventory, getWeapon } from "./data.ts";
+import { starterInventory, getWeapon, getShield, DEFAULT_SHIELD_ID } from "./data.ts";
 
-// バランス調整（武器弱体化）に伴い保存データを初期化するためバージョンを更新
-const KEY = "astral-warden-save-v7";
+// 盾・防御力の追加に伴い保存データを初期化するためバージョンを更新
+const KEY = "astral-warden-save-v8";
 
-/** 初期セーブ：標準武器を1本ずつ所持・装備 */
+/** 初期セーブ：標準武器を1本ずつ所持・装備＋初期の盾を装備 */
 export function defaultSave(): SaveData {
   const inv = starterInventory();
   const equipped: Record<WeaponClass, string> = { slash: "", pierce: "", crush: "" };
@@ -12,7 +12,7 @@ export function defaultSave(): SaveData {
     const w = getWeapon(it.baseId);
     if (w && !equipped[w.weapon]) equipped[w.weapon] = it.uid;
   }
-  return { inventory: inv, equipped, bestStage: 0, gold: 0, purchased: [], locked: [], bestFloor: 0 };
+  return { inventory: inv, equipped, equippedShield: DEFAULT_SHIELD_ID, bestStage: 0, gold: 0, purchased: [], locked: [], bestFloor: 0 };
 }
 
 /** 装備が無効（売却・データ不整合）な系統を、所持品から補完する */
@@ -37,6 +37,7 @@ export function loadSave(): SaveData {
     const save: SaveData = {
       inventory,
       equipped: { slash: "", pierce: "", crush: "", ...(parsed.equipped ?? {}) },
+      equippedShield: getShield(parsed.equippedShield ?? "") ? parsed.equippedShield! : DEFAULT_SHIELD_ID,
       bestStage: typeof parsed.bestStage === "number" ? parsed.bestStage : 0,
       gold: typeof parsed.gold === "number" ? parsed.gold : 0,
       purchased: Array.isArray(parsed.purchased) ? parsed.purchased : [],

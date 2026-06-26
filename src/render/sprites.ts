@@ -1180,6 +1180,105 @@ export const SHIELD: Sprite = {
   ],
 };
 
+// ===== 盾（防具）のドット絵：装備IDごとに5種 =====
+const O = "#0c0a18"; // 共通輪郭
+
+/** sh_wood：ウッドバックラー（木の丸盾＋鉄鋲） */
+export const SHIELD_WOOD: Sprite = {
+  palette: { o: O, b: "#a9712f", c: "#74471a", w: "#d7a35c", s: "#3a2410" },
+  rows: [
+    "...oooo...",
+    ".oobwwboo.",
+    ".obbbbbco.",
+    "obbbssbbbo",
+    "obbsssssbo",
+    "obbsssssbo",
+    "obbbssbbco",
+    ".obbbbbco.",
+    ".oobbbcoo.",
+    "...oooo...",
+  ],
+};
+
+/** sh_iron：アイアンガード（鉄の角盾＋四隅の鋲） */
+export const SHIELD_IRON: Sprite = {
+  palette: { o: O, b: "#9aa3b2", c: "#5c6473", w: "#d6dce6", r: "#3a3f4a" },
+  rows: [
+    "oooooooooo",
+    "obwwbbbbco",
+    "obrbbbbrco",
+    "obbbbbbbco",
+    "obbbbbbbco",
+    "obbbbbbbco",
+    "obbbbbbbco",
+    "obrbbbbrco",
+    "obbbbbbbco",
+    "oooooooooo",
+  ],
+};
+
+/** sh_knight：ナイトエイジス（青の騎士盾＋金の十字） */
+export const SHIELD_KNIGHT: Sprite = {
+  palette: { o: O, b: "#5fa8ff", c: "#2c6fb8", w: "#d4ecff", y: "#ffd35f" },
+  rows: [
+    ".oooooooo.",
+    "obwbbbbbbo",
+    "obbbyybbco",
+    "obbbyybbco",
+    "obyyyyyybo",
+    "obbbyybbco",
+    "obbbyybbco",
+    "oobbbbbboo",
+    ".oobbbboo.",
+    "...obbo...",
+    "....oo....",
+  ],
+};
+
+/** sh_obsidian：オブシディアンウォール（黒曜の重盾＋紫光） */
+export const SHIELD_OBSIDIAN: Sprite = {
+  palette: { o: O, b: "#3a2d52", c: "#241a36", w: "#7a5fae", y: "#c89bff" },
+  rows: [
+    "oooooooooo",
+    "obwbbbbbco",
+    "obbbyybbco",
+    "obbyyyybco",
+    "obyybbyybo",
+    "obyybbyybo",
+    "obbyyyybco",
+    "obbbyybbco",
+    "oobbbbbboo",
+    ".oooooooo.",
+  ],
+};
+
+/** sh_astral：アストラルバリア（星辰の盾＋虹がかった金） */
+export const SHIELD_ASTRAL: Sprite = {
+  palette: { o: O, b: "#ffcf3f", c: "#c8911a", w: "#fff4c0", y: "#ff7de9", p: "#7df0ff" },
+  rows: [
+    ".oooooooo.",
+    "obwbbbbpbo",
+    "obbpbbybbo",
+    "obbbyybbco",
+    "obyyyyyybo",
+    "obbbyybbco",
+    "obpbbbbyco",
+    "oobbbbbboo",
+    ".oobbbboo.",
+    "...obbo...",
+    "....oo....",
+  ],
+};
+
+/** 盾ID → スプライト。未知IDは木盾で代替 */
+export const SHIELD_BY_ID: Record<string, Sprite> = {
+  sh_wood: SHIELD_WOOD,
+  sh_iron: SHIELD_IRON,
+  sh_knight: SHIELD_KNIGHT,
+  sh_obsidian: SHIELD_OBSIDIAN,
+  sh_astral: SHIELD_ASTRAL,
+};
+
 const SLEEP_PAL: Record<string, string> = {
   z: "#eafff2", // Zzz(白緑)
 };

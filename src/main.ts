@@ -1,7 +1,7 @@
 import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
 import {
-  WARDEN, SHIELD, SLEEP, getWeaponSprite, chestSprite,
+  WARDEN, SHIELD_BY_ID, SHIELD_WOOD, SLEEP, getWeaponSprite, chestSprite,
   CARAPACE, AERIAL, PHANTOM, BOSS, RARE, ENEMY_BY_ID,
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
@@ -157,7 +157,7 @@ function doGuard(): void {
 /** 削除確認中の武器UID（2タップ目で確定） */
 let pendingDeleteUid: string | null = null;
 /** インベントリ：系統フィルタ（all=すべて） */
-let invClass: WeaponClass | "all" = "all";
+let invClass: WeaponClass | "all" | "shield" = "all";
 /** インベントリ：並び替えキー */
 type SortKey = "rarity" | "acquired" | "atk" | "break";
 let invSortKey: SortKey = "rarity";
@@ -1063,7 +1063,15 @@ function buildInventory(): void {
   tabs.appendChild(classTab("slash", "斬撃"));
   tabs.appendChild(classTab("pierce", "刺突"));
   tabs.appendChild(classTab("crush", "打撃"));
+  tabs.appendChild(classTab("shield", "盾"));
   controls.appendChild(tabs);
+
+  // 盾タブ：盾は別枠（スキルなし・防御力のみ）。専用グリッドを出して終了
+  if (invClass === "shield") {
+    controls.appendChild(shieldGrid());
+    controls.appendChild(bottomNav());
+    return;
+  }
 
   // 並び替え（キー選択。アクティブなキーをもう一度押すと昇順/降順を切替）
   const sortRow = document.createElement("div");
@@ -1176,12 +1184,72 @@ function multiDeleteBar(): HTMLElement {
 }
 
 /** 系統フィルタタブ */
-function classTab(cls: WeaponClass | "all", label: string): HTMLElement {
+function classTab(cls: WeaponClass | "all" | "shield", label: string): HTMLElement {
   const b = document.createElement("button");
   b.className = "ars-tab" + (invClass === cls ? " on" : "");
   b.textContent = label;
   b.addEventListener("click", () => { invClass = cls; buildControls(); });
   return b;
+}
+
+/** 盾の一覧グリッド（装備の付け替え。スキルなし・防御力のみ） */
+function shieldGrid(): HTMLElement {
+  const grid = document.createElement("div");
+  grid.className = "ars-grid";
+  const equippedId = game.equippedShield()?.id ?? "";
+  for (const sh of game.shields) {
+    const equipped = sh.id === equippedId;
+    const card = document.createElement("button");
+    card.className = ("ars-card " + rarityGlowClass(sh.rarity)).trim();
+    if (equipped) card.classList.add("sel");
+    card.innerHTML =
+      `<div class="ars-card-top"><span ${rarityAttr(sh.rarity, "ars-card-rar")}>${RARITY_LABEL[sh.rarity]}</span>` +
+      `<span class="ars-card-fav"></span></div>` +
+      `<div class="ars-card-img"></div>` +
+      `<div class="ars-card-name">${sh.name}</div>` +
+      (equipped
+        ? `<div class="ars-card-eq">EQUIPPED</div>`
+        : `<div class="ars-card-stats"><span>DEF ${sh.defense}</span></div>`);
+    const sprite = SHIELD_BY_ID[sh.id] ?? SHIELD_WOOD;
+    const cv = makeSpriteCanvas(sprite, 3); cv.className = "wpn-sprite";
+    card.querySelector(".ars-card-img")?.appendChild(cv);
+    card.addEventListener("click", () => { openShieldModal(sh.id); });
+    grid.appendChild(card);
+  }
+  return grid;
+}
+
+/** 盾の詳細モーダル（防御力・説明・装備） */
+function openShieldModal(id: string): void {
+  const sh = game.shields.find((s) => s.id === id);
+  if (!sh) return;
+  const equipped = game.equippedShield()?.id === sh.id;
+  const overlay = document.createElement("div");
+  overlay.className = "wpn-modal";
+  const sheet = document.createElement("div");
+  sheet.className = ("wpn-sheet " + rarityGlowClass(sh.rarity)).trim();
+  sheet.innerHTML =
+    `<div class="wpn-sheet-head"><div class="wpn-sheet-title">${sh.name}</div><button class="wpn-sheet-x">×</button></div>` +
+    `<div class="wpn-sheet-chips"><span ${rarityAttr(sh.rarity, "wpn-chip")}>${RARITY_LABEL[sh.rarity]}</span>` +
+    `<span class="wpn-chip wpn-chip-cls">盾</span></div>` +
+    `<div class="wpn-sheet-img"></div>` +
+    `<div class="wpn-sheet-stats">${statBox("DEF", `${sh.defense}`)}</div>` +
+    `<div class="wpn-sheet-desc">${sh.desc}</div>`;
+  const mcv = makeSpriteCanvas(SHIELD_BY_ID[sh.id] ?? SHIELD_WOOD, 6); mcv.className = "wpn-sprite";
+  sheet.querySelector(".wpn-sheet-img")?.appendChild(mcv);
+  const acts = document.createElement("div");
+  acts.className = "wpn-sheet-acts";
+  const eq = document.createElement("button");
+  eq.className = "nb-cta wpn-act-eq";
+  eq.textContent = equipped ? "装備中" : "装備する";
+  eq.disabled = equipped;
+  eq.addEventListener("click", () => { game.equipShield(sh.id); overlay.remove(); buildControls(); });
+  acts.appendChild(eq);
+  sheet.appendChild(acts);
+  overlay.appendChild(sheet);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  sheet.querySelector(".wpn-sheet-x")?.addEventListener("click", () => overlay.remove());
+  document.body.appendChild(overlay);
 }
 
 /** ARSENAL グリッドの武器カード。タップで詳細モーダル */
@@ -1497,7 +1565,9 @@ function buildBattle(): void {
   const gbtn = document.createElement("button");
   gbtn.className = "bt-act bt-guard";
   gbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">GUARD</span>`;
-  gbtn.querySelector(".bt-act-ico")!.appendChild(actionIcon(SHIELD));
+  // ガードボタンには装備中の盾を表示する
+  const shieldSprite = SHIELD_BY_ID[game.equippedShield()?.id ?? ""] ?? SHIELD_WOOD;
+  gbtn.querySelector(".bt-act-ico")!.appendChild(actionIcon(shieldSprite));
   gbtn.addEventListener("click", doGuard);
   pressFx(gbtn);
   guardCard = gbtn;
@@ -1840,6 +1910,10 @@ function buildHowTo(): void {
   guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP <b>最大まで全回復</b>し、敵をひるませる。`));
   guard.appendChild(howStep("⭐", "JUST（早め）", `被ダメージを大きく軽減しAP <b>+${JUST_EN_RECOVER}</b> 回復。`));
   guard.appendChild(howStep("🛡", "GUARD（通常）", "被ダメージを軽減。タイミングを逃しても守りにはなる。"));
+  guard.appendChild(howText(
+    "インベントリの<b>盾</b>タブで盾を装備すると<b>防御力</b>が上がり、" +
+    "受けるダメージがさらに減る（パーフェクトは元々0なので影響なし）。",
+  ));
   controls.appendChild(howSection("04", "ガードのコツ", guard));
 
   // 5. ブレイク

@@ -2,11 +2,11 @@ import { Battle } from "./engine.ts";
 import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
-  withRareSpawn,
+  withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type {
-  Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef, ShopChest,
+  Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef, ShopChest, Shield,
 } from "./types.ts";
 
 const CLASSES: WeaponClass[] = ["slash", "pierce", "crush"];
@@ -167,9 +167,11 @@ export class Game {
     if (this.isEndless) {
       this.endlessFloor = 1;
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false));
+      this.battle.playerDefense = this.defense;
       this.battle.announce("1階", "#9fd9ff");
     } else {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
+      this.battle.playerDefense = this.defense;
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
@@ -253,6 +255,25 @@ export class Game {
     return true;
   }
 
+  // ===== 盾（防具） =====
+  /** 所持している盾（現状は全種を最初から所持） */
+  get shields(): Shield[] { return SHIELDS; }
+  /** 装備中の盾。未設定・不正なら既定の盾にフォールバック */
+  equippedShield(): Shield | undefined {
+    return getShield(this.save.equippedShield) ?? getShield(DEFAULT_SHIELD_ID);
+  }
+  /** 盾を装備する。成功で true */
+  equipShield(id: string): boolean {
+    if (!getShield(id)) return false;
+    this.save.equippedShield = id;
+    writeSave(this.save);
+    // 戦闘中なら即座に防御力へ反映
+    if (this.battle) this.battle.playerDefense = this.defense;
+    return true;
+  }
+  /** 現在の防御力（装備盾の defense） */
+  get defense(): number { return this.equippedShield()?.defense ?? 0; }
+
   /** 削除ロック中か */
   isLocked(uid: string): boolean {
     return this.save.locked.includes(uid);
@@ -313,6 +334,7 @@ export class Game {
       this.endlessFloor += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en);
+      this.battle.playerDefense = this.defense;
       this.battle.announce(`${this.endlessFloor}階`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
@@ -328,6 +350,7 @@ export class Game {
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), hp, en);
+      this.battle.playerDefense = this.defense;
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
