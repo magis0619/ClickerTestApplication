@@ -46,8 +46,6 @@ let battleCards: {
 let guardCard: HTMLButtonElement | null = null;
 /** 戦闘中の休憩ボタン（敵の予兆中は無効化する） */
 let restCard: HTMLButtonElement | null = null;
-/** 戦闘中の戦況ログバー（COMBAT_LOG） */
-let battleLog: HTMLElement | null = null;
 /** 戦闘中のHP/AP（セグメント）バー。毎フレーム更新する */
 let battleHud: {
   hpLabel: HTMLElement; hpSegs: HTMLElement[]; crit: HTMLElement; hpFill: HTMLElement;
@@ -220,7 +218,6 @@ function buildControls(): void {
   battleHud = null;
   guardCard = null;
   restCard = null;
-  battleLog = null;
   const screenChanged = renderedScreen !== game.screen;
   renderedScreen = game.screen;
   // バトル枠（canvas）は戦闘中のみ表示。それ以外（リザルト含む）はDOMで構成
@@ -1482,13 +1479,6 @@ function buildBattle(): void {
   actRow.appendChild(rbtn);
   controls.appendChild(actRow);
 
-  // ===== COMBAT_LOG バー =====
-  const log = document.createElement("div");
-  log.className = "bt-log";
-  log.innerHTML = `<span class="bt-log-title">COMBAT_LOG_V2</span><span class="bt-log-line"></span>`;
-  controls.appendChild(log);
-  battleLog = log.querySelector(".bt-log-line") as HTMLElement;
-
   updateWeaponButtons();
 }
 
@@ -1569,11 +1559,6 @@ function updateWeaponButtons(): void {
   // GUARD：敵の予兆中は強調。休憩は予兆中は無効
   if (guardCard) guardCard.classList.toggle("guard-now", telegraph);
   if (restCard) restCard.classList.toggle("disabled", telegraph);
-  // COMBAT_LOG：直近の味方ログを表示
-  if (battleLog) {
-    const logs = b.floats.filter((fl) => fl.anchor === "player");
-    battleLog.textContent = logs.length ? logs[logs.length - 1].text : "READY";
-  }
 }
 
 function buildResult(): void {

@@ -2218,22 +2218,22 @@ body.theme-nb {
 /* 連携可能カードの強調（既存 combo-ready を踏襲） */
 .bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 5px 5px 0 #df0b81; }
 
-/* ガード／休憩を攻撃行の下に横並び（2列） */
-.bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+/* ガード／休憩を攻撃行の下に横並び（2列）。バトルログを廃したぶん大きく */
+.bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .bt-act {
-  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
-  min-height: 52px; padding: 8px;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px;
+  min-height: 84px; padding: 12px;
   background: #ffffff;
-  border: 2.5px solid #1c1b1b;
-  box-shadow: 4px 4px 0 #1c1b1b;
+  border: 3px solid #1c1b1b;
+  box-shadow: 5px 5px 0 #1c1b1b;
   color: #1c1b1b;
   cursor: pointer;
   transition: transform 0.05s, box-shadow 0.05s;
 }
 .bt-act:active, .bt-act.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
 .bt-act-ico { display: flex; align-items: center; justify-content: center; }
-.bt-act-ico canvas { image-rendering: pixelated; height: 28px; width: auto; }
-.bt-act-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-size: 12px; font-weight: 900; letter-spacing: 0.5px; }
+.bt-act-ico canvas { image-rendering: pixelated; height: 42px; width: auto; }
+.bt-act-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-size: 17px; font-weight: 900; letter-spacing: 0.5px; }
 .bt-guard { background: #d8ecff; }
 .bt-rest2 { background: #d8f7ea; }
 .bt-guard.guard-now {
