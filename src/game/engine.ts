@@ -31,6 +31,8 @@ import {
   LOSE_ANIM_MS,
   WIN_HOLD_MS,
   BOSS_INTRO_MS,
+  READY_WAIT_MIN_MS,
+  READY_WAIT_MAX_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -80,6 +82,11 @@ export class EnemyState {
   count: number;
   /** 予兆（!）の残り時間(ms)。>0 の間だけガード可能、0で着弾 */
   telegraphT = 0;
+  /**
+   * カウント0到達後、!（予兆）が出るまでのランダムな待ち時間(ms)。
+   * -1=未抽選（まだ「攻撃の順番」が回ってきていない）。順番が回った敵だけ抽選して消化する。
+   */
+  readyWaitT = -1;
   /** 被弾フラッシュ演出の残り時間(ms) */
   hitFlash = 0;
   /** 撃破アニメの残り時間(ms)。>0 の間は撃破演出を描画 */
@@ -367,24 +374,34 @@ export class Battle {
   }
 
   /**
-   * 攻撃準備完了(count<=0)の敵を「左から順に」1体ずつ予兆させる。
-   * 同時に複数体が準備完了でも、予兆は常に1体だけ＝順番に攻撃させる。
+   * 攻撃準備完了(count<=0)の敵を「左から順に」1体ずつ攻撃させる。
+   * カウント0に達してもすぐには予兆せず、0のままランダムな時間だけ待ってから ! を出す。
+   * 待ち時間は敵ごとに個別保持し、「順番が回ってきた1体だけ」消化する。
+   * ＝右の敵は左の敵が攻撃し終わるまで 0 のまま待機（順番に攻撃）。
    */
-  private startNextTelegraph(): void {
-    if (this.enemies.some((e) => e.telegraphT > 0)) return; // 既に1体予兆中
-    for (const e of this.enemies) {
-      if (!e.alive || e.isBroken || e.flinchT > 0) continue;
-      if (e.count <= 0) {
-        e.telegraphT = e.def.telegraphMs; // 予兆開始（! が出る）
-        this.sfx.push("warn");
-        return;
-      }
+  private tickAttackWait(dtMs: number): void {
+    if (this.enemies.some((e) => e.telegraphT > 0)) return; // 既に1体予兆中＝順番待ち
+    // 攻撃準備完了の敵を左から1体だけ選ぶ（これが今「攻撃の順番」の敵）
+    const e = this.enemies.find(
+      (x) => x.alive && !x.isBroken && x.flinchT <= 0 && x.count <= 0,
+    );
+    if (!e) return;
+    // この敵の0待ち時間が未抽選なら、今ここで抽選（順番が回ってきた瞬間）
+    if (e.readyWaitT < 0) {
+      e.readyWaitT = READY_WAIT_MIN_MS + Math.random() * (READY_WAIT_MAX_MS - READY_WAIT_MIN_MS);
+    }
+    e.readyWaitT -= dtMs;
+    if (e.readyWaitT <= 0) {
+      e.readyWaitT = -1;
+      e.telegraphT = e.def.telegraphMs; // 待ち終わり → 予兆開始（! が出る）
+      this.sfx.push("warn");
     }
   }
 
-  /** 予兆の決着後、カウントを開始値に戻す */
+  /** 予兆の決着後、カウント・待ち時間を初期状態に戻す */
   private endTelegraph(e: EnemyState): void {
     e.telegraphT = 0;
+    e.readyWaitT = -1;
     e.count = e.def.countStart;
   }
 
@@ -451,6 +468,7 @@ export class Battle {
         e.breakTurns = BREAK_TURNS;
         e.breakGauge = 0;
         e.telegraphT = 0; // 予兆中ならキャンセル
+        e.readyWaitT = -1; // 0待ち中ならリセット（ブレイク復帰後に再抽選させる）
         this.pushFloat("BREAK!!", "#ffdd44", idx);
         this.sfx.push("break");
       }
@@ -688,8 +706,8 @@ export class Battle {
       }
     }
 
-    // 攻撃準備完了の敵を左から1体ずつ予兆させる（同時攻撃を順番に）
-    this.startNextTelegraph();
+    // 攻撃準備完了の敵を左から1体ずつ、0待ち→! →攻撃の流れで処理（同時攻撃を順番に）
+    this.tickAttackWait(dtMs);
 
     this.checkWin();
   }
