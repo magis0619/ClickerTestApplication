@@ -1203,6 +1203,89 @@ export const SLEEP: Sprite = {
   ],
 };
 
+// ===== 下部ナビのドット絵アイコン（ホーム/ワールド/インベントリ/鍛冶屋/ショップ） =====
+const OUTL = "#1c1b1b";
+/** ホーム：家 */
+export const NAV_HOME: Sprite = {
+  palette: { o: OUTL, b: "#5fa8ff", y: "#ffd35f" },
+  rows: [
+    ".....o.....",
+    "....obo....",
+    "...obbbo...",
+    "..obbbbbo..",
+    ".obbbbbbbo.",
+    "oo.bbbbb.oo",
+    ".obbyyybbo.",
+    ".obbyyybbo.",
+    ".obbyyybbo.",
+    ".ooooooooo.",
+  ],
+};
+/** ワールド：地球儀 */
+export const NAV_WORLD: Sprite = {
+  palette: { o: OUTL, b: "#3fa8a0" },
+  rows: [
+    "...ooooo...",
+    ".oobbbbboo.",
+    ".obobbbobo.",
+    "oobbbobbboo",
+    "obbbbbbbbbo",
+    "oobbbobbboo",
+    ".obobbbobo.",
+    ".oobbbbboo.",
+    "...ooooo...",
+    "...........",
+  ],
+};
+/** インベントリ：リュック */
+export const NAV_BAG: Sprite = {
+  palette: { o: OUTL, b: "#e0622a", y: "#ffd35f" },
+  rows: [
+    "...ooo.....",
+    "..oyyyo....",
+    ".ooooooo...",
+    ".obbbbbo...",
+    ".obyyybo...",
+    ".obyyybo...",
+    ".obbbbbo...",
+    ".obbbbbo...",
+    ".ooooooo...",
+    "..o...o....",
+  ],
+};
+/** 鍛冶屋：ハンマー */
+export const NAV_FORGE: Sprite = {
+  palette: { o: OUTL, h: "#aab2c4", b: "#8a5a2a" },
+  rows: [
+    ".oooooo....",
+    "ohhhhhho...",
+    "ohhhhhho...",
+    "ohhhhhho...",
+    ".oo.b.oo...",
+    "...obo.....",
+    "...obo.....",
+    "...obo.....",
+    "..oboo.....",
+    "..oo.......",
+  ],
+};
+/** ショップ：カート */
+export const NAV_SHOP: Sprite = {
+  palette: { o: OUTL, b: "#ffd35f" },
+  rows: [
+    "o....oo....",
+    "o...obbo...",
+    "ooooobboo..",
+    "obbbbbbbo..",
+    "obbbbbbbo..",
+    ".obbbbbo...",
+    ".ooooooo...",
+    "..o...o....",
+    ".ooo.ooo...",
+    ".ooo.ooo...",
+  ],
+};
+
 // ===== 武器アイコン（武器名に見合うドット絵。系統ごとの形＋武器ごとの配色） =====
 // 斬撃＝剣（斜めの刃）/ 刺突＝槍 / 打撃＝戦槌。配色で各武器の個性を表現する。
 const SWORD_ROWS = [

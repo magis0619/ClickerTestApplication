@@ -1083,35 +1083,36 @@ function drawSkillBanner(ctx: CanvasRenderingContext2D, b: Battle): void {
   const by = 298 - bh;
   const textX = bx + padX;
 
-  // ===== 吹き出し枠（プレイヤー方向＝左下にしっぽ） =====
+  // ===== 吹き出し枠（プレイヤー方向＝左下にしっぽ）。本体としっぽを一筆書きの輪郭にして内部の線を出さない =====
   const fill = combo ? "#fff7e0" : "#ffffff";
   const line = combo ? "#9a6f0b" : "#1c1b1b";
   const lw = combo ? 3 : 2.5;
-  const t1 = bx + 14, t2 = bx + 30, tipX = bx - 4, tipY = by + bh + 14;
-  // しっぽ（塗り）
-  ctx.beginPath();
-  ctx.moveTo(t1, by + bh - 1);
-  ctx.lineTo(t2, by + bh - 1);
-  ctx.lineTo(tipX, tipY);
-  ctx.closePath();
+  const r = 9;
+  const t1 = bx + 14, t2 = bx + 30, tipX = bx - 2, tipY = by + bh + 14;
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by);
+    ctx.lineTo(bx + bw - r, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + r, r);          // 右上
+    ctx.lineTo(bx + bw, by + bh - r);
+    ctx.arcTo(bx + bw, by + bh, bx + bw - r, by + bh, r); // 右下
+    ctx.lineTo(t2, by + bh);                              // 下辺 → しっぽ右
+    ctx.lineTo(tipX, tipY);                               // しっぽ先端
+    ctx.lineTo(t1, by + bh);                              // しっぽ左 → 下辺
+    ctx.lineTo(bx + r, by + bh);
+    ctx.arcTo(bx, by + bh, bx, by + bh - r, r);           // 左下
+    ctx.lineTo(bx, by + r);
+    ctx.arcTo(bx, by, bx + r, by, r);                     // 左上
+    ctx.closePath();
+  };
   if (combo) { ctx.shadowColor = "#ffcf3f"; ctx.shadowBlur = 16 * alpha; }
   ctx.fillStyle = fill;
-  ctx.fill();
-  // 本体（塗り）
-  roundRect(ctx, bx, by, bw, bh, 9);
-  ctx.fillStyle = fill;
+  path();
   ctx.fill();
   ctx.shadowBlur = 0;
-  // 枠線
   ctx.lineWidth = lw;
   ctx.strokeStyle = line;
-  roundRect(ctx, bx, by, bw, bh, 9);
-  ctx.stroke();
-  // しっぽの外側2辺だけ縁取り
-  ctx.beginPath();
-  ctx.moveTo(t1, by + bh);
-  ctx.lineTo(tipX, tipY);
-  ctx.lineTo(t2, by + bh);
+  path();
   ctx.stroke();
 
   const nameY = by + bh - padY - 2;

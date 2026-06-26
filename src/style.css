@@ -1050,7 +1050,8 @@ button.wpn-row:hover { background: #241f55; }
   font-size: 10px;
   cursor: pointer;
 }
-.nav-ico { font-size: 20px; }
+.nav-ico { font-size: 20px; display: flex; align-items: center; justify-content: center; height: 28px; }
+.nav-ico canvas { image-rendering: pixelated; height: 26px; width: auto; display: block; }
 .nav-on { background: #1c2c50; color: #fff; }
 
 /* ===== タイトル ===== */
@@ -2000,6 +2001,15 @@ body.theme-nb {
   color: #1c1b1b; background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer;
 }
 .ars-tab.on { background: #1c1b1b; color: #fff; }
+/* 並び替えキー */
+.ars-sorts { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.ars-sort {
+  flex: 1; min-width: 64px; padding: 7px 4px;
+  font-size: 12px; font-weight: 800; color: #1c1b1b;
+  background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer; white-space: nowrap;
+}
+.ars-sort.on { background: #df0b81; color: #fff; border-color: #1c1b1b; }
+
 .ars-tools { display: flex; gap: 8px; margin-bottom: 12px; }
 .ars-tool {
   flex: 1; padding: 8px;
@@ -2007,6 +2017,33 @@ body.theme-nb {
   background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer;
 }
 .ars-tool.on { background: #fff6d8; border-color: #df0b81; color: #b01070; }
+
+/* 複数削除バー */
+.ars-delbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 8px 10px;
+  background: #fff0f4; border: 2px solid #df0b81;
+}
+.ars-delbar-info { font-size: 11px; font-weight: 800; color: #b01070; }
+.ars-delbar-acts { display: flex; gap: 6px; }
+.ars-delbar-clear, .ars-delbar-del {
+  padding: 6px 10px; font-size: 12px; font-weight: 900; cursor: pointer; border: 2px solid #1c1b1b;
+}
+.ars-delbar-clear { background: #ffffff; color: #1c1b1b; }
+.ars-delbar-del { background: #df0b81; color: #fff; box-shadow: 2px 2px 0 #1c1b1b; }
+.ars-delbar-del:disabled, .ars-delbar-clear:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* 選択モードのカード */
+.ars-card.selecting { border-color: #df0b81; }
+.ars-card.sel { background: #fff0f4; box-shadow: 4px 4px 0 #df0b81; }
+.ars-card.undeletable { opacity: 0.42; }
+.ars-card-check {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: #fff; background: #ffffff;
+  border: 2px solid #1c1b1b;
+}
+.ars-card.sel .ars-card-check { background: #df0b81; color: #fff; }
 
 .ars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ars-card {
@@ -2102,7 +2139,8 @@ body.theme-nb {
    を横一列に並べる（2x2グリッドから差し替え）
    ===================================================================== */
 .bt-skills {
-  grid-template-columns: repeat(4, 1fr);
+  /* minmax(0,1fr) で「内容（スキル名）の長さに関わらず」4列を常に均等幅に固定 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   align-items: stretch;
 }

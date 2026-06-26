@@ -2,7 +2,8 @@ import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
 import {
   SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite,
-  CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite,
+  CARAPACE, AERIAL, PHANTOM, BOSS,
+  NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
 import astralWardenUrl from "./assets/astral_warden.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
@@ -134,10 +135,17 @@ function doGuard(): void {
 let pendingDeleteUid: string | null = null;
 /** インベントリ：系統フィルタ（all=すべて） */
 let invClass: WeaponClass | "all" = "all";
-/** インベントリ：レア度の並び（true=降順） */
+/** インベントリ：並び替えキー */
+type SortKey = "rarity" | "acquired" | "atk" | "break";
+let invSortKey: SortKey = "rarity";
+/** インベントリ：並び（true=降順） */
 let invSortDesc = true;
 /** インベントリ：ロック中のみ表示 */
 let invLockedOnly = false;
+/** インベントリ：複数選択削除モード */
+let invSelectMode = false;
+/** インベントリ：選択中の武器UID（複数削除用） */
+const invSelected = new Set<string>();
 /** ダンジョン選択：選択中のゾーン番号 */
 let stageSel = 0;
 /** ワールド選択：開いているワールド番号（ダンジョン一覧の対象） */
@@ -357,19 +365,26 @@ function playerPower(): number {
 function bottomNav(): HTMLElement {
   const nav = document.createElement("div");
   nav.className = "bottom-nav";
-  const items: [string, string, string, () => void][] = [
-    ["🏠", "ホーム", "title", () => game.goTitle()],
-    ["🗺️", "ワールド", "worldSelect", () => game.goWorldSelect()],
-    ["🎒", "インベントリ", "inventory", () => game.goInventory()],
-    ["🔨", "鍛冶屋", "forge", () => game.goForge()],
-    ["🛒", "ショップ", "shop", () => game.goShop()],
+  const items: [Sprite, string, string, () => void][] = [
+    [NAV_HOME, "ホーム", "title", () => game.goTitle()],
+    [NAV_WORLD, "ワールド", "worldSelect", () => game.goWorldSelect()],
+    [NAV_BAG, "インベントリ", "inventory", () => game.goInventory()],
+    [NAV_FORGE, "鍛冶屋", "forge", () => game.goForge()],
+    [NAV_SHOP, "ショップ", "shop", () => game.goShop()],
   ];
   for (const [icon, label, scr, act] of items) {
     const b = document.createElement("button");
     // ダンジョン一覧(stageSelect)もワールドタブのハイライト対象にする
     const on = game.screen === scr || (scr === "worldSelect" && game.screen === "stageSelect");
     b.className = "nav-item" + (on ? " nav-on" : "");
-    b.innerHTML = `<span class="nav-ico">${icon}</span><span class="nav-lbl">${label}</span>`;
+    const ico = document.createElement("span");
+    ico.className = "nav-ico";
+    ico.appendChild(makeSpriteCanvas(icon, 3));
+    const lbl = document.createElement("span");
+    lbl.className = "nav-lbl";
+    lbl.textContent = label;
+    b.appendChild(ico);
+    b.appendChild(lbl);
     b.addEventListener("click", () => { act(); buildControls(); });
     nav.appendChild(b);
   }
@@ -1016,39 +1031,114 @@ function buildInventory(): void {
   tabs.appendChild(classTab("crush", "打撃"));
   controls.appendChild(tabs);
 
-  // ツール（ソート・ロックのみ）
+  // 並び替え（キー選択。アクティブなキーをもう一度押すと昇順/降順を切替）
+  const sortRow = document.createElement("div");
+  sortRow.className = "ars-sorts";
+  const sortDefs: [SortKey, string][] = [
+    ["rarity", "レア度"], ["acquired", "入手順"], ["atk", "ATK"], ["break", "ブレイク"],
+  ];
+  for (const [key, label] of sortDefs) {
+    const on = invSortKey === key;
+    const btn = document.createElement("button");
+    btn.className = "ars-sort" + (on ? " on" : "");
+    btn.textContent = label + (on ? (invSortDesc ? " ▼" : " ▲") : "");
+    btn.addEventListener("click", () => {
+      if (invSortKey === key) invSortDesc = !invSortDesc;
+      else { invSortKey = key; invSortDesc = true; }
+      buildControls();
+    });
+    sortRow.appendChild(btn);
+  }
+  controls.appendChild(sortRow);
+
+  // ツール（ロック絞り込み・複数削除モード）
   const tools = document.createElement("div");
   tools.className = "ars-tools";
-  const sortBtn = document.createElement("button");
-  sortBtn.className = "ars-tool";
-  sortBtn.textContent = invSortDesc ? "レア度 ▼" : "レア度 ▲";
-  sortBtn.addEventListener("click", () => { invSortDesc = !invSortDesc; buildControls(); });
   const lockBtn = document.createElement("button");
   lockBtn.className = "ars-tool" + (invLockedOnly ? " on" : "");
   lockBtn.textContent = invLockedOnly ? "🔒 ロックのみ" : "🔓 すべて";
   lockBtn.addEventListener("click", () => { invLockedOnly = !invLockedOnly; buildControls(); });
-  tools.appendChild(sortBtn);
+  const selBtn = document.createElement("button");
+  selBtn.className = "ars-tool" + (invSelectMode ? " on" : "");
+  selBtn.textContent = invSelectMode ? "✓ 選択中" : "🗑 複数削除";
+  selBtn.addEventListener("click", () => {
+    invSelectMode = !invSelectMode;
+    invSelected.clear();
+    buildControls();
+  });
   tools.appendChild(lockBtn);
+  tools.appendChild(selBtn);
   controls.appendChild(tools);
 
+  // 複数削除バー（選択モード時）
+  if (invSelectMode) controls.appendChild(multiDeleteBar());
+
   // グリッド（フィルタ＋ソート）
+  const order = new Map(game.save.inventory.map((it, i) => [it.uid, i]));
+  const atkOf = (inst: WeaponInstance): number => (effectiveWeapon(inst) ?? getWeapon(inst.baseId))?.attack ?? 0;
+  const brkOf = (inst: WeaponInstance): number => (effectiveWeapon(inst) ?? getWeapon(inst.baseId))?.breakPower ?? 0;
+  const cmpDesc = (a: WeaponInstance, b: WeaponInstance): number => {
+    switch (invSortKey) {
+      case "acquired": return (order.get(b.uid)! - order.get(a.uid)!); // 新しい入手が先
+      case "atk": return (atkOf(b) - atkOf(a)) || rarityDesc(a, b);
+      case "break": return (brkOf(b) - brkOf(a)) || rarityDesc(a, b);
+      default: return rarityDesc(a, b);
+    }
+  };
   let items = game.save.inventory.slice();
   if (invClass !== "all") items = items.filter((it) => getWeapon(it.baseId)?.weapon === invClass);
   if (invLockedOnly) items = items.filter((it) => game.isLocked(it.uid));
-  items.sort((a, b) => (invSortDesc ? rarityDesc(a, b) : -rarityDesc(a, b)));
+  items.sort((a, b) => (invSortDesc ? cmpDesc(a, b) : -cmpDesc(a, b)));
 
   const grid = document.createElement("div");
   grid.className = "ars-grid";
   for (const inst of items) grid.appendChild(arsenalCard(inst));
-  // CRAFT NEW（ショップへ）
-  const craft = document.createElement("button");
-  craft.className = "ars-craft";
-  craft.innerHTML = `<span class="ars-craft-plus">＋</span><span>CRAFT NEW</span>`;
-  craft.addEventListener("click", () => { game.goShop(); buildControls(); });
-  grid.appendChild(craft);
+  if (!invSelectMode) {
+    // CRAFT NEW（ショップへ）
+    const craft = document.createElement("button");
+    craft.className = "ars-craft";
+    craft.innerHTML = `<span class="ars-craft-plus">＋</span><span>CRAFT NEW</span>`;
+    craft.addEventListener("click", () => { game.goShop(); buildControls(); });
+    grid.appendChild(craft);
+  }
   controls.appendChild(grid);
 
   controls.appendChild(bottomNav());
+}
+
+/** 複数削除モードの操作バー（選択数・実行・全解除） */
+function multiDeleteBar(): HTMLElement {
+  const bar = document.createElement("div");
+  bar.className = "ars-delbar";
+  const info = document.createElement("span");
+  info.className = "ars-delbar-info";
+  info.textContent = `選択中 ${invSelected.size} 件（装備中・ロック中は選べません）`;
+  const acts = document.createElement("div");
+  acts.className = "ars-delbar-acts";
+  const clear = document.createElement("button");
+  clear.className = "ars-delbar-clear";
+  clear.textContent = "全解除";
+  clear.disabled = invSelected.size === 0;
+  clear.addEventListener("click", () => { invSelected.clear(); buildControls(); });
+  const del = document.createElement("button");
+  del.className = "ars-delbar-del";
+  del.textContent = `削除する (${invSelected.size})`;
+  del.disabled = invSelected.size === 0;
+  del.addEventListener("click", () => {
+    const uids = [...invSelected].filter((u) => game.canDelete(u));
+    if (uids.length === 0) return;
+    confirmModal(`${uids.length} 件の武器を削除しますか？`, () => {
+      game.deleteMany(uids);
+      invSelected.clear();
+      invSelectMode = false;
+      buildControls();
+    });
+  });
+  acts.appendChild(clear);
+  acts.appendChild(del);
+  bar.appendChild(info);
+  bar.appendChild(acts);
+  return bar;
 }
 
 /** 系統フィルタタブ */
@@ -1069,7 +1159,18 @@ function arsenalCard(inst: WeaponInstance): HTMLElement {
   const locked = game.isLocked(inst.uid);
   const card = document.createElement("button");
   card.className = ("ars-card wclass-" + w.weapon + " " + rarityGlowClass(r)).trim();
+  const selectable = game.canDelete(inst.uid);
+  const checked = invSelected.has(inst.uid);
+  if (invSelectMode) {
+    card.classList.add("selecting");
+    if (!selectable) card.classList.add("undeletable"); // 装備中・ロック中は選べない
+    if (checked) card.classList.add("sel");
+  }
+  const check = invSelectMode
+    ? `<span class="ars-card-check">${checked ? "✓" : ""}</span>`
+    : "";
   card.innerHTML =
+    check +
     `<div class="ars-card-top"><span ${rarityAttr(r, "ars-card-rar")}>${RARITY_LABEL[r]}</span>` +
     `<span class="ars-card-fav">${locked ? "★" : ""}</span></div>` +
     `<div class="ars-card-img"></div>` +
@@ -1078,7 +1179,16 @@ function arsenalCard(inst: WeaponInstance): HTMLElement {
       ? `<div class="ars-card-eq">EQUIPPED</div>`
       : `<div class="ars-card-stats"><span>ATK ${eff.attack}</span><span>Lv ${inst.level ?? 1}</span></div>`);
   card.querySelector(".ars-card-img")?.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 3));
-  card.addEventListener("click", () => openWeaponModal(inst.uid));
+  card.addEventListener("click", () => {
+    if (invSelectMode) {
+      if (!selectable) return; // 削除できない武器は選択不可
+      if (invSelected.has(inst.uid)) invSelected.delete(inst.uid);
+      else invSelected.add(inst.uid);
+      buildControls();
+    } else {
+      openWeaponModal(inst.uid);
+    }
+  });
   return card;
 }
 

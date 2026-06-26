@@ -278,6 +278,14 @@ export class Game {
     writeSave(this.save);
     return true;
   }
+  /** 複数の武器をまとめて削除（削除可能なものだけ）。削除した本数を返す */
+  deleteMany(uids: string[]): number {
+    const del = new Set(uids.filter((u) => this.canDelete(u)));
+    if (del.size === 0) return 0;
+    this.save.inventory = this.save.inventory.filter((it) => !del.has(it.uid));
+    writeSave(this.save);
+    return del.size;
+  }
 
   // ===== 進行 =====
   update(dt: number): void {
