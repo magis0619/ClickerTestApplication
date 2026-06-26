@@ -272,7 +272,7 @@ function drawDefeatBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   const pop = age < 180 ? 2.6 - 1.6 * (age / 180) : 1 + 0.1 * Math.max(0, Math.sin((age - 180) / 70));
   const alpha = Math.min(1, age / 160);
   if (imgReady(BADGE_DEFEATED)) {
-    drawBadgeImage(ctx, BADGE_DEFEATED, W / 2, 150, 96, pop, alpha, "#ff4d63");
+    drawBadgeImage(ctx, BADGE_DEFEATED, W / 2, 150, 125, pop, alpha, "#ff4d63");
     return;
   }
   ctx.save();
@@ -919,7 +919,7 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
 
   // STAGE CLEAR は専用のドット絵バナーで表示
   if (f.text === "STAGE CLEAR" && imgReady(BADGE_CLEAR)) {
-    drawBadgeImage(ctx, BADGE_CLEAR, W / 2, cy, 116, pop, alpha, "#ff5db6");
+    drawBadgeImage(ctx, BADGE_CLEAR, W / 2, cy, 151, pop, alpha, "#ff5db6");
     return;
   }
 
@@ -1123,7 +1123,7 @@ function drawGuardBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   const baseAlpha = Math.min(1, b.lastGuardTtl / FLOAT_FADE_MS);
   // PERFECT は専用のドット絵バナーで表示
   if (entry.perfect && imgReady(BADGE_PERFECT)) {
-    drawBadgeImage(ctx, BADGE_PERFECT, W / 2, 150, 104, pop, baseAlpha, "#8effe0");
+    drawBadgeImage(ctx, BADGE_PERFECT, W / 2, 150, 135, pop, baseAlpha, "#8effe0");
     return;
   }
   ctx.save();
