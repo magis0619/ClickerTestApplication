@@ -2218,29 +2218,22 @@ body.theme-nb {
 /* 連携可能カードの強調（既存 combo-ready を踏襲） */
 .bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 5px 5px 0 #df0b81; }
 
-/* ガード／休憩を攻撃行の下に横並び（2列）。バトルログを廃したぶん大きく */
-.bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-.bt-act {
-  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px;
-  min-height: 84px; padding: 12px;
-  background: #ffffff;
-  border: 3px solid #1c1b1b;
-  box-shadow: 5px 5px 0 #1c1b1b;
-  color: #1c1b1b;
-  cursor: pointer;
-  transition: transform 0.05s, box-shadow 0.05s;
+/* ガード／休憩を攻撃行の下に横並び（2列）。用意したボタン画像を使用 */
+.bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; align-items: center; }
+.bt-act-img {
+  display: block; width: 100%; padding: 0; margin: 0;
+  background: transparent; border: none; cursor: pointer;
 }
-.bt-act:active, .bt-act.btn-press { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
-.bt-act-ico { display: flex; align-items: center; justify-content: center; }
-.bt-act-ico canvas { image-rendering: pixelated; height: 42px; width: auto; }
-.bt-act-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace; font-size: 17px; font-weight: 900; letter-spacing: 0.5px; }
-.bt-guard { background: #d8ecff; }
-.bt-rest2 { background: #d8f7ea; }
-.bt-guard.guard-now {
-  border-color: #df0b81;
-  box-shadow: 4px 4px 0 #df0b81;
+.bt-act-img img { image-rendering: pixelated; display: block; width: 100%; height: auto; }
+.bt-act-img:active img, .bt-act-img.btn-press img { transform: translate(2px, 2px); }
+/* 予兆中：ガードを点滅で強調 */
+.bt-act-img.guard-now img {
+  filter: drop-shadow(0 0 6px #df0b81) drop-shadow(0 0 10px #df0b81);
   animation: skCombo 0.45s ease-in-out infinite;
 }
+/* 予兆中は休憩を無効表示 */
+.bt-act-img.disabled { pointer-events: none; }
+.bt-act-img.disabled img { opacity: 0.4; }
 
 /* =====================================================================
    Hyper-Pop タイポグラフィ：見出しは Anybody（重め・チャンキー）

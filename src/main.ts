@@ -1,7 +1,7 @@
 import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
 import {
-  SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite,
+  WARDEN, getWeaponSprite, chestSprite,
   CARAPACE, AERIAL, PHANTOM, BOSS,
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
@@ -9,6 +9,8 @@ import astralWardenUrl from "./assets/astral_warden.png";
 import btnAdventureUrl from "./assets/btn_adventure.png";
 import btnHowtoUrl from "./assets/btn_howto.png";
 import btnEnterUrl from "./assets/btn_enter.png";
+import btnGuardUrl from "./assets/btn_guard.png";
+import btnRestUrl from "./assets/btn_rest.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -1458,20 +1460,20 @@ function buildBattle(): void {
 
   controls.appendChild(grid);
 
-  // ガード／休憩は攻撃行の下に横並びで配置（攻撃カードを広げてスキル名を表示するため）
+  // ガード／休憩は攻撃行の下に横並びで配置（用意したボタン画像を使用・同サイズ）
   const actRow = document.createElement("div");
   actRow.className = "bt-actions";
   const gbtn = document.createElement("button");
-  gbtn.className = "bt-act bt-guard";
-  gbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">GUARD</span>`;
-  gbtn.querySelector(".bt-act-ico")?.appendChild(actionIcon(SHIELD));
+  gbtn.className = "bt-act-img bt-guard";
+  const gImg = document.createElement("img"); gImg.src = btnGuardUrl; gImg.alt = "GUARD";
+  gbtn.appendChild(gImg);
   gbtn.addEventListener("click", doGuard);
   pressFx(gbtn);
   guardCard = gbtn;
   const rbtn = document.createElement("button");
-  rbtn.className = "bt-act bt-rest2";
-  rbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">REST</span>`;
-  rbtn.querySelector(".bt-act-ico")?.appendChild(actionIcon(SLEEP));
+  rbtn.className = "bt-act-img bt-rest2";
+  const rImg = document.createElement("img"); rImg.src = btnRestUrl; rImg.alt = "REST";
+  rbtn.appendChild(rImg);
   rbtn.addEventListener("click", () => { if (game.battle?.rest()) audio.sfxGuard(); });
   pressFx(rbtn);
   restCard = rbtn;
@@ -1482,12 +1484,6 @@ function buildBattle(): void {
   updateWeaponButtons();
 }
 
-/** ボタン用のドット絵アイコン要素を作る */
-function actionIcon(sprite: Parameters<typeof makeSpriteCanvas>[0]): HTMLCanvasElement {
-  const icon = makeSpriteCanvas(sprite, 4);
-  icon.className = "act-icon";
-  return icon;
-}
 
 /** 武器のドット絵要素を作る（無ければ系統の絵文字でフォールバック） */
 function weaponSpriteEl(baseId: string, cls: WeaponClass, scale: number): HTMLElement {
