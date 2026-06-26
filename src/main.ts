@@ -13,7 +13,7 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview, COMBOS,
-  PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, PERFECT_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
+  PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
@@ -1555,7 +1555,8 @@ function updateWeaponButtons(): void {
   const last = b.lastSkill;
   // 敵の攻撃フェーズ（カウント0＝攻撃前待機／予兆中）はガードのみ。攻撃カード・休憩は無効化
   const telegraph = b.anyTelegraph;       // !表示中（ガード強調用）
-  const enemyTurn = b.inEnemyAttackPhase; // 0待ち＋予兆＝攻撃・休憩を封じる
+  const locked = b.actionsLocked;         // 開始直後・勝敗演出中＝全行動禁止
+  const enemyTurn = b.inEnemyAttackPhase || locked; // 攻撃・休憩を封じる状態
   for (const entry of battleCards) {
     const { card, cls, steps, mark, link } = entry;
     const active = game.comboIndex(cls);
@@ -1836,8 +1837,8 @@ function buildHowTo(): void {
   // 4. ガードのタイミング
   const guard = document.createElement("div");
   guard.appendChild(howText("ガードは<b>タイミング</b>で結果が変わる。引きつけるほど見返りが大きい。"));
-  guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP <b>+${PERFECT_EN_RECOVER}</b> 回復し、敵をひるませる。`));
-  guard.appendChild(howStep("⭐", "JUST（早め）", "被ダメージを大きく軽減しAPも少し回復。"));
+  guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP <b>最大まで全回復</b>し、敵をひるませる。`));
+  guard.appendChild(howStep("⭐", "JUST（早め）", `被ダメージを大きく軽減しAP <b>+${JUST_EN_RECOVER}</b> 回復。`));
   guard.appendChild(howStep("🛡", "GUARD（通常）", "被ダメージを軽減。タイミングを逃しても守りにはなる。"));
   controls.appendChild(howSection("04", "ガードのコツ", guard));
 

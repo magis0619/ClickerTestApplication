@@ -110,15 +110,38 @@ export function enemySlots(n: number): { x: number; y: number }[] {
   return enemyLayout(n).map((L) => ({ x: L.cx, y: L.footY }));
 }
 
-/** ライトテーマの背景ドットグリッド（ターミナル風の方眼） */
+/** ライトテーマの背景ドットグリッド（ゆっくり上へ流れて奥行きと動きを出す） */
 function drawDotGrid(ctx: CanvasRenderingContext2D): void {
   const step = 16;
+  const drift = (Date.now() / 70) % step; // 方眼がゆっくり上方向へスクロール
   ctx.fillStyle = "#d8cdd5";
-  for (let y = step / 2; y < H; y += step) {
+  for (let y = step / 2 - drift; y < H + step; y += step) {
+    if (y < -2) continue;
     for (let x = step / 2; x < W; x += step) {
       ctx.fillRect(x, y, 2, 2);
     }
   }
+}
+
+/**
+ * 背景に常時漂う光の粒。下から上へゆっくり昇り、横にゆれ、ちらつく。
+ * バトル画面に「止まっていない」動きを与える（キャラより奥に描く）。
+ */
+function drawAmbientMotes(ctx: CanvasRenderingContext2D): void {
+  const t = Date.now() / 1000;
+  ctx.save();
+  for (let i = 0; i < 24; i++) {
+    const speed = 9 + (i % 5) * 5;                  // 粒ごとの速度差＝奥行き
+    const sway = Math.sin(t * 0.6 + i * 1.3) * 12;  // ゆらゆら横ゆれ
+    const x = (((i * 79) % W) + sway + W) % W;
+    const y = H - ((t * speed + i * 47) % (H + 40)); // 下端→上端へ循環
+    const size = 1 + (i % 3);
+    const tw = 0.18 + 0.32 * (0.5 + 0.5 * Math.sin(t * 2.1 + i * 1.7)); // 明滅
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = i % 4 === 0 ? "#ff9ad6" : "#c7bce8";
+    ctx.fillRect(Math.round(x), Math.round(y), size, size);
+  }
+  ctx.restore();
 }
 
 /** 角丸矩形パス */
@@ -223,6 +246,7 @@ export function render(
   ctx.fillStyle = "#fcf9f8";
   ctx.fillRect(0, 0, W, H);
   drawDotGrid(ctx);
+  drawAmbientMotes(ctx);
 
   // 地面のライン（淡いグレー）
   ctx.strokeStyle = "#d2c7cf";

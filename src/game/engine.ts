@@ -12,7 +12,7 @@ import {
   REST_EN_RECOVER,
   GUARD_EN_RECOVER,
   JUST_EN_RECOVER,
-  PERFECT_EN_RECOVER,
+  KILL_EN_RECOVER,
   GUARD_WINDOW_MS,
   JUST_WINDOW_MS,
   PERFECT_WINDOW_MS,
@@ -35,6 +35,7 @@ import {
   READY_WAIT_MAX_MS,
   TELEGRAPH_SCALE,
   TELEGRAPH_MIN_MS,
+  SPAWN_LOCK_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -200,6 +201,8 @@ export class Battle {
   /** ボス戦開始の警告演出（暗転＋BOSS BATTLE）の残り時間(ms)。>0の間は操作・進行を凍結 */
   introT = 0;
   introMax = 0;
+  /** 戦闘開始直後の行動禁止時間(ms)。敵が出てくる瞬間は操作不可（>0の間） */
+  spawnLockT = SPAWN_LOCK_MS;
   /** 敗北演出中フラグ。スロー＋敗北宣言を見せてから lost へ移す */
   losePending = false;
   /** 敗北演出の残り時間(ms)。0 で phase=lost に確定 */
@@ -257,11 +260,22 @@ export class Battle {
     return this.enemies.some((e) => e.alive && !e.isBroken && e.count <= 0);
   }
 
+  /**
+   * プレイヤーが一切行動できない状態か。
+   * ・戦闘開始直後（敵が出てくる瞬間の行動禁止時間）
+   * ・勝利確定待ち（全滅後の撃破演出中。休憩連打などを防ぐ）
+   * ・敗北演出中
+   */
+  get actionsLocked(): boolean {
+    return this.spawnLockT > 0 || this.winPending || this.losePending || this.aliveEnemies.length === 0;
+  }
+
   // ===== プレイヤー行動 =====
 
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
     if (this.phase !== "fighting" || this.introT > 0) return false;
+    if (this.actionsLocked) return false; // 開始直後・勝敗演出中は不可
     if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
     // 敵の攻撃フェーズ（カウント0＝攻撃前待機／予兆中）はガードのみ。攻撃・ためる・集中は不可
     if (this.inEnemyAttackPhase) {
@@ -359,6 +373,7 @@ export class Battle {
   /** 休憩：ENを回復（攻撃はしない）。実行できたら true */
   rest(): boolean {
     if (this.phase !== "fighting" || this.introT > 0) return false;
+    if (this.actionsLocked) return false; // 開始直後・勝敗演出中は休憩不可（連打防止）
     if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
     if (this.inEnemyAttackPhase) return false; // 攻撃前待機／予兆中はガードのみ
     const before = this.playerEn;
@@ -425,6 +440,7 @@ export class Battle {
   /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める。判定結果を返す */
   guard(): GuardResult {
     if (this.phase !== "fighting" || this.introT > 0) return "none";
+    if (this.actionsLocked) return "none"; // 開始直後・勝敗演出中はガードも不可
     // 予兆中の敵のうち、最も着弾が近い（telegraphTが小さい）ものを対象に
     const targets = this.enemies.filter((e) => e.inTelegraph);
     if (targets.length === 0) {
@@ -504,6 +520,11 @@ export class Battle {
     e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり＝撃破時は宝箱で表示）
     const gold = rollEnemyGold(e.def); // 強い敵ほど多い
     this.goldEarned += gold;
+    // 撃破でEN回復（攻め続けるご褒美）
+    const enBefore = this.playerEn;
+    this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + KILL_EN_RECOVER);
+    const enGain = Math.round(this.playerEn - enBefore);
+    if (enGain > 0) this.pushFloat(`+${enGain}EN`, "#9fe8ff", "player");
     // 撃破の爆発エフェクト（テキストポップは出さず、爆発＋コイン＋宝箱で魅せる）
     this.explosions.push({ anchor: idx, ttl: 460, max: 460 });
     // コインが弾けて落ちる演出（ゴールドが多いほど多く）
@@ -532,7 +553,7 @@ export class Battle {
         // === このゲームで一番気持ちいい瞬間 ===
         dmg = 0;
         this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + PERFECT_HP_RECOVER);
-        this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + PERFECT_EN_RECOVER);
+        this.playerEn = PLAYER_MAX_EN; // パーフェクトはENを最大まで全回復
         // 一瞬の静止→ホワイトアウト→スロー＋弾きエフェクト＋軽い揺れ
         this.hitstopT = HITSTOP_MS;
         this.whiteFlashT = WHITE_FLASH_MS;
@@ -540,7 +561,7 @@ export class Battle {
         this.perfectFxT = 360;
         this.perfectFxIndex = idx;
         this.shake(180, 4);
-        this.pushFloat(`+${PERFECT_HP_RECOVER}HP +${PERFECT_EN_RECOVER}EN`, "#66ffaa", "player");
+        this.pushFloat(`+${PERFECT_HP_RECOVER}HP ENMAX`, "#66ffaa", "player");
         // 敵を怯ませる：カウントを戻し、ブレイクゲージも溜める
         e.flinchT = PERFECT_FLINCH_MS;
         if (!e.isBroken) {
@@ -643,6 +664,9 @@ export class Battle {
       if (this.loseAnimT <= 0) this.phase = "lost";
       return;
     }
+
+    // 戦闘開始直後の行動禁止（敵が出てくる瞬間）。実時間で消化する
+    if (this.spawnLockT > 0) this.spawnLockT = Math.max(0, this.spawnLockT - realDt);
 
     // スローモーション：以降の進行を遅い時間で動かす
     if (this.slowT > 0) {

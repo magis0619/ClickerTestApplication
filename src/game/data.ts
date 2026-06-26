@@ -364,10 +364,12 @@ export const PLAYER_MAX_EN = 10;
 
 // ===== EN回復（自動回復なし。休憩・ガード成功のみ） =====
 export const REST_EN_RECOVER = 3;
-// 通常ガードはわずか、JUSTは中程度、パーフェクトが大きく報われる。
+// 通常ガードはわずか、JUSTは中程度、パーフェクトはEN最大まで全回復。
 export const GUARD_EN_RECOVER = 1;
-export const JUST_EN_RECOVER = 3;
-export const PERFECT_EN_RECOVER = 6;
+export const JUST_EN_RECOVER = 2;
+// ※パーフェクトガードはENを最大まで全回復する（固定値ではないため定数なし）
+/** 敵を撃破したときのEN回復量 */
+export const KILL_EN_RECOVER = 3;
 
 // ===== ガード判定の窓 =====
 // 着弾までの残り時間がこの範囲ならガード成立。
@@ -428,6 +430,12 @@ export const READY_WAIT_MAX_MS = 2200;
 // 敵ごとの telegraphMs に掛けて使う（速い敵ほど短い）。最低 TELEGRAPH_MIN_MS は確保。
 export const TELEGRAPH_SCALE = 0.55;
 export const TELEGRAPH_MIN_MS = 480;
+
+/**
+ * 戦闘（ウェーブ）開始直後、敵が出てくる瞬間の行動禁止時間(ms)。
+ * この間はプレイヤーは攻撃・ガード等ができず、敵の登場を見てから始まる。
+ */
+export const SPAWN_LOCK_MS = 650;
 
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
