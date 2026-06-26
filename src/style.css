@@ -1055,6 +1055,9 @@ button.wpn-row:hover { background: #241f55; }
 
 /* ===== タイトル ===== */
 .title-hero { display: flex; align-items: center; gap: 14px; justify-content: center; padding: 16px 0; }
+/* ホーム中央：ASTRAL WARDEN ロゴ画像 */
+.title-hero-logo { flex-direction: column; gap: 10px; padding: 24px 0 8px; }
+.title-logo-img { image-rendering: pixelated; width: min(300px, 76%); height: auto; display: block; }
 .title-sprite { image-rendering: pixelated; height: 88px; }
 .title-logo { font-size: 26px; font-weight: 900; color: #5fa8ff; letter-spacing: 1px; }
 .title-sub { font-size: 12px; color: #9690c4; }

@@ -12,6 +12,7 @@ import type { EnemyKind } from "../game/types.ts";
 import stageClearUrl from "../assets/stage_clear.png";
 import defeatedUrl from "../assets/defeated.png";
 import perfectUrl from "../assets/perfect.png";
+import bossBattleUrl from "../assets/boss_battle.png";
 
 /** バナー演出用のドット絵画像（白を透過したPNG）。読み込めたものだけ使う */
 function loadImg(url: string): HTMLImageElement {
@@ -22,6 +23,7 @@ function loadImg(url: string): HTMLImageElement {
 const BADGE_CLEAR = loadImg(stageClearUrl);
 const BADGE_DEFEATED = loadImg(defeatedUrl);
 const BADGE_PERFECT = loadImg(perfectUrl);
+const BADGE_BOSS = loadImg(bossBattleUrl);
 /** 画像が表示可能か */
 function imgReady(img: HTMLImageElement): boolean { return img.complete && img.naturalWidth > 0; }
 /**
@@ -930,9 +932,13 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
   const alpha = Math.max(0, Math.min(1, f.ttl / FLOAT_FADE_MS));
   const cy = 138;
 
-  // STAGE CLEAR は専用のドット絵バナーで表示
+  // STAGE CLEAR / BOSS BATTLE は専用のドット絵バナーで表示
   if (f.text === "STAGE CLEAR" && imgReady(BADGE_CLEAR)) {
     drawBadgeImage(ctx, BADGE_CLEAR, W / 2, cy, 170, pop, alpha, "#ff5db6");
+    return;
+  }
+  if (f.text === "BOSS BATTLE" && imgReady(BADGE_BOSS)) {
+    drawBadgeImage(ctx, BADGE_BOSS, W / 2, cy + 6, 240, pop, alpha, "#ff5a2a");
     return;
   }
 

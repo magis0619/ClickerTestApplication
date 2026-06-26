@@ -4,6 +4,7 @@ import {
   SHIELD, SLEEP, WARDEN, getWeaponSprite, chestSprite,
   CARAPACE, AERIAL, PHANTOM, BOSS, type Sprite,
 } from "./render/sprites.ts";
+import astralWardenUrl from "./assets/astral_warden.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -247,13 +248,16 @@ function buildControls(): void {
 
 function buildTitle(): void {
   const hero = document.createElement("div");
-  hero.className = "title-hero";
-  const spr = makeSpriteCanvas(WARDEN, 6);
-  spr.className = "title-sprite";
-  hero.appendChild(spr);
-  const cap = document.createElement("div");
-  cap.innerHTML = `<div class="title-logo">ASTRAL WARDEN</div><div class="title-sub">タイミングアクションRPG</div>`;
-  hero.appendChild(cap);
+  hero.className = "title-hero title-hero-logo";
+  const logo = document.createElement("img");
+  logo.className = "title-logo-img";
+  logo.src = astralWardenUrl;
+  logo.alt = "ASTRAL WARDEN";
+  hero.appendChild(logo);
+  const sub = document.createElement("div");
+  sub.className = "title-sub";
+  sub.textContent = "タイミングアクションRPG";
+  hero.appendChild(sub);
   controls.appendChild(hero);
   controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
   const howBtn = bigButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); });
