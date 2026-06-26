@@ -6,9 +6,6 @@ import {
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
 import astralWardenUrl from "./assets/astral_warden.png";
-import btnAdventureUrl from "./assets/btn_adventure.png";
-import btnHowtoUrl from "./assets/btn_howto.png";
-import btnEnterUrl from "./assets/btn_enter.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -297,8 +294,8 @@ function buildTitle(): void {
   sub.textContent = "タイミングアクションRPG";
   hero.appendChild(sub);
   controls.appendChild(hero);
-  controls.appendChild(imgButton(btnAdventureUrl, "imgbtn-wide", () => { game.goWorldSelect(); buildControls(); }));
-  controls.appendChild(imgButton(btnHowtoUrl, "imgbtn-wide", () => { game.goHowTo(); buildControls(); }));
+  controls.appendChild(ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect())));
+  controls.appendChild(ctaButton("遊び方を見る", "howto", () => { game.goHowTo(); buildControls(); }));
   controls.appendChild(bottomNav());
 }
 
@@ -889,13 +886,7 @@ function worldCard(wd: typeof WORLDS[number]): HTMLElement {
   }
   card.appendChild(dl);
 
-  const go = document.createElement("div");
-  go.className = "world-go";
-  const goImg = document.createElement("img");
-  goImg.src = btnEnterUrl;
-  goImg.alt = "";
-  go.appendChild(goImg);
-  card.appendChild(go);
+  card.appendChild(enterButton()); // 見た目だけ（カード全体がクリック可能）
 
   card.addEventListener("click", () => {
     selectedWorld = wd.world;
@@ -1000,10 +991,9 @@ function zoneCard(s: StageDef, i: number): HTMLElement {
   body.appendChild(meta);
   card.appendChild(body);
 
-  // 各ダンジョンに「入る」画像ボタンを設置
-  const enter = imgButton(btnEnterUrl, "imgbtn-enter", () => {});
-  enter.addEventListener("click", (e) => {
-    e.stopPropagation();
+  // 各ダンジョンに「入る」ボタンを設置
+  const enter = enterButton((e?: Event) => {
+    e?.stopPropagation();
     stageSel = i;
     withFade(() => game.startStage(i));
   });
@@ -1979,22 +1969,30 @@ function buildHowTo(): void {
   controls.appendChild(howSection("09", "キーボード操作（PC）", keys));
 
   // 出発ボタン
-  const go = imgButton(btnAdventureUrl, "imgbtn-wide howto-go", () => { game.goWorldSelect(); buildControls(); });
+  const go = ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect()));
   controls.appendChild(go);
 
   controls.appendChild(bottomNav());
 }
 
-/** ドット絵画像ボタン（用意したボタン画像をそのまま使う） */
-function imgButton(url: string, cls: string, onClick: () => void): HTMLButtonElement {
+/** ホーム等の大ボタン（CSS描画。ピクセル画像をやめてクッキリ表示） */
+function ctaButton(label: string, variant: "adventure" | "howto", onClick: () => void): HTMLButtonElement {
   const b = document.createElement("button");
-  b.className = "img-btn " + cls;
-  const im = document.createElement("img");
-  im.src = url;
-  im.alt = "";
-  b.appendChild(im);
+  b.className = "cta-btn cta-" + variant;
+  const ico = variant === "adventure"
+    ? `<span class="cta-ico"><span class="cta-play"></span></span>`
+    : `<span class="cta-ico cta-book">📖</span>`;
+  b.innerHTML = ico + `<span class="cta-lbl">${label}</span>`;
   b.addEventListener("click", onClick);
   return b;
+}
+/** ENTER ボタン（カード内・CSS描画）。badge=見た目だけ（カード全体がクリック可能な場面用） */
+function enterButton(onClick?: () => void): HTMLElement {
+  const el = document.createElement(onClick ? "button" : "div");
+  el.className = "cta-enter";
+  el.innerHTML = `<span class="cta-ico"><span class="cta-play"></span></span><span class="cta-lbl">ENTER</span>`;
+  if (onClick) el.addEventListener("click", onClick);
+  return el;
 }
 
 function primaryButton(text: string, onClick: () => void): HTMLButtonElement {
