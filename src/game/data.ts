@@ -408,7 +408,7 @@ export const ATTACK_WINDUP_MS = 380;
 export const SKILL_BANNER_MS = 1100;
 
 /** 敗北演出（スロー＋敗北宣言）の長さ(ms)。これが終わるとリザルトへ遷移する */
-export const LOSE_ANIM_MS = 1500;
+export const LOSE_ANIM_MS = 2500;
 
 /** 戦闘クリア後、CLEARバナーを見せてから次のウェーブ／リザルトへ移すまでの待機(ms) */
 export const WIN_HOLD_MS = 500;

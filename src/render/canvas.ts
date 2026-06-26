@@ -33,7 +33,7 @@ function imgReady(img: HTMLImageElement): boolean { return img.complete && img.n
 function drawBadgeImage(
   ctx: CanvasRenderingContext2D, img: HTMLImageElement,
   cx: number, cy: number, targetH: number, pop: number, alpha: number, glow?: string,
-  maxW = W - 36,
+  maxW = W - 36, glowBlur = 26,
 ): void {
   // 高さ基準と幅上限の小さい方を基準スケールに（はみ出し防止）
   const base = Math.min(targetH / img.naturalHeight, maxW / img.naturalWidth);
@@ -44,9 +44,40 @@ function drawBadgeImage(
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
   ctx.imageSmoothingEnabled = false; // ドット絵をくっきり拡大
-  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 26; }
+  if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = glowBlur; }
   ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
   ctx.restore();
+}
+
+/**
+ * バナー画像に「エフェクト」を足して描く（脈打つ発光＋微振動＋周囲の火花）。
+ * kind="boss" は火花が立ち上り、"defeated" は火花が舞い落ちる。
+ */
+function drawBadgeFx(
+  ctx: CanvasRenderingContext2D, img: HTMLImageElement,
+  cx: number, cy: number, targetH: number, pop: number, alpha: number,
+  color: string, t: number, kind: "boss" | "defeated",
+): void {
+  // 周囲の火花
+  const n = kind === "boss" ? 12 : 9;
+  for (let i = 0; i < n; i++) {
+    const ang = (i / n) * Math.PI * 2 + t * 0.0011;
+    const rad = 96 + Math.sin(t * 0.006 + i) * 22;
+    const fl = 0.5 + 0.5 * Math.sin(t * 0.01 + i * 1.7);
+    const drift = kind === "boss" ? -(((t * 0.05 + i * 34) % 90) - 45) : (((t * 0.05 + i * 34) % 90) - 45);
+    const px = cx + Math.cos(ang) * rad * 1.35;
+    const py = cy + Math.sin(ang) * rad * 0.62 + drift;
+    ctx.globalAlpha = alpha * fl * 0.9;
+    ctx.fillStyle = i % 2 ? "#fff2c0" : color;
+    const s = 2 + fl * 3.2;
+    ctx.fillRect(px - s / 2, py - s / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
+  // 微振動＋脈打つ発光で本体を描く
+  const jx = Math.sin(t * 0.019) * (kind === "boss" ? 3 : 2) + Math.sin(t * 0.045) * 1.4;
+  const jy = Math.sin(t * 0.027) * (kind === "boss" ? 2 : 1.3);
+  const blur = 24 + (0.5 + 0.5 * Math.sin(t * 0.012)) * 22;
+  drawBadgeImage(ctx, img, cx + jx, cy + jy, targetH, pop, alpha, color, W - 36, blur);
 }
 
 const W = 480;
@@ -279,15 +310,16 @@ export function render(
 function drawDefeatBadge(ctx: CanvasRenderingContext2D, b: Battle): void {
   if (!b.losePending) return;
   const age = b.loseAnimMax - b.loseAnimT;
-  // 画面を徐々に暗く沈める（敗北の重さ）
-  const dark = Math.min(0.5, (age / 600) * 0.5);
-  ctx.fillStyle = `rgba(28,6,10,${dark})`;
+  // 画面を徐々に暗く沈める。終盤(残り約450ms)はほぼ真っ暗まで沈めて暗転につなげる
+  let dark = Math.min(0.5, (age / 600) * 0.5);
+  if (b.loseAnimT < 450) dark = 0.5 + (1 - b.loseAnimT / 450) * 0.45;
+  ctx.fillStyle = `rgba(10,4,8,${dark})`;
   ctx.fillRect(0, 0, W, H);
   // 弾んで飛び出す→定位置で微振動。出だしはフェードイン
   const pop = age < 180 ? 2.6 - 1.6 * (age / 180) : 1 + 0.1 * Math.max(0, Math.sin((age - 180) / 70));
   const alpha = Math.min(1, age / 160);
   if (imgReady(BADGE_DEFEATED)) {
-    drawBadgeImage(ctx, BADGE_DEFEATED, W / 2, 150, 170, pop, alpha, "#ff4d63");
+    drawBadgeFx(ctx, BADGE_DEFEATED, W / 2, 150, 170, pop, alpha, "#ff4d63", Date.now(), "defeated");
     return;
   }
   ctx.save();
@@ -938,7 +970,7 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
     return;
   }
   if (f.text === "BOSS BATTLE" && imgReady(BADGE_BOSS)) {
-    drawBadgeImage(ctx, BADGE_BOSS, W / 2, H / 2, 260, pop, alpha, "#ff5a2a");
+    drawBadgeFx(ctx, BADGE_BOSS, W / 2, H / 2, 260, pop, alpha, "#ff5a2a", Date.now(), "boss");
     return;
   }
 

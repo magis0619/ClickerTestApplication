@@ -6,6 +6,9 @@ import {
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
 import astralWardenUrl from "./assets/astral_warden.png";
+import btnAdventureUrl from "./assets/btn_adventure.png";
+import btnHowtoUrl from "./assets/btn_howto.png";
+import btnEnterUrl from "./assets/btn_enter.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -270,10 +273,8 @@ function buildTitle(): void {
   sub.textContent = "タイミングアクションRPG";
   hero.appendChild(sub);
   controls.appendChild(hero);
-  controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goWorldSelect(); buildControls(); }));
-  const howBtn = bigButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); });
-  howBtn.classList.add("menu-btn-sec");
-  controls.appendChild(howBtn);
+  controls.appendChild(imgButton(btnAdventureUrl, "imgbtn-wide", () => { game.goWorldSelect(); buildControls(); }));
+  controls.appendChild(imgButton(btnHowtoUrl, "imgbtn-wide", () => { game.goHowTo(); buildControls(); }));
   controls.appendChild(bottomNav());
 }
 
@@ -857,9 +858,12 @@ function worldCard(wd: typeof WORLDS[number]): HTMLElement {
   }
   card.appendChild(dl);
 
-  const go = document.createElement("span");
+  const go = document.createElement("div");
   go.className = "world-go";
-  go.textContent = "▶ ENTER WORLD";
+  const goImg = document.createElement("img");
+  goImg.src = btnEnterUrl;
+  goImg.alt = "";
+  go.appendChild(goImg);
   card.appendChild(go);
 
   card.addEventListener("click", () => {
@@ -965,10 +969,8 @@ function zoneCard(s: StageDef, i: number): HTMLElement {
   body.appendChild(meta);
   card.appendChild(body);
 
-  // 各ダンジョンに「入る」ボタンを設置（下部の大ボタンは廃止）
-  const enter = document.createElement("button");
-  enter.className = "zone-enter";
-  enter.innerHTML = "▶ ENTER";
+  // 各ダンジョンに「入る」画像ボタンを設置
+  const enter = imgButton(btnEnterUrl, "imgbtn-enter", () => {});
   enter.addEventListener("click", (e) => {
     e.stopPropagation();
     stageSel = i;
@@ -1457,9 +1459,11 @@ function buildBattle(): void {
     battleCards.push({ card, cls, steps, focus, link, focusIdx: -1 });
   }
 
-  // ガード（上）／休憩（下）を縦に並べた列
-  const grCol = document.createElement("div");
-  grCol.className = "bt-gr-col";
+  controls.appendChild(grid);
+
+  // ガード／休憩は攻撃行の下に横並びで配置（攻撃カードを広げてスキル名を表示するため）
+  const actRow = document.createElement("div");
+  actRow.className = "bt-actions";
   const gbtn = document.createElement("button");
   gbtn.className = "bt-act bt-guard";
   gbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">GUARD</span>`;
@@ -1474,10 +1478,9 @@ function buildBattle(): void {
   rbtn.addEventListener("click", () => { if (game.battle?.rest()) audio.sfxGuard(); });
   pressFx(rbtn);
   restCard = rbtn;
-  grCol.appendChild(gbtn);
-  grCol.appendChild(rbtn);
-  grid.appendChild(grCol);
-  controls.appendChild(grid);
+  actRow.appendChild(gbtn);
+  actRow.appendChild(rbtn);
+  controls.appendChild(actRow);
 
   // ===== COMBAT_LOG バー =====
   const log = document.createElement("div");
@@ -1876,20 +1879,24 @@ function buildHowTo(): void {
   controls.appendChild(howSection("09", "キーボード操作（PC）", keys));
 
   // 出発ボタン
-  const go = bigButton("▶ 冒険に出る", () => { game.goWorldSelect(); buildControls(); });
-  go.classList.add("howto-go");
+  const go = imgButton(btnAdventureUrl, "imgbtn-wide howto-go", () => { game.goWorldSelect(); buildControls(); });
   controls.appendChild(go);
 
   controls.appendChild(bottomNav());
 }
 
-function bigButton(text: string, onClick: () => void): HTMLButtonElement {
+/** ドット絵画像ボタン（用意したボタン画像をそのまま使う） */
+function imgButton(url: string, cls: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement("button");
-  b.className = "menu-btn";
-  b.textContent = text;
+  b.className = "img-btn " + cls;
+  const im = document.createElement("img");
+  im.src = url;
+  im.alt = "";
+  b.appendChild(im);
   b.addEventListener("click", onClick);
   return b;
 }
+
 function primaryButton(text: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.className = "guard-btn";
@@ -1935,6 +1942,8 @@ function loop(now: number): void {
   }
   if (game.screen !== prev && game.screen === "result") {
     if (game.lastWon) audio.sfxWin(); else audio.sfxLose();
+    // 戦闘 → リザルトは暗転（黒）から明転して切り替える
+    if (prev === "battle") fadeInBattle();
   }
   if (game.screen !== renderedScreen) buildControls();
 

@@ -1780,12 +1780,21 @@ body.theme-nb {
 .world-d-status {
   flex: 0 0 auto; font-family: "Space Mono", ui-monospace, monospace; font-size: 10px; font-weight: 900; color: #8a7f90;
 }
-.world-go {
-  display: block; text-align: center;
-  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 14px; font-weight: 900; color: #fff; background: #df0b81;
-  border: 2px solid #1c1b1b; box-shadow: 3px 3px 0 #1c1b1b; padding: 8px;
+.world-go { display: flex; justify-content: center; margin-top: 2px; }
+.world-go img { image-rendering: pixelated; height: 46px; width: auto; display: block; }
+
+/* ===== ドット絵画像ボタン（用意したボタン画像をそのまま使用） ===== */
+.img-btn {
+  display: block; width: 100%; margin: 10px auto 0;
+  background: transparent; border: none; padding: 0; cursor: pointer;
 }
+.img-btn img { image-rendering: pixelated; display: block; height: auto; margin: 0 auto; }
+.img-btn:active img { transform: translate(2px, 2px); }
+/* タイトル等の横長ボタン */
+.imgbtn-wide img { width: min(330px, 94%); }
+/* ダンジョン/ワールドの ENTER ボタン */
+.imgbtn-enter { width: 100%; margin-top: 10px; }
+.imgbtn-enter img { height: 50px; width: auto; }
 
 /* =====================================================================
    DUNGEON HUB（ダンジョン選択）
@@ -2139,8 +2148,8 @@ body.theme-nb {
    を横一列に並べる（2x2グリッドから差し替え）
    ===================================================================== */
 .bt-skills {
-  /* minmax(0,1fr) で「内容（スキル名）の長さに関わらず」4列を常に均等幅に固定 */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* 攻撃カードは3列。minmax(0,1fr) で内容（スキル名）に依らず常に均等幅に固定 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   align-items: stretch;
 }
@@ -2209,12 +2218,11 @@ body.theme-nb {
 /* 連携可能カードの強調（既存 combo-ready を踏襲） */
 .bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 5px 5px 0 #df0b81; }
 
-/* ガード（上）／休憩（下）の縦列 */
-.bt-gr-col { display: flex; flex-direction: column; gap: 8px; }
+/* ガード／休憩を攻撃行の下に横並び（2列） */
+.bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .bt-act {
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  padding: 6px 4px;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; padding: 8px;
   background: #ffffff;
   border: 2.5px solid #1c1b1b;
   box-shadow: 4px 4px 0 #1c1b1b;
