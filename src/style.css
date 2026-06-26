@@ -1503,11 +1503,11 @@ body.in-battle {
 }
 .bt-stat-label {
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 15px; font-weight: 900; letter-spacing: 1px; color: #1c1b1b;
+  font-size: 22px; font-weight: 900; letter-spacing: 1.5px; color: #1c1b1b;
 }
 .bt-crit {
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #df0b81;
+  font-size: 16px; font-weight: 900; letter-spacing: 1px; color: #df0b81;
   animation: critBlink 0.7s steps(1) infinite;
 }
 @keyframes critBlink { 50% { opacity: 0.3; } }
@@ -1521,16 +1521,27 @@ body.in-battle {
 .bt-seg-en .bt-seg.on { background: #00c2d4; border-color: #0e8fa8; }
 .bt-seg-en.focus .bt-seg.on { background: #ffce3a; border-color: #c79a16; }
 
-/* バトルのHP/APは連続フィルで「ぬるっと」増減（セグメントは仕切りとして上に重ねる） */
-.bt-seg-fluid { position: relative; overflow: hidden; background: #ddd2d9; }
+/* バトルのHP/AP：太い黒枠＋ハードシャドウのチャンキーなセグメントバー（送付デザイン準拠）。
+   連続フィルで「ぬるっと」増減しつつ、黒い仕切り＋上面グロスで艶のあるブロックに見せる */
+.bt-seg-fluid {
+  position: relative; overflow: hidden; gap: 0; height: 28px; margin: 6px 0 12px;
+  background: #2f2632; border: 3px solid #1c1b1b; border-radius: 6px; box-shadow: 4px 4px 0 #1c1b1b;
+}
 .bt-seg-fluid .bt-seg-fill {
   position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0;
   transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
 }
-.bt-seg-fluid.bt-seg-hp .bt-seg-fill { background: #df0b81; }
-.bt-seg-fluid.bt-seg-en .bt-seg-fill { background: #00c2d4; }
-.bt-seg-fluid.bt-seg-en.focus .bt-seg-fill { background: #ffce3a; }
-.bt-seg-fluid .bt-seg { background: transparent; position: relative; z-index: 1; }
+/* グロス（上面の白い艶＋下の影） */
+.bt-seg-fluid::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0) 52%, rgba(0,0,0,0.16) 100%);
+}
+.bt-seg-fluid.bt-seg-hp .bt-seg-fill { background: linear-gradient(180deg, #ff9ad6 0%, #ff2d8f 50%, #c70b6a 100%); }
+.bt-seg-fluid.bt-seg-en .bt-seg-fill { background: linear-gradient(180deg, #aef3ff 0%, #18c6e8 50%, #0a8aa6 100%); }
+.bt-seg-fluid.bt-seg-en.focus .bt-seg-fill { background: linear-gradient(180deg, #fff0a8 0%, #ffce3a 50%, #c79a16 100%); }
+/* 仕切り：各セルの右に黒線を引いてブロック状に見せる */
+.bt-seg-fluid .bt-seg { flex: 1; background: transparent; position: relative; z-index: 1; border: 0; border-right: 2px solid #1c1b1b; }
+.bt-seg-fluid .bt-seg:last-child { border-right: 0; }
 
 /* ----- スキルカード 2x2 ----- */
 .bt-skills {

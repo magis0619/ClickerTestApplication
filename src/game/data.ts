@@ -483,9 +483,9 @@ export const GUARD_BADGE_MS = 1100;
 export const BREAK_TURNS = 3;
 export const BREAK_CRIT_MULT = 1.6;
 /** ブレイク蓄積の全体倍率（大きいほどブレイクしやすい） */
-export const BREAK_RATE_MULT = 1.6;
+export const BREAK_RATE_MULT = 1.2;
 /** 弱点属性で攻撃したときのブレイク蓄積の追加倍率 */
-export const BREAK_WEAK_MULT = 1.8;
+export const BREAK_WEAK_MULT = 1.5;
 
 /** 初期インベントリ（各系統の先頭武器を1本ずつ。武器リスト変更にも追従） */
 export function starterInventory(): WeaponInstance[] {
