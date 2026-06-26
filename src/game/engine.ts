@@ -436,13 +436,13 @@ export class Battle {
 
     const wasAlive = e.alive;
     e.hp = Math.max(0, e.hp - dmg);
-    e.hitFlash = 170; // 被弾フラッシュ・のけぞりを短めに
+    e.hitFlash = 300;
     const idx = this.enemies.indexOf(e);
     const big = crit || weak || e.isBroken || this.charge > 1;
     this.pushDamage(dmg, idx, big, crit);
-    // 当たった瞬間のストップ＋画面シェイク（手応え）。短く切る
+    // 当たった瞬間の0.05秒ストップ＋画面シェイク（手応え）
     this.hitstopT = Math.max(this.hitstopT, HIT_HITSTOP_MS);
-    this.shake(110, crit ? 5 : 3);
+    this.shake(150, crit ? 5 : 3);
 
     if (!e.isBroken) {
       e.breakGauge += (mods?.breakPower ?? 0) * skill.breakMult;

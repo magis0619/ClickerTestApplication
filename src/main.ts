@@ -58,6 +58,26 @@ const fadeEl = document.createElement("div");
 fadeEl.className = "fade-overlay";
 document.body.appendChild(fadeEl);
 
+// ===== メニュー画面の動く背景（ハイパーポップな浮遊ピクセル） =====
+const menuBg = document.createElement("div");
+menuBg.className = "menu-bg";
+{
+  const FX = ["#ff2d8f", "#1fb6ff", "#ffd34d", "#57d36b", "#b96bff"];
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement("span");
+    s.className = "mb-bit";
+    const size = 6 + Math.floor(Math.random() * 11);
+    s.style.left = (Math.random() * 100).toFixed(2) + "%";
+    s.style.width = s.style.height = size + "px";
+    s.style.background = FX[i % FX.length];
+    s.style.animationDuration = (10 + Math.random() * 12).toFixed(1) + "s";
+    s.style.animationDelay = (-Math.random() * 18).toFixed(1) + "s";
+    s.style.setProperty("--sway", (Math.random() * 2 - 1 > 0 ? 1 : -1) * (10 + Math.random() * 22) + "px");
+    menuBg.appendChild(s);
+  }
+}
+document.body.appendChild(menuBg);
+
 /** 暗転 → action実行 → 明転、の順で画面遷移する */
 function withFade(action: () => void): void {
   fadeEl.classList.add("show");
@@ -227,6 +247,7 @@ function buildControls(): void {
   const menuThemed = !inBattle;
   document.body.classList.toggle("in-battle", inBattle);
   document.body.classList.toggle("theme-nb", menuThemed);
+  menuBg.style.display = inBattle ? "none" : "";
   battleTop.style.display = inBattle ? "" : "none";
   if (!inBattle) battleTop.innerHTML = "";
   if (menuThemed) buildTopHeader();

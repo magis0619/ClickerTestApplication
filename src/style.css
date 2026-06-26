@@ -57,6 +57,22 @@ button {
   padding: 12px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1; /* 動く背景(menu-bg)より前面 */
+}
+
+/* メニュー画面の動く背景：ゆっくり上昇する浮遊ピクセル */
+.menu-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.mb-bit {
+  position: absolute; bottom: -24px;
+  image-rendering: pixelated; opacity: 0;
+  animation-name: mbFloat; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+@keyframes mbFloat {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  12% { opacity: 0.3; }
+  88% { opacity: 0.3; }
+  100% { transform: translate(var(--sway, 12px), -108vh) rotate(150deg); opacity: 0; }
 }
 
 .topbar h1 {

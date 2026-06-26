@@ -419,8 +419,8 @@ export const BOSS_INTRO_MS = 2000;
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;
-/** ダメージ数値（爆発表記）の寿命(ms)。長めに残して手応えを出す */
-export const DAMAGE_TTL = 2100;
+/** ダメージ数値（爆発表記）の寿命(ms)。出したらすぐ消えるよう短め */
+export const DAMAGE_TTL = 1000;
 /** 浮遊テキスト/バッジが消える直前のフェード時間(ms)。これより前は不透明で読みやすい */
 export const FLOAT_FADE_MS = 400;
 /** PERFECT/JUST/GUARD バッジの表示時間(ms) */
