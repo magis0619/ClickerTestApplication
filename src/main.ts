@@ -1,16 +1,14 @@
 import "./style.css";
 import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
 import {
-  WARDEN, getWeaponSprite, chestSprite,
-  CARAPACE, AERIAL, PHANTOM, BOSS,
+  WARDEN, SHIELD, SLEEP, getWeaponSprite, chestSprite,
+  CARAPACE, AERIAL, PHANTOM, BOSS, RARE, ENEMY_BY_ID,
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
 import astralWardenUrl from "./assets/astral_warden.png";
 import btnAdventureUrl from "./assets/btn_adventure.png";
 import btnHowtoUrl from "./assets/btn_howto.png";
 import btnEnterUrl from "./assets/btn_enter.png";
-import btnGuardUrl from "./assets/btn_guard.png";
-import btnRestUrl from "./assets/btn_rest.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -21,7 +19,7 @@ import {
 import { audio } from "./audio/audio.ts";
 import type {
   Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
-  EnemyKind, StageDef,
+  EnemyKind, EnemyDef, StageDef,
 } from "./game/types.ts";
 
 /** インスタンスの武器名・レアリティ（テンプレートから取得） */
@@ -787,12 +785,18 @@ function stageKinds(s: StageDef): EnemyKind[] {
   for (const wave of s.waves) for (const e of wave) set.add(e.kind);
   return [...set];
 }
+/** 敵1体の表示スプライト（敵IDごとの専用→レア→ボス→種別の順で解決） */
+function enemySpriteFor(def: EnemyDef): Sprite {
+  return ENEMY_BY_ID[def.id]?.base ?? (def.rare ? RARE : def.boss ? BOSS : KIND_SPRITE[def.kind]);
+}
+/** ダンジョンのサムネ：そのダンジョンのボス（無ければ最後の敵）のスプライト */
 function stageThumbSprite(s: StageDef): Sprite {
   for (let i = s.waves.length - 1; i >= 0; i--) {
-    if (s.waves[i].some((e) => e.boss)) return BOSS;
+    const boss = s.waves[i].find((e) => e.boss || e.rare);
+    if (boss) return enemySpriteFor(boss);
   }
   const last = s.waves[s.waves.length - 1]?.[0];
-  return last ? KIND_SPRITE[last.kind] : BOSS;
+  return last ? enemySpriteFor(last) : BOSS;
 }
 
 /** ワールド選択画面：ワールド一覧＋（下に）無限の回廊 */
@@ -879,8 +883,8 @@ function buildStageSelect(): void {
   controls.appendChild(screenHead(`WORLD ${wd.world}`, "🗺 DUNGEONS"));
 
   const back = document.createElement("button");
-  back.className = "forge-back";
-  back.textContent = "← ワールド選択へ";
+  back.className = "world-back";
+  back.textContent = "◀ ワールド選択へ";
   back.addEventListener("click", () => { game.goWorldSelect(); buildControls(); });
   controls.appendChild(back);
 
@@ -1458,20 +1462,20 @@ function buildBattle(): void {
 
   controls.appendChild(grid);
 
-  // ガード／休憩は攻撃行の下に横並びで配置（用意したボタン画像を使用・同サイズ）
+  // ガード／休憩は攻撃行の下に横並び。攻撃カードと同じCSSカード調（ピクセル画像はやめる）
   const actRow = document.createElement("div");
   actRow.className = "bt-actions";
   const gbtn = document.createElement("button");
-  gbtn.className = "bt-act-img bt-guard";
-  const gImg = document.createElement("img"); gImg.src = btnGuardUrl; gImg.alt = "GUARD";
-  gbtn.appendChild(gImg);
+  gbtn.className = "bt-act bt-guard";
+  gbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">GUARD</span>`;
+  gbtn.querySelector(".bt-act-ico")!.appendChild(actionIcon(SHIELD));
   gbtn.addEventListener("click", doGuard);
   pressFx(gbtn);
   guardCard = gbtn;
   const rbtn = document.createElement("button");
-  rbtn.className = "bt-act-img bt-rest2";
-  const rImg = document.createElement("img"); rImg.src = btnRestUrl; rImg.alt = "REST";
-  rbtn.appendChild(rImg);
+  rbtn.className = "bt-act bt-rest2";
+  rbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">REST</span>`;
+  rbtn.querySelector(".bt-act-ico")!.appendChild(actionIcon(SLEEP));
   rbtn.addEventListener("click", () => { if (game.battle?.rest()) audio.sfxGuard(); });
   pressFx(rbtn);
   restCard = rbtn;
@@ -1552,6 +1556,13 @@ function updateWeaponButtons(): void {
   // GUARD：敵の予兆中は強調。休憩は予兆中は無効
   if (guardCard) guardCard.classList.toggle("guard-now", telegraph);
   if (restCard) restCard.classList.toggle("disabled", telegraph);
+}
+
+/** ボタン用のドット絵アイコン要素を作る */
+function actionIcon(sprite: Parameters<typeof makeSpriteCanvas>[0]): HTMLCanvasElement {
+  const icon = makeSpriteCanvas(sprite, 4);
+  icon.className = "act-icon";
+  return icon;
 }
 
 function buildResult(): void {
