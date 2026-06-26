@@ -1410,20 +1410,16 @@ function buildBattle(): void {
     pressFx(card);
     const inst = game.equippedInstance(cls);
 
-    // ヘッダー：系統名＋装備武器のドット絵
+    // ヘッダー：系統名（アイコンは各スキル段の中に表示する）
     const top = document.createElement("div");
     top.className = "sk-card-top";
     const title = document.createElement("div");
     title.className = "sk-title";
     title.textContent = CLASS_EN[cls];
-    const icon = document.createElement("span");
-    icon.className = "sk-icon";
-    if (inst) icon.appendChild(weaponSpriteEl(inst.baseId, cls, 2));
     top.appendChild(title);
-    top.appendChild(icon);
     card.appendChild(top);
 
-    // スキルを「コンボ」として段で表示（クリック毎にフォーカスが切り替わる）
+    // スキルを「コンボ」として段で表示（現在の段は色付きボックス＋武器アイコン）
     const wrap = document.createElement("div");
     wrap.className = "sk-steps";
     const steps: HTMLElement[] = [];
@@ -1439,8 +1435,10 @@ function buildBattle(): void {
         const step = document.createElement("div");
         step.className = "sk-step";
         step.innerHTML =
-          `<span class="sk-step-name">${s.name}</span>` +
-          `<span class="sk-step-cost">${s.enCost}</span>`;
+          `<span class="sk-step-icon"></span>` +
+          `<span class="sk-step-main"><span class="sk-step-name">${s.name}</span>` +
+          `<span class="sk-step-cost">${s.enCost}</span></span>`;
+        if (inst) step.querySelector(".sk-step-icon")!.appendChild(weaponSpriteEl(inst.baseId, cls, 3));
         wrap.appendChild(step);
         steps.push(step);
       }

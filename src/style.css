@@ -2150,55 +2150,63 @@ body.theme-nb {
 .bt-skills {
   /* 攻撃カードは3列。minmax(0,1fr) で内容（スキル名）に依らず常に均等幅に固定 */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   align-items: stretch;
 }
+/* 系統ごとの基準色（--bc=濃色 / --bc-lt=カード地） */
+.sk-card.wclass-slash  { --bc: #ff2d8f; --bc-lt: #ffd2e7; }
+.sk-card.wclass-pierce { --bc: #1fb6ff; --bc-lt: #c9ecff; }
+.sk-card.wclass-crush  { --bc: #ff9e2e; --bc-lt: #ffe4ba; }
 .bt-skills .sk-card {
   min-height: 216px;
-  padding: 12px 9px 13px;
-  gap: 9px;
+  padding: 10px 9px 12px;
+  gap: 8px;
+  background: var(--bc-lt);
+  border: 4px solid #1c1b1b;
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 #1c1b1b;
 }
-.sk-card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.bt-skills .sk-title { font-size: 16px; }
-.bt-skills .sk-icon { position: static; }
-.bt-skills .sk-icon canvas { height: 22px; }
+.bt-skills .sk-card.disabled {
+  background: #e6e1e8; border-color: #b7afb6; box-shadow: 6px 6px 0 #b7afb6;
+}
+.sk-card-top { display: flex; align-items: center; justify-content: center; }
+.bt-skills .sk-title { font-size: 20px; font-weight: 900; color: #1c1b1b; letter-spacing: 1px; }
 
-/* スキル段（コンボ表示） */
+/* スキル段（現在の段＝基準色ボックス＋武器アイコン、それ以外＝グレー） */
 .sk-steps { position: relative; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .sk-step {
-  position: relative;
-  flex: 1;
-  display: flex; align-items: center; justify-content: space-between; gap: 4px;
-  min-height: 56px;
-  padding: 12px 10px;
-  background: #fff;
-  border: 1.5px solid #1c1b1b;
+  position: relative; flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; padding: 8px 6px;
+  background: #c6c6d0;
+  border: 3px solid #1c1b1b;
+  border-radius: 8px;
+  color: #4a4550;
 }
+.sk-step-icon { display: none; }
+.sk-step-on .sk-step-icon { display: flex; align-items: center; justify-content: center; }
+.sk-step-icon canvas { image-rendering: pixelated; height: 34px; width: auto; }
+/* 名前＋コストを1行に（縦の節約＝段が短くても収まる） */
+.sk-step-main { display: flex; align-items: baseline; justify-content: center; gap: 5px; max-width: 100%; }
 .sk-step-name {
-  font-size: 13px; font-weight: 800; color: #1c1b1b;
+  font-size: 13px; font-weight: 800;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
 .sk-step-cost {
   flex-shrink: 0;
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 27px; font-weight: 900; line-height: 1; color: #df0b81;
+  font-size: 22px; font-weight: 900; line-height: 1;
 }
-.sk-step-on .sk-step-name { color: #b01070; }
-.sk-step-on .sk-step-cost { color: #df0b81; }
+/* 現在の段＝その系統の基準色 */
+.sk-step-on { background: var(--bc); color: #1c1b1b; }
+.sk-step-on .sk-step-name, .sk-step-on .sk-step-cost { color: #1c1b1b; }
+/* 無効時は現在段もグレーに沈める */
+.bt-skills .sk-card.disabled .sk-step-on { background: #b8b2be; color: #7a7480; }
+.bt-skills .sk-card.disabled .sk-step-on .sk-step-name,
+.bt-skills .sk-card.disabled .sk-step-on .sk-step-cost { color: #7a7480; }
 
-/* 次に出る段へ「ぬるっと」移動するフォーカス枠 */
-.sk-focus {
-  position: absolute;
-  left: 0; right: 0; top: 0; height: 0;
-  z-index: 1;
-  border: 2.5px solid #df0b81;
-  background: rgba(223, 11, 129, 0.12);
-  box-shadow: 0 0 8px rgba(223, 11, 129, 0.4);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.5, 1), height 0.16s ease, opacity 0.16s ease;
-}
-.sk-focus.on { opacity: 1; }
+/* 旧スライド枠は廃止（現在の段はボックスの色で示す） */
+.sk-focus { display: none; }
 
 /* 連携バッジ（段からはみ出して表示） */
 .sk-link {
@@ -2216,7 +2224,7 @@ body.theme-nb {
 .sk-link.on { display: block; animation: skCombo 0.5s steps(1) infinite; }
 
 /* 連携可能カードの強調（既存 combo-ready を踏襲） */
-.bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 5px 5px 0 #df0b81; }
+.bt-skills .sk-card.combo-ready { border-color: #df0b81; box-shadow: 6px 6px 0 #df0b81; }
 
 /* ガード／休憩を攻撃行の下に横並び（2列）。用意したボタン画像を使用 */
 .bt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; align-items: center; }
