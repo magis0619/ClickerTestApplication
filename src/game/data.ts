@@ -395,6 +395,9 @@ export const LOSE_ANIM_MS = 1500;
 /** 戦闘クリア後、CLEARバナーを見せてから次のウェーブ／リザルトへ移すまでの待機(ms) */
 export const WIN_HOLD_MS = 1000;
 
+/** ボス戦開始の警告演出（画面を暗くし BOSS BATTLE を見せる）の長さ(ms) */
+export const BOSS_INTRO_MS = 2000;
+
 // ===== 演出の表示時間（発動した表記を1秒ほど画面に残す） =====
 /** ダメージ・連携・回復などの浮遊テキストの寿命(ms) */
 export const FLOAT_TTL = 1300;

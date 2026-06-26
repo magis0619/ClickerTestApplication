@@ -30,6 +30,7 @@ import {
   SKILL_BANNER_MS,
   LOSE_ANIM_MS,
   WIN_HOLD_MS,
+  BOSS_INTRO_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
   rollEnemyDrop,
@@ -184,6 +185,9 @@ export class Battle {
   private winPending = false;
   /** クリア表示を見せてからwonに移すための待機タイマー(ms) */
   private winHoldT = 0;
+  /** ボス戦開始の警告演出（暗転＋BOSS BATTLE）の残り時間(ms)。>0の間は操作・進行を凍結 */
+  introT = 0;
+  introMax = 0;
   /** 敗北演出中フラグ。スロー＋敗北宣言を見せてから lost へ移す */
   losePending = false;
   /** 敗北演出の残り時間(ms)。0 で phase=lost に確定 */
@@ -237,7 +241,7 @@ export class Battle {
 
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
-    if (this.phase !== "fighting") return false;
+    if (this.phase !== "fighting" || this.introT > 0) return false;
     if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
     // 敵の予兆中（!表示）はターン制のためガードのみ。攻撃・ためる・集中は不可
     if (this.anyTelegraph) { this.pushFloat("ガードで受けろ！", "#ffcc55", "player"); return false; }
@@ -331,7 +335,7 @@ export class Battle {
 
   /** 休憩：ENを回復（攻撃はしない）。実行できたら true */
   rest(): boolean {
-    if (this.phase !== "fighting") return false;
+    if (this.phase !== "fighting" || this.introT > 0) return false;
     if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
     if (this.anyTelegraph) return false; // 予兆中はガードのみ（ターン制）
     const before = this.playerEn;
@@ -386,7 +390,7 @@ export class Battle {
 
   /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める。判定結果を返す */
   guard(): GuardResult {
-    if (this.phase !== "fighting") return "none";
+    if (this.phase !== "fighting" || this.introT > 0) return "none";
     // 予兆中の敵のうち、最も着弾が近い（telegraphTが小さい）ものを対象に
     const targets = this.enemies.filter((e) => e.inTelegraph);
     if (targets.length === 0) {
@@ -583,6 +587,14 @@ export class Battle {
       return;
     }
 
+    // ボス開始警告：暗転＋BOSS BATTLE を見せる間は進行・操作を凍結（バナーだけ進める）
+    if (this.introT > 0) {
+      this.introT = Math.max(0, this.introT - realDt);
+      for (const f of this.floats) { f.ttl -= realDt; f.rise += realDt * 0.03; }
+      this.floats = this.floats.filter((f) => f.ttl > 0);
+      return;
+    }
+
     // 敗北演出：スロー＋敗北宣言を見せ、尺が終わったら lost を確定（敵の行動は止める）
     if (this.losePending) {
       this.loseAnimT -= realDt;
@@ -721,4 +733,13 @@ export class Battle {
     this.floats.push({ text, color, kind: "announce", ttl: 1700, max: 1700, anchor: "center", rise: 0 });
     this.whiteFlashT = 120;
   }
+
+  /** ボス戦の開始警告：画面を暗くし BOSS BATTLE バナーを一定時間見せる（操作・進行は凍結） */
+  beginBossIntro(): void {
+    this.introT = this.introMax = BOSS_INTRO_MS;
+    // text "BOSS BATTLE" は描画側で専用のドット絵バナーに差し替えられる
+    this.floats.push({ text: "BOSS BATTLE", color: "#ff5a2a", kind: "announce", ttl: BOSS_INTRO_MS, max: BOSS_INTRO_MS, anchor: "center", rise: 0 });
+  }
+  /** ボス開始警告の最中か（暗転中・操作不可） */
+  get inIntro(): boolean { return this.introT > 0; }
 }

@@ -1729,10 +1729,11 @@ function loop(now: number): void {
   }
   if (game.screen !== renderedScreen) buildControls();
 
-  // ウェーブが切り替わった（新しい戦闘に入れ替わった）瞬間は黒からぬるっと明転
+  // ウェーブが切り替わった（新しい戦闘に入れ替わった）瞬間は黒からぬるっと明転。
+  // ただしボス開始警告（暗転演出）中は、その演出に任せてフェードしない
   if (game.screen === "battle" && game.battle && game.battle !== lastBattleRef) {
     lastBattleRef = game.battle;
-    fadeInBattle();
+    if (!game.battle.inIntro) fadeInBattle();
   }
 
   // バトル枠（canvas）は戦闘中のみ描画

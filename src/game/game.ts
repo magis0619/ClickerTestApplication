@@ -166,8 +166,9 @@ export class Game {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
-      // バトル開始時にステージ名を大型バナーで告知（ボス単体ステージは BOSS 表記）
-      this.battle.announce(this.isBossWave ? "BOSS BATTLE" : this.currentStage.name, this.isBossWave ? "#ff6b6b" : "#ffd35f");
+      // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
+      if (this.isBossWave) this.battle.beginBossIntro();
+      else this.battle.announce(`ステージ${this.waveIndex + 1}`, "#ffd35f");
     }
     this.screen = "battle";
   }
@@ -315,10 +316,9 @@ export class Game {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), hp, en);
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
-      this.battle.announce(
-        this.isBossWave ? "BOSS BATTLE" : `WAVE ${this.waveIndex + 1} / ${this.waveCount}`,
-        this.isBossWave ? "#ff6b6b" : "#ffd35f",
-      );
+      // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
+      if (this.isBossWave) this.battle.beginBossIntro();
+      else this.battle.announce(`ステージ${this.waveIndex + 1}`, "#ffd35f");
       return;
     }
 
