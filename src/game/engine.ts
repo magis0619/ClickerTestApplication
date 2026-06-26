@@ -190,6 +190,11 @@ export class Battle {
   loseAnimT = 0;
   /** 敗北演出の総時間(ms)。バナーの出現アニメ計算に使う */
   loseAnimMax = LOSE_ANIM_MS;
+  /**
+   * この戦闘がダンジョン（ステージ）の最終ウェーブか。
+   * true のときだけ全滅時に「STAGE CLEAR」バナーを出す（途中ウェーブでは出さない）。
+   */
+  isFinalWave = false;
 
   constructor(
     defs: EnemyDef[],
@@ -554,8 +559,11 @@ export class Battle {
       this.winPending = true;
       this.winHoldT = WIN_HOLD_MS;
       // クリアを大型バナーで告知（撃破アニメ→待機の間ずっと見せる）。
+      // ダンジョン完了（最終ウェーブ）のときだけ出す。途中ウェーブでは出さない。
       // text "STAGE CLEAR" は描画側で専用のドット絵バナーに差し替えられる。
-      this.floats.push({ text: "STAGE CLEAR", color: "#ff5db6", kind: "announce", ttl: 2200, max: 2200, anchor: "center", rise: 0 });
+      if (this.isFinalWave) {
+        this.floats.push({ text: "STAGE CLEAR", color: "#ff5db6", kind: "announce", ttl: 2200, max: 2200, anchor: "center", rise: 0 });
+      }
     }
   }
 

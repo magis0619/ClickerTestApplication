@@ -164,6 +164,8 @@ export class Game {
       this.battle.announce("1階", "#9fd9ff");
     } else {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
+      // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
+      this.battle.isFinalWave = this.isBossWave;
       // バトル開始時にステージ名を大型バナーで告知（ボス単体ステージは BOSS 表記）
       this.battle.announce(this.isBossWave ? "BOSS BATTLE" : this.currentStage.name, this.isBossWave ? "#ff6b6b" : "#ffd35f");
     }
@@ -311,6 +313,8 @@ export class Game {
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), hp, en);
+      // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
+      this.battle.isFinalWave = this.isBossWave;
       this.battle.announce(
         this.isBossWave ? "BOSS BATTLE" : `WAVE ${this.waveIndex + 1} / ${this.waveCount}`,
         this.isBossWave ? "#ff6b6b" : "#ffd35f",
