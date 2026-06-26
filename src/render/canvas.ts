@@ -966,7 +966,8 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
 
   // STAGE CLEAR / BOSS BATTLE は専用のドット絵バナーで表示
   if (f.text === "STAGE CLEAR" && imgReady(BADGE_CLEAR)) {
-    drawBadgeImage(ctx, BADGE_CLEAR, W / 2, cy, 170, pop, alpha, "#ff5db6");
+    // 画面いっぱいに（横幅上限をほぼ全幅にし、高さ基準を大きく取って幅で決まるように）
+    drawBadgeImage(ctx, BADGE_CLEAR, W / 2, H / 2, 360, pop, alpha, "#ff5db6", W);
     return;
   }
   if (f.text === "BOSS BATTLE" && imgReady(BADGE_BOSS)) {
