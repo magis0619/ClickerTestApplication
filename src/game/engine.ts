@@ -30,6 +30,8 @@ import {
   SKILL_BANNER_MS,
   LOSE_ANIM_MS,
   WIN_HOLD_MS,
+  STAGE_CLEAR_HOLD_MS,
+  STAGE_CLEAR_SLOWMO_MS,
   BOSS_INTRO_MS,
   READY_WAIT_MIN_MS,
   READY_WAIT_MAX_MS,
@@ -200,6 +202,8 @@ export class Battle {
   private winPending = false;
   /** クリア表示を見せてからwonに移すための待機タイマー(ms) */
   private winHoldT = 0;
+  /** winHoldT の初期値（演出の経過時間計算に使う） */
+  private winHoldMax = 0;
   /** ボス戦開始の警告演出（暗転＋BOSS BATTLE）の残り時間(ms)。>0の間は操作・進行を凍結 */
   introT = 0;
   introMax = 0;
@@ -622,12 +626,16 @@ export class Battle {
     // 全滅した瞬間に「STAGE CLEAR」表示。ただし撃破アニメを見せてからwonへ移す
     if (this.phase === "fighting" && this.aliveEnemies.length === 0 && !this.winPending) {
       this.winPending = true;
-      this.winHoldT = WIN_HOLD_MS;
-      // クリアを大型バナーで告知（撃破アニメ→待機の間ずっと見せる）。
-      // ダンジョン完了（最終ウェーブ）のときだけ出す。途中ウェーブでは出さない。
-      // text "STAGE CLEAR" は描画側で専用のドット絵バナーに差し替えられる。
+      // ダンジョン完了（最終ウェーブ）はスロー＋STAGE CLEAR＋紙吹雪で盛大に見せてから暗転→リザルト。
+      // 途中ウェーブはバナーを出さず短く次へ。
       if (this.isFinalWave) {
-        this.floats.push({ text: "STAGE CLEAR", color: "#ff5db6", kind: "announce", ttl: 2200, max: 2200, anchor: "center", rise: 0 });
+        this.winHoldT = this.winHoldMax = STAGE_CLEAR_HOLD_MS;
+        this.slowT = Math.max(this.slowT, STAGE_CLEAR_SLOWMO_MS); // ボス撃破をスローで魅せる
+        this.whiteFlashT = Math.max(this.whiteFlashT, 180);
+        // text "STAGE CLEAR" は描画側で専用のドット絵バナーに差し替えられる
+        this.floats.push({ text: "STAGE CLEAR", color: "#ff5db6", kind: "announce", ttl: STAGE_CLEAR_HOLD_MS, max: STAGE_CLEAR_HOLD_MS, anchor: "center", rise: 0 });
+      } else {
+        this.winHoldT = this.winHoldMax = WIN_HOLD_MS;
       }
     }
   }
@@ -728,7 +736,11 @@ export class Battle {
 
     // 全滅していたら、撃破アニメ完了→クリア表示の待機を経て勝利確定
     if (this.winPending) {
-      if (this.enemies.every((e) => e.deathT <= 0)) {
+      if (this.isFinalWave) {
+        // STAGE CLEAR は実時間で進める（スローの影響を受けない）。撃破アニメと並行に演出
+        this.winHoldT -= realDt;
+        if (this.winHoldT <= 0) this.phase = "won";
+      } else if (this.enemies.every((e) => e.deathT <= 0)) {
         this.winHoldT -= dtMs;
         if (this.winHoldT <= 0) this.phase = "won";
       }
@@ -807,4 +819,15 @@ export class Battle {
   }
   /** ボス開始警告の最中か（暗転中・操作不可） */
   get inIntro(): boolean { return this.introT > 0; }
+
+  /** ステージクリア演出中か（最終ボス撃破→STAGE CLEAR表示中）。紙吹雪などを出す */
+  get isVictoryFx(): boolean { return this.winPending && this.isFinalWave; }
+  /** STAGE CLEAR 演出の経過時間(ms)。バースト→紙吹雪のタイミングに使う */
+  get victoryAge(): number { return this.winHoldMax - this.winHoldT; }
+  /** STAGE CLEAR 終盤の暗転(0..1)。残り VICTORY_FADE_MS で 0→1 へ。完了で won へ移る */
+  get victoryFade(): number {
+    if (!this.isVictoryFx) return 0;
+    const FADE = 520;
+    return Math.max(0, Math.min(1, (FADE - this.winHoldT) / FADE));
+  }
 }

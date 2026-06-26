@@ -1666,6 +1666,31 @@ function buildResult(): void {
   buildResultPanel();
 }
 
+/** 取得ゴールドを 0→target へカウントアップ（ease-out）。完了で onDone を呼ぶ */
+function countUpGold(
+  el: HTMLElement, target: number, durationMs: number,
+  onStep: (cur: number) => void, onDone: () => void,
+): void {
+  if (target <= 0) { el.textContent = "+0"; onDone(); return; }
+  const start = performance.now();
+  let lastTick = 0;
+  const frame = (now: number): void => {
+    if (!el.isConnected) return; // 画面を離れたら停止
+    const p = Math.min(1, (now - start) / durationMs);
+    const eased = 1 - Math.pow(1 - p, 3);
+    const cur = Math.round(target * eased);
+    el.textContent = `+${cur.toLocaleString()}`;
+    onStep(cur);
+    if (p < 1) {
+      if (now - lastTick > 80) { lastTick = now; audio.sfxUiClick(); } // コインのカチカチ音
+      requestAnimationFrame(frame);
+    } else {
+      onDone();
+    }
+  };
+  requestAnimationFrame(frame);
+}
+
 /** ドロップ武器の中身（ドット絵＋名前＋レアリティ）の小カード */
 function rewardCard(inst: WeaponInstance): HTMLElement {
   const w = getWeapon(inst.baseId)!;
@@ -1784,15 +1809,23 @@ function buildResultPanel(): void {
   else sub.textContent = "倒れてしまった…… 装備を見直して再挑戦しよう";
   panel.appendChild(sub);
 
-  // ゴールド・ドロップ（勝利／回廊時）
+  // ゴールド・ドロップ（勝利／回廊時）：まずゴールドを0からカウントアップ→その後に宝箱開封
   if (good) {
     const goldLine = document.createElement("div");
     goldLine.className = "result-gold";
     goldLine.innerHTML =
-      `<span class="gold-amt">+${game.lastGold.toLocaleString()}</span><span class="gold-unit">G</span>` +
-      `<span class="result-gold-total">（所持 ${game.gold.toLocaleString()} G）</span>`;
+      `<span class="gold-amt">+0</span><span class="gold-unit">G</span>` +
+      `<span class="result-gold-total">（所持 ${(game.gold - game.lastGold).toLocaleString()} G）</span>`;
     panel.appendChild(goldLine);
-    if (game.lastDrops.length > 0) panel.appendChild(buildChestReveal(game.lastDrops));
+    const chestHost = document.createElement("div");
+    panel.appendChild(chestHost);
+
+    const amtEl = goldLine.querySelector(".gold-amt") as HTMLElement;
+    const totalEl = goldLine.querySelector(".result-gold-total") as HTMLElement;
+    const startTotal = game.gold - game.lastGold;
+    countUpGold(amtEl, game.lastGold, 1100,
+      (cur) => { totalEl.textContent = `（所持 ${(startTotal + cur).toLocaleString()} G）`; },
+      () => { if (game.lastDrops.length > 0) chestHost.appendChild(buildChestReveal(game.lastDrops)); });
   }
 
   // アクション

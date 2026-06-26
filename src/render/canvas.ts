@@ -407,6 +407,7 @@ export function render(
     ctx.fillStyle = `rgba(4,3,9,${a})`;
     ctx.fillRect(0, 0, W, H);
   }
+  if (b.isVictoryFx) drawVictoryFx(ctx, b); // STAGE CLEAR の盛り上げ（紙吹雪＋花火）
   drawFloats(ctx, b, slots);
   ctx.restore();
 
@@ -441,7 +442,57 @@ export function render(
   }
   drawGuardBadge(ctx, b);
   drawDefeatBadge(ctx, b);
+  // STAGE CLEAR 終盤の暗転（これが満ちると won へ移り、リザルトが黒から明転する）
+  if (b.victoryFade > 0) {
+    ctx.fillStyle = `rgba(6,4,12,${b.victoryFade})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (b.phase !== "fighting") drawResult(ctx, b);
+}
+
+/** STAGE CLEAR の盛り上げ演出：舞い落ちる紙吹雪＋数回の花火バースト */
+function drawVictoryFx(ctx: CanvasRenderingContext2D, b: Battle): void {
+  const age = b.victoryAge;
+  const t = Date.now() / 1000;
+  const cols = ["#ff2d8f", "#1fb6ff", "#ffd34d", "#57d36b", "#b96bff", "#ff7de9"];
+  ctx.save();
+  // 紙吹雪：上から舞い落ちて回転・明滅
+  const fadeIn = Math.min(1, age / 200);
+  for (let i = 0; i < 48; i++) {
+    const speed = 42 + (i % 7) * 18;
+    const x = (((i * 53) % W) + Math.sin(t * 1.5 + i) * 16 + W) % W;
+    const y = ((age / 1000) * speed + i * 37) % (H + 30) - 20;
+    const w = 4 + (i % 3) * 2, h = 7 + (i % 2) * 4;
+    ctx.save();
+    ctx.globalAlpha = fadeIn * (0.7 + 0.3 * Math.sin(t * 3 + i));
+    ctx.translate(x, y);
+    ctx.rotate(t * 2 + i);
+    ctx.fillStyle = cols[i % cols.length];
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+  // 花火バースト：時間差で数発、放射状に弾ける
+  const bursts = [
+    { x: 0.24, y: 0.30, d: 0 }, { x: 0.76, y: 0.26, d: 280 }, { x: 0.50, y: 0.20, d: 560 },
+    { x: 0.34, y: 0.58, d: 880 }, { x: 0.70, y: 0.60, d: 1160 },
+  ];
+  for (const bu of bursts) {
+    const ba = age - bu.d;
+    if (ba < 0 || ba > 640) continue;
+    const p = ba / 640;
+    const cx = W * bu.x, cy = H * bu.y;
+    const rays = 14;
+    ctx.globalAlpha = (1 - p) * 0.95;
+    for (let r = 0; r < rays; r++) {
+      const ang = (r / rays) * Math.PI * 2;
+      const rad = p * 50;
+      const px = cx + Math.cos(ang) * rad, py = cy + Math.sin(ang) * rad;
+      const s = 4 * (1 - p) + 1.5;
+      ctx.fillStyle = cols[(r + bu.d) % cols.length];
+      ctx.fillRect(px - s / 2, py - s / 2, s, s);
+    }
+  }
+  ctx.restore();
 }
 
 /**

@@ -2390,7 +2390,7 @@ body.theme-nb {
    ===================================================================== */
 .theme-nb .result-panel {
   background: #ffffff; border: 3px solid #1c1b1b; box-shadow: 6px 6px 0 #1c1b1b;
-  border-radius: 0; padding: 16px;
+  border-radius: 18px; padding: 16px;
 }
 .nb-title.r-win { color: #df0b81; }
 .nb-title.r-lose { color: #ba1a1a; }
@@ -2412,7 +2412,7 @@ body.theme-nb {
 .theme-nb .result-panel .reset-btn {
   flex: 1; min-width: 120px; padding: 13px;
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace;
-  font-size: 14px; font-weight: 700; border-radius: 0;
+  font-size: 14px; font-weight: 700; border-radius: 12px;
   border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; cursor: pointer;
 }
 .theme-nb .result-panel .guard-btn { background: #df0b81; color: #fff; }

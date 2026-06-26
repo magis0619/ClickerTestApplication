@@ -441,6 +441,11 @@ export const LOSE_ANIM_MS = 2500;
 /** 戦闘クリア後、CLEARバナーを見せてから次のウェーブ／リザルトへ移すまでの待機(ms) */
 export const WIN_HOLD_MS = 500;
 
+/** ステージクリア（最終ボス撃破）演出：STAGE CLEAR を見せてから暗転→リザルトへ移すまでの長さ(ms) */
+export const STAGE_CLEAR_HOLD_MS = 2600;
+/** ステージクリア時のスローモーション時間(ms)。ボス撃破の瞬間をゆっくり見せる */
+export const STAGE_CLEAR_SLOWMO_MS = 1400;
+
 /** ボス戦開始の警告演出（画面を暗くし BOSS BATTLE を見せる）の長さ(ms) */
 export const BOSS_INTRO_MS = 2000;
 
