@@ -122,6 +122,8 @@ function playSfx(ev: SfxEvent): void {
     case "hurt": audio.sfxHurt(); break;
     case "break": audio.sfxBreak(); break;
     case "die": audio.sfxEnemyDie(); break;
+    case "crit": audio.sfxCrit(); break;
+    case "boss": audio.sfxBossAlarm(); break;
   }
 }
 
@@ -143,7 +145,7 @@ function rarityAttr(r: string, baseClass: string): string {
 
 /** 攻撃入力（武器使用）。即座に攻撃SEを鳴らして手応えを出す */
 function attackWith(cls: WeaponClass): void {
-  if (game.useWeapon(cls)) audio.sfxAttack();
+  if (game.useWeapon(cls)) audio.sfxAttack(cls);
 }
 
 /** ガード入力。判定結果に応じたSEは戦闘側のイベントで鳴る（空振りのみ軽い音） */
@@ -185,7 +187,13 @@ function levelTag(inst: WeaponInstance): string {
 }
 
 // ===== オーディオ =====
-window.addEventListener("pointerdown", () => audio.init());
+window.addEventListener("pointerdown", (e) => {
+  audio.init();
+  // メニュー/ナビ/画像ボタンの押下音（戦闘ボタンは pressFx で専用音を鳴らすので除外）
+  const t = e.target as HTMLElement | null;
+  const btn = t?.closest("button, .btn, a[href], [data-click]") as HTMLElement | null;
+  if (btn && !btn.closest(".sk-card") && !btn.closest(".bt-act")) audio.sfxUiClick();
+});
 const topbarEl = document.querySelector(".topbar") as HTMLElement;
 
 // 規定フォントを先読み（canvasの文字が初回からデザイン通りに描画されるように）

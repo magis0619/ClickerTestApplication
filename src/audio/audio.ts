@@ -128,9 +128,42 @@ export class AudioEngine {
     this.blip(900, "square", 0.025, 0.35, 1400);
     this.noise(0.018, 0.18, 3500);
   }
-  sfxAttack(): void {
-    this.blip(330, "square", 0.09, 0.4, 180);
-    this.noise(0.05, 0.25, 2200);
+  /** メニュー/ナビのボタン押下音（やわらかいクリック） */
+  sfxUiClick(): void {
+    this.blip(680, "square", 0.03, 0.3, 1020);
+    this.blip(1020, "triangle", 0.05, 0.16, undefined, 0.015);
+  }
+  /** 武器系統ごとの攻撃音：斬＝スウィッシュ / 突＝刺突 / 打＝重撃 */
+  sfxAttack(weapon: "slash" | "pierce" | "crush" = "slash"): void {
+    switch (weapon) {
+      case "slash": // 斬：鋭い斬撃のスウィッシュ
+        this.blip(960, "sawtooth", 0.09, 0.34, 180);
+        this.noise(0.06, 0.22, 3000);
+        break;
+      case "pierce": // 突：素早い刺突（高めの二段突き）
+        this.blip(640, "square", 0.05, 0.4, 1500);
+        this.blip(1500, "square", 0.04, 0.24, 2100, 0.02);
+        this.noise(0.03, 0.16, 3600);
+        break;
+      case "crush": // 打：重く沈む一撃
+        this.blip(120, "sawtooth", 0.16, 0.5, 55);
+        this.blip(80, "sine", 0.22, 0.4);
+        this.noise(0.09, 0.32, 500);
+        break;
+    }
+  }
+  /** クリティカル：きらめく金属の特別音 */
+  sfxCrit(): void {
+    this.noise(0.05, 0.4, 5000);
+    this.blip(1320, "square", 0.1, 0.35, 2640);
+    this.blip(1980, "triangle", 0.16, 0.3, undefined, 0.03);
+    this.blip(2640, "square", 0.12, 0.22, undefined, 0.07);
+  }
+  /** ボス戦開始：ブザーのような警報音（低高を繰り返す） */
+  sfxBossAlarm(): void {
+    const beats = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+    beats.forEach((d, i) => this.blip(i % 2 ? 340 : 240, "sawtooth", 0.17, 0.42, undefined, d));
+    this.noise(1.15, 0.1, 180);
   }
   sfxGuard(): void {
     this.blip(660, "triangle", 0.08, 0.5);
@@ -164,10 +197,15 @@ export class AudioEngine {
     this.blip(150, "sawtooth", 0.18, 0.4, 70);
     this.noise(0.08, 0.3, 600);
   }
-  /** ブレイク：金属が砕けるような音 */
+  /** ブレイク：ガラス/結晶が砕け散るような派手な破砕音 */
   sfxBreak(): void {
-    this.blip(440, "square", 0.16, 0.35, 110);
-    this.noise(0.12, 0.3, 1200);
+    // 一撃の芯（低→高への弾け）＋ガラスの破片が散るノイズ
+    this.blip(620, "square", 0.18, 0.4, 90);
+    this.noise(0.18, 0.34, 1400);
+    // 砕けた破片のきらめき（高音が散らばる）
+    this.blip(1568, "triangle", 0.1, 0.22, undefined, 0.04);
+    this.blip(2093, "triangle", 0.09, 0.18, undefined, 0.08);
+    this.noise(0.12, 0.16, 4500, 0.06);
   }
   /** 敵撃破：落下するような下降音 */
   sfxEnemyDie(): void {

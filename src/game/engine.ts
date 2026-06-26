@@ -440,6 +440,7 @@ export class Battle {
     const idx = this.enemies.indexOf(e);
     const big = crit || weak || e.isBroken || this.charge > 1;
     this.pushDamage(dmg, idx, big, crit);
+    if (crit) this.sfx.push("crit");
     // 当たった瞬間の0.05秒ストップ＋画面シェイク（手応え）
     this.hitstopT = Math.max(this.hitstopT, HIT_HITSTOP_MS);
     this.shake(150, crit ? 5 : 3);
@@ -739,6 +740,7 @@ export class Battle {
     this.introT = this.introMax = BOSS_INTRO_MS;
     // text "BOSS BATTLE" は描画側で専用のドット絵バナーに差し替えられる
     this.floats.push({ text: "BOSS BATTLE", color: "#ff5a2a", kind: "announce", ttl: BOSS_INTRO_MS, max: BOSS_INTRO_MS, anchor: "center", rise: 0 });
+    this.sfx.push("boss");
   }
   /** ボス開始警告の最中か（暗転中・操作不可） */
   get inIntro(): boolean { return this.introT > 0; }

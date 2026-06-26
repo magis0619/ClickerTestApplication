@@ -142,7 +142,7 @@ export interface StageDef {
 export type GuardResult = "none" | "guard" | "just" | "perfect";
 
 /** 戦闘から発火する効果音イベント（mainがフレームごとに回収して再生する） */
-export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" | "die";
+export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" | "die" | "crit" | "boss";
 
 /** 戦闘のフェーズ */
 export type BattlePhase = "fighting" | "won" | "lost";
