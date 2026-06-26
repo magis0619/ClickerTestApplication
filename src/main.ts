@@ -7,7 +7,7 @@ import {
 import astralWardenUrl from "./assets/astral_warden.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
-  STAGES, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
+  STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview, COMBOS,
   PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, PERFECT_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
@@ -140,6 +140,8 @@ let invSortDesc = true;
 let invLockedOnly = false;
 /** ダンジョン選択：選択中のゾーン番号 */
 let stageSel = 0;
+/** ワールド選択：開いているワールド番号（ダンジョン一覧の対象） */
+let selectedWorld = 1;
 /** 鍛冶屋：強化対象に選んだ武器UID（null=一覧から選ぶ画面） */
 let forgeTargetUid: string | null = null;
 /** 鍛冶屋：素材に選んだ武器UID */
@@ -223,6 +225,7 @@ function buildControls(): void {
   else { topbarEl.innerHTML = ""; topbarEl.className = "topbar"; }
   switch (game.screen) {
     case "title": buildTitle(); break;
+    case "worldSelect": buildWorldSelect(); break;
     case "stageSelect": buildStageSelect(); break;
     case "inventory": buildInventory(); break;
     case "forge": buildForge(); break;
@@ -259,7 +262,7 @@ function buildTitle(): void {
   sub.textContent = "タイミングアクションRPG";
   hero.appendChild(sub);
   controls.appendChild(hero);
-  controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); }));
+  controls.appendChild(bigButton("▶ 冒険に出る", () => { game.goWorldSelect(); buildControls(); }));
   const howBtn = bigButton("📖 遊び方を見る", () => { game.goHowTo(); buildControls(); });
   howBtn.classList.add("menu-btn-sec");
   controls.appendChild(howBtn);
@@ -356,14 +359,16 @@ function bottomNav(): HTMLElement {
   nav.className = "bottom-nav";
   const items: [string, string, string, () => void][] = [
     ["🏠", "ホーム", "title", () => game.goTitle()],
-    ["🗺️", "ダンジョン", "stageSelect", () => game.goStageSelect()],
+    ["🗺️", "ワールド", "worldSelect", () => game.goWorldSelect()],
     ["🎒", "インベントリ", "inventory", () => game.goInventory()],
     ["🔨", "鍛冶屋", "forge", () => game.goForge()],
     ["🛒", "ショップ", "shop", () => game.goShop()],
   ];
   for (const [icon, label, scr, act] of items) {
     const b = document.createElement("button");
-    b.className = "nav-item" + (game.screen === scr ? " nav-on" : "");
+    // ダンジョン一覧(stageSelect)もワールドタブのハイライト対象にする
+    const on = game.screen === scr || (scr === "worldSelect" && game.screen === "stageSelect");
+    b.className = "nav-item" + (on ? " nav-on" : "");
     b.innerHTML = `<span class="nav-ico">${icon}</span><span class="nav-lbl">${label}</span>`;
     b.addEventListener("click", () => { act(); buildControls(); });
     nav.appendChild(b);
@@ -775,13 +780,97 @@ function stageThumbSprite(s: StageDef): Sprite {
   return last ? KIND_SPRITE[last.kind] : BOSS;
 }
 
+/** ワールド選択画面：ワールド一覧＋（下に）無限の回廊 */
+function buildWorldSelect(): void {
+  controls.appendChild(screenHead("WORLD SELECT"));
+
+  const list = document.createElement("div");
+  list.className = "world-list";
+  for (const wd of WORLDS) list.appendChild(worldCard(wd));
+  controls.appendChild(list);
+
+  // 無限の回廊（いつでもプレイ可能・ワールドの下に配置）
+  if (ENDLESS_INDEX >= 0) {
+    controls.appendChild(sectionLabel("ENDLESS"));
+    const el = document.createElement("div");
+    el.className = "zone-list";
+    el.appendChild(zoneCard(STAGES[ENDLESS_INDEX], ENDLESS_INDEX));
+    controls.appendChild(el);
+  }
+
+  controls.appendChild(bottomNav());
+}
+
+/** ワールドカード：所属ダンジョンの一覧を載せ、タップでそのワールドのダンジョン画面へ */
+function worldCard(wd: typeof WORLDS[number]): HTMLElement {
+  const unlocked = game.worldUnlocked(wd.stageIndices);
+  const total = wd.stageIndices.length;
+  const cleared = wd.stageIndices.filter((i) => game.save.bestStage > i).length;
+  const card = document.createElement("button");
+  card.className = "world-card" + (unlocked ? "" : " locked");
+
+  if (!unlocked) {
+    card.innerHTML =
+      `<div class="world-top"><span class="world-tag">WORLD ${wd.world}</span>` +
+      `<span class="zone-status st-locked">🔒 LOCKED</span></div>` +
+      `<div class="zone-locked-name">??? 未到達のワールド</div>`;
+    return card;
+  }
+
+  const top = document.createElement("div");
+  top.className = "world-top";
+  top.innerHTML =
+    `<span class="world-tag">WORLD ${wd.world}</span>` +
+    `<span class="world-prog">${cleared} / ${total} CLEAR</span>`;
+  card.appendChild(top);
+
+  // ダンジョンの記載（名前＋状態）
+  const dl = document.createElement("div");
+  dl.className = "world-dungeons";
+  for (const i of wd.stageIndices) {
+    const s = STAGES[i];
+    const open = game.stageUnlocked(i);
+    const done = game.save.bestStage > i;
+    const row = document.createElement("div");
+    row.className = "world-d-row" + (open ? "" : " locked");
+    const mark = done ? "✓" : open ? "▶" : "🔒";
+    row.innerHTML =
+      `<span class="world-d-mark">${mark}</span>` +
+      `<span class="world-d-name">${open ? s.name : "？？？"}</span>` +
+      `<span class="world-d-status">${done ? "CLEAR" : open ? "OPEN" : "LOCK"}</span>`;
+    dl.appendChild(row);
+  }
+  card.appendChild(dl);
+
+  const go = document.createElement("span");
+  go.className = "world-go";
+  go.textContent = "▶ ENTER WORLD";
+  card.appendChild(go);
+
+  card.addEventListener("click", () => {
+    selectedWorld = wd.world;
+    stageSel = wd.stageIndices[0];
+    game.goStageSelect();
+    buildControls();
+  });
+  return card;
+}
+
 function buildStageSelect(): void {
-  controls.appendChild(screenHead("DUNGEON HUB"));
-  if (!game.stageUnlocked(stageSel)) stageSel = 0;
+  const wd = WORLDS.find((w) => w.world === selectedWorld) ?? WORLDS[0];
+  controls.appendChild(screenHead(`WORLD ${wd.world}`, "🗺 DUNGEONS"));
+
+  const back = document.createElement("button");
+  back.className = "forge-back";
+  back.textContent = "← ワールド選択へ";
+  back.addEventListener("click", () => { game.goWorldSelect(); buildControls(); });
+  controls.appendChild(back);
+
+  if (!wd.stageIndices.includes(stageSel)) stageSel = wd.stageIndices[0];
 
   const list = document.createElement("div");
   list.className = "zone-list";
-  STAGES.forEach((s, i) => list.appendChild(zoneCard(s, i)));
+  for (const i of wd.stageIndices) list.appendChild(zoneCard(STAGES[i], i));
   controls.appendChild(list);
 
   controls.appendChild(powerPanel());
@@ -1511,9 +1600,15 @@ function buildResultPanel(): void {
   const actions = document.createElement("div");
   actions.className = "actions";
   if (!won) actions.appendChild(primaryButton("もう一度", () => withFade(() => game.retryStage())));
-  const hasNext = won && game.stageIndex + 1 < STAGE_COUNT && game.stageUnlocked(game.stageIndex + 1);
-  if (hasNext) actions.appendChild(primaryButton("次のステージへ", () => withFade(() => game.startStage(game.stageIndex + 1))));
-  actions.appendChild(secondaryButton("ダンジョン選択", () => { game.goStageSelect(); buildControls(); }));
+  // 次のダンジョンへ（無限の回廊は除外。同ワールド内/次ワールドの順に並ぶ）
+  const nextI = game.stageIndex + 1;
+  const hasNext = won && nextI < STAGE_COUNT && !STAGES[nextI]?.endless && game.stageUnlocked(nextI);
+  if (hasNext) actions.appendChild(primaryButton("次のダンジョンへ", () => withFade(() => game.startStage(nextI))));
+  actions.appendChild(secondaryButton("ダンジョン選択", () => {
+    selectedWorld = game.currentStage?.world ?? selectedWorld;
+    game.goStageSelect();
+    buildControls();
+  }));
   actions.appendChild(secondaryButton("インベントリ", () => { game.goInventory(); buildControls(); }));
   panel.appendChild(actions);
   controls.appendChild(panel);
@@ -1671,7 +1766,7 @@ function buildHowTo(): void {
   controls.appendChild(howSection("09", "キーボード操作（PC）", keys));
 
   // 出発ボタン
-  const go = bigButton("▶ 冒険に出る", () => { game.goStageSelect(); buildControls(); });
+  const go = bigButton("▶ 冒険に出る", () => { game.goWorldSelect(); buildControls(); });
   go.classList.add("howto-go");
   controls.appendChild(go);
 
@@ -1743,8 +1838,15 @@ function loop(now: number): void {
   // バトル枠（canvas）は戦闘中のみ描画
   if (game.screen === "battle" && game.battle) {
     updateWeaponButtons();
+    // ステージ表記はワールド内での順番（例：WORLD2の1つ目なら 1/1）にする
+    let sIndex = game.stageIndex, sCount = STAGE_COUNT;
+    const cur = game.currentStage;
+    if (cur && cur.world != null) {
+      const wd = WORLDS.find((w) => w.world === cur.world);
+      if (wd) { sIndex = wd.stageIndices.indexOf(game.stageIndex); sCount = wd.stageIndices.length; }
+    }
     render(ctx, game.battle, {
-      index: game.stageIndex, count: STAGE_COUNT,
+      index: sIndex, count: sCount,
       wave: game.waveIndex, waves: game.waveCount, boss: game.isBossWave,
       floor: game.isEndless ? game.endlessFloor : undefined,
     });

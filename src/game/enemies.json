@@ -316,5 +316,19 @@
     "dropWeaponId": "w_thunder_spear",
     "dropRate": 100,
     "rare": true
+  },
+  {
+    "id": "abyss_sovereign",
+    "name": "アビスソブリン",
+    "kind": "phantom",
+    "maxHp": 1200,
+    "attack": 46,
+    "telegraphMs": 760,
+    "countStart": 3,
+    "breakThreshold": 220,
+    "dropWeaponId": "w_astral_edge",
+    "dropRate": 100,
+    "boss": true,
+    "bigBoss": true
   }
 ]

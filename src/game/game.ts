@@ -40,6 +40,7 @@ export class Game {
   goInventory(): void { this.screen = "inventory"; }
   goForge(): void { this.screen = "forge"; }
   goShop(): void { this.screen = "shop"; }
+  goWorldSelect(): void { this.screen = "worldSelect"; }
   goHowTo(): void { this.screen = "howto"; }
 
   /** 所持ゴールド */
@@ -145,9 +146,14 @@ export class Game {
     return inst.level - before;
   }
 
-  /** ステージが選択可能か（前ステージクリアで解放） */
+  /** ステージが選択可能か（前ステージクリアで解放。無限の回廊は常に開放） */
   stageUnlocked(i: number): boolean {
+    if (STAGES[i]?.endless) return true;
     return i === 0 || this.save.bestStage >= i;
+  }
+  /** ワールドが解放済みか（先頭ダンジョンが解放されていれば見られる） */
+  worldUnlocked(stageIndices: number[]): boolean {
+    return stageIndices.length > 0 && this.stageUnlocked(stageIndices[0]);
   }
 
   startStage(i: number): void {

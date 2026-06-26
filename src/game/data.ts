@@ -287,15 +287,33 @@ export function withRareSpawn(enemies: EnemyDef[], isBoss: boolean): EnemyDef[] 
 }
 
 // ===== ステージ（stages.json から読み込み） =====
-interface RawStage { name: string; desc: string; waves: string[][]; endless?: boolean; recommendLv?: number; }
+interface RawStage { name: string; desc: string; waves: string[][]; endless?: boolean; recommendLv?: number; world?: number; }
 export const STAGES: StageDef[] = (stagesJson as RawStage[]).map((s) => ({
   name: s.name,
   desc: s.desc,
   waves: s.waves.map((wave) => wave.map((id) => ENEMY_MAP[id]).filter(Boolean)),
   endless: s.endless,
   recommendLv: s.recommendLv,
+  world: s.world,
 }));
 export const STAGE_COUNT = STAGES.length;
+
+/** 無限の回廊（endless）のステージ番号。ワールドのダンジョン一覧からは除外する */
+export const ENDLESS_INDEX = STAGES.findIndex((s) => s.endless);
+
+/** ワールド定義：番号と、それに属するダンジョン（STAGESの添字）の並び */
+export interface WorldDef { world: number; name: string; stageIndices: number[]; }
+export const WORLDS: WorldDef[] = (() => {
+  const map = new Map<number, number[]>();
+  STAGES.forEach((s, i) => {
+    if (s.endless || s.world == null) return;
+    if (!map.has(s.world)) map.set(s.world, []);
+    map.get(s.world)!.push(i);
+  });
+  return [...map.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([world, stageIndices]) => ({ world, name: `WORLD ${world}`, stageIndices }));
+})();
 
 /** 選択画面で見せる「ドロップしうる武器」一覧（重複なし） */
 export function stageDropPreview(stageIndex: number): string[] {

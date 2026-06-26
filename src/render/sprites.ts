@@ -1075,9 +1075,60 @@ export const SHADOW_TYRANT_TEL: Sprite = {
   ],
 };
 
+// ===== ワールド最終ボス：アビスソブリン（特大・他より大きく描く） =====
+const ABYSS_PAL: Record<string, string> = {
+  o: "#0c0a18", d: "#1a1330", s: "#3a2a5a", S: "#6a4fa0", H: "#9a78d8",
+  e: "#ff2e5c", E: "#ff7da0", y: "#ffcf3f", g: "#b96bff", w: "#ffffff",
+};
+export const ABYSS: Sprite = {
+  palette: ABYSS_PAL,
+  rows: [
+    "y.y..........y.y",
+    "yoyo..yyyy..oyoy",
+    ".oyo.ydSSdy.oyo.",
+    "..ooyoSSSSoyoo..",
+    "..odSHHHHHHSdo..",
+    ".odSHeeHHeeHSdo.",
+    ".oSSHeeHHeeHSSo.",
+    ".oSSHHHwwHHHSSo.",
+    ".odSSHHHHHHSSdo.",
+    "odSSsSSSSSSsSSdo",
+    "oSSsgSSwwSSgsSSo",
+    "oSSsSSgwwgSSsSSo",
+    "oSSsSSSSSSSSsSSo",
+    ".odSSsSSSSsSSdo.",
+    ".oo.oSSooSSo.oo.",
+    "..o..oo..oo..o..",
+    "..o...o..o...o..",
+  ],
+};
+export const ABYSS_TEL: Sprite = {
+  palette: ABYSS_PAL,
+  rows: [
+    "y.y..........y.y",
+    "yoyo..yyyy..oyoy",
+    ".oyo.ydSSdy.oyo.",
+    "..ooyoSSSSoyoo..",
+    "..odSHHHHHHSdo..",
+    ".odSeeeHHeeeSdo.",
+    ".oSSeeeHHeeeSSo.",
+    ".oSSHHwwwwHHSSo.",
+    ".odSSHwwwwHSSdo.",
+    "odSSsSSwwSSsSSdo",
+    "oSSsgSwwwwSgsSSo",
+    "oSSsSgwwwwgSsSSo",
+    "oSSsSSSwwSSSsSSo",
+    ".odSSsSSSSsSSdo.",
+    ".oo.oSSooSSo.oo.",
+    "o.o..oo..oo..o.o",
+    "..o...o..o...o..",
+  ],
+};
+
 // 敵IDごとの専用スプライト（base=待機 / tel=予兆・攻撃）。
 // ここに無い敵は種別共通スプライト（canvas側）にフォールバックする。
 export const ENEMY_BY_ID: Record<string, { base: Sprite; tel: Sprite }> = {
+  abyss_sovereign: { base: ABYSS,         tel: ABYSS_TEL },
   straw_golem:    { base: STRAW_GOLEM,    tel: STRAW_GOLEM_TEL },
   stone_sentinel: { base: STONE_SENTINEL, tel: STONE_SENTINEL_TEL },
   sand_crab:      { base: SAND_CRAB,      tel: SAND_CRAB_TEL },

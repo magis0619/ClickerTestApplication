@@ -77,6 +77,8 @@ export interface EnemyDef {
   boss?: boolean;
   /** レアモンスター（強く・煌びやかで、レア武器を落とす特別な敵） */
   rare?: boolean;
+  /** 特大ボス（通常ボスより大きなドット絵で描く＝ワールド最終ボスなど） */
+  bigBoss?: boolean;
 }
 
 /** レアリティ（高いほど強く、出にくい） */
@@ -132,6 +134,8 @@ export interface StageDef {
   endless?: boolean;
   /** 推奨レベル（表示用） */
   recommendLv?: number;
+  /** 所属ワールド番号（1始まり。endlessは未設定） */
+  world?: number;
 }
 
 /** ガード判定の結果段階。none=失敗(被弾) / guard=通常ガード / just=中間 / perfect=パーフェクトガード */
@@ -144,7 +148,7 @@ export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" 
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "title" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result" | "howto";
+export type Screen = "title" | "worldSelect" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result" | "howto";
 
 /** ショップで購入できる武器とその価格 */
 export interface ShopItem {

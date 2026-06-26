@@ -443,7 +443,7 @@ function drawEnemyCard(
   targeted: boolean,
 ): void {
   const sprite = enemyStill(e);
-  const scale = e.def.boss || e.def.rare ? 5 : 4;
+  const scale = e.def.bigBoss ? 7 : e.def.boss || e.def.rare ? 5 : 4;
 
   // 撃破演出：カード枠は出さず、ノックバック→フェード→宝箱（ドロップ）
   if (!e.alive) {
@@ -1061,64 +1061,102 @@ function drawSkillBanner(ctx: CanvasRenderingContext2D, b: Battle): void {
   const ease = 1 - Math.pow(1 - appear, 3); // easeOutCubic
   const fadeOut = Math.min(1, sb.ttl / FLOAT_FADE_MS);
   const alpha = Math.min(appear, fadeOut);
-  const baseX = 116 + (1 - ease) * -24; // 左(-24px)から定位置へ滑り込む
-  const y = sb.combo ? 300 : 302;
+  const slide = (1 - ease) * -18; // 左から滑り込む
   const fontStack = "'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif";
+  const combo = !!sb.combo;
 
   ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.lineJoin = "round";
-  ctx.globalAlpha = alpha;
 
-  if (sb.combo) {
-    // ===== 連携：金色の特別演出 =====
+  // 吹き出しの寸法を計算
+  const fs = combo ? 22 : 18;
+  ctx.font = `900 ${fs}px ${fontStack}`;
+  const tw = ctx.measureText(sb.text).width;
+  const tagH = combo ? 15 : 0;
+  const padX = 12, padY = 8;
+  const bx = 96 + slide;
+  const bw = tw + padX * 2;
+  const bh = fs + tagH + padY * 2 + (combo ? 3 : 0);
+  const by = 298 - bh;
+  const textX = bx + padX;
+
+  // ===== 吹き出し枠（プレイヤー方向＝左下にしっぽ） =====
+  const fill = combo ? "#fff7e0" : "#ffffff";
+  const line = combo ? "#9a6f0b" : "#1c1b1b";
+  const lw = combo ? 3 : 2.5;
+  const t1 = bx + 14, t2 = bx + 30, tipX = bx - 4, tipY = by + bh + 14;
+  // しっぽ（塗り）
+  ctx.beginPath();
+  ctx.moveTo(t1, by + bh - 1);
+  ctx.lineTo(t2, by + bh - 1);
+  ctx.lineTo(tipX, tipY);
+  ctx.closePath();
+  if (combo) { ctx.shadowColor = "#ffcf3f"; ctx.shadowBlur = 16 * alpha; }
+  ctx.fillStyle = fill;
+  ctx.fill();
+  // 本体（塗り）
+  roundRect(ctx, bx, by, bw, bh, 9);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // 枠線
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = line;
+  roundRect(ctx, bx, by, bw, bh, 9);
+  ctx.stroke();
+  // しっぽの外側2辺だけ縁取り
+  ctx.beginPath();
+  ctx.moveTo(t1, by + bh);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(t2, by + bh);
+  ctx.stroke();
+
+  const nameY = by + bh - padY - 2;
+
+  if (combo) {
     // 「⚡連携」タグ
-    ctx.font = `900 13px ${fontStack}`;
-    ctx.lineWidth = 4;
+    const tagY = by + padY + 11;
+    ctx.font = `900 12px ${fontStack}`;
+    ctx.lineWidth = 3.5;
     ctx.strokeStyle = "#5a3d00";
-    ctx.strokeText("⚡ 連携", baseX, y - 24);
-    const tg = ctx.createLinearGradient(baseX, y - 34, baseX, y - 16);
+    ctx.strokeText("⚡ 連携", textX, tagY);
+    const tg = ctx.createLinearGradient(textX, tagY - 11, textX, tagY + 2);
     tg.addColorStop(0, "#fff3c4");
     tg.addColorStop(1, "#ffb01f");
     ctx.fillStyle = tg;
-    ctx.fillText("⚡ 連携", baseX, y - 24);
+    ctx.fillText("⚡ 連携", textX, tagY);
 
-    // スキル名（金グラデ＋ゴールドグロー＋濃い縁取り）
-    ctx.font = `900 24px ${fontStack}`;
-    ctx.shadowColor = "#ffcf3f";
-    ctx.shadowBlur = 18 * alpha;
-    ctx.lineWidth = 6;
+    // スキル名（金グラデ＋濃い縁取り）
+    ctx.font = `900 ${fs}px ${fontStack}`;
+    ctx.lineWidth = 5;
     ctx.strokeStyle = "#5a3d00";
-    ctx.strokeText(sb.text, baseX, y);
-    const g = ctx.createLinearGradient(baseX, y - 22, baseX, y + 4);
+    ctx.strokeText(sb.text, textX, nameY);
+    const g = ctx.createLinearGradient(textX, nameY - fs, textX, nameY + 2);
     g.addColorStop(0, "#fff7d6");
     g.addColorStop(0.5, "#ffd34d");
     g.addColorStop(1, "#f59a12");
     ctx.fillStyle = g;
-    ctx.fillText(sb.text, baseX, y);
-    ctx.shadowBlur = 0;
+    ctx.fillText(sb.text, textX, nameY);
 
-    // 火花（テキスト周りで瞬く金の粒）
-    const w = ctx.measureText(sb.text).width;
+    // 火花（吹き出し周りで瞬く金の粒）
     const tsec = age / 1000;
     for (let i = 0; i < 6; i++) {
-      const px = baseX - 6 + ((i * 53) % (w + 24));
-      const py = y - 14 + Math.sin(tsec * 9 + i * 1.7) * 12;
-      const tw = 0.5 + 0.5 * Math.sin(tsec * 11 + i * 2.3);
-      ctx.globalAlpha = alpha * tw;
+      const px = bx - 4 + ((i * 53) % (bw + 12));
+      const py = by + 6 + Math.sin(tsec * 9 + i * 1.7) * 10;
+      const twk = 0.5 + 0.5 * Math.sin(tsec * 11 + i * 2.3);
+      ctx.globalAlpha = alpha * twk;
       ctx.fillStyle = i % 2 ? "#fff6cf" : "#ffd24d";
-      const s = 1.4 + tw * 1.8;
+      const s = 1.4 + twk * 1.8;
       ctx.fillRect(px - s / 2, py - s / 2, s, s);
     }
   } else {
-    // ===== 通常スキル：白縁の黒字でシンプルに =====
-    ctx.font = `800 19px ${fontStack}`;
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = "#ffffff";
-    ctx.strokeText(sb.text, baseX, y);
+    // 通常スキル：黒字
+    ctx.font = `800 ${fs}px ${fontStack}`;
     ctx.fillStyle = "#1c1b1b";
-    ctx.fillText(sb.text, baseX, y);
+    ctx.fillText(sb.text, textX, nameY);
   }
 
   ctx.restore();

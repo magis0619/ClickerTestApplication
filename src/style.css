@@ -1748,6 +1748,45 @@ body.theme-nb {
 .theme-nb .menu-btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
 
 /* =====================================================================
+   WORLD SELECT（ワールド選択）
+   ===================================================================== */
+.world-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 6px; }
+.world-card {
+  width: 100%; text-align: left; display: block;
+  background: #ffffff; border: 2.5px solid #1c1b1b; box-shadow: 5px 5px 0 #1c1b1b;
+  padding: 12px; cursor: pointer; transition: transform 0.05s, box-shadow 0.05s;
+}
+.world-card:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #1c1b1b; }
+.world-card.locked { background: #ece7ea; border-color: #b7afb6; box-shadow: 5px 5px 0 #b7afb6; cursor: default; }
+.world-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.world-tag {
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 18px; font-weight: 900; color: #1c1b1b; letter-spacing: 0.5px;
+}
+.world-prog {
+  font-family: "Space Mono", ui-monospace, monospace; font-size: 12px; font-weight: 800;
+  color: #fff; background: #df0b81; border: 2px solid #1c1b1b; padding: 1px 7px;
+}
+.world-dungeons { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.world-d-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #1c1b1b; background: #faf7fb; border: 1.5px solid #1c1b1b; padding: 5px 8px;
+}
+.world-d-row.locked { color: #9a93a0; background: #f1edf0; border-color: #c2b6bf; }
+.world-d-mark { flex: 0 0 auto; width: 16px; text-align: center; font-weight: 900; color: #df0b81; }
+.world-d-row.locked .world-d-mark { color: #9a93a0; }
+.world-d-name { flex: 1; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-d-status {
+  flex: 0 0 auto; font-family: "Space Mono", ui-monospace, monospace; font-size: 10px; font-weight: 900; color: #8a7f90;
+}
+.world-go {
+  display: block; text-align: center;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 14px; font-weight: 900; color: #fff; background: #df0b81;
+  border: 2px solid #1c1b1b; box-shadow: 3px 3px 0 #1c1b1b; padding: 8px;
+}
+
+/* =====================================================================
    DUNGEON HUB（ダンジョン選択）
    ===================================================================== */
 .zone-list { display: flex; flex-direction: column; gap: 14px; }
@@ -2063,7 +2102,7 @@ body.theme-nb {
    を横一列に並べる（2x2グリッドから差し替え）
    ===================================================================== */
 .bt-skills {
-  grid-template-columns: repeat(3, 1fr) 0.82fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   align-items: stretch;
 }
