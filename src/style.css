@@ -30,6 +30,8 @@ body {
 button {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  /* 既定で全ボタンの4隅を丸く（個別指定があればそちらが優先） */
+  border-radius: 10px;
 }
 
 /* 画面遷移の暗転オーバーレイ */
@@ -1780,9 +1782,13 @@ body.theme-nb {
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
   font-size: 18px; font-weight: 900; color: #1c1b1b; letter-spacing: 0.5px;
 }
+.world-concept {
+  font-size: 13px; font-weight: 900; color: #2a7d4f; letter-spacing: 0.5px;
+  margin-right: auto; margin-left: 10px;
+}
 .world-prog {
   font-family: "Space Mono", ui-monospace, monospace; font-size: 12px; font-weight: 800;
-  color: #fff; background: #df0b81; border: 2px solid #1c1b1b; padding: 1px 7px;
+  color: #fff; background: #df0b81; border: 2px solid #1c1b1b; padding: 1px 7px; border-radius: 8px;
 }
 .world-dungeons { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .world-d-row {
@@ -2040,14 +2046,19 @@ body.theme-nb {
   color: #1c1b1b; background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer;
 }
 .ars-tab.on { background: #1c1b1b; color: #fff; }
-/* 並び替えキー */
-.ars-sorts { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-.ars-sort {
-  flex: 1; min-width: 64px; padding: 7px 4px;
-  font-size: 12px; font-weight: 800; color: #1c1b1b;
-  background: #ffffff; border: 2px solid #1c1b1b; cursor: pointer; white-space: nowrap;
+/* 並び替え（プルダウン＋方向トグル） */
+.ars-sorts { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.ars-sort-lbl { font-size: 12px; font-weight: 900; color: #1c1b1b; white-space: nowrap; }
+.ars-sort-sel {
+  flex: 1; padding: 8px 10px;
+  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 13px; font-weight: 800;
+  color: #1c1b1b; background: #ffffff; border: 2px solid #1c1b1b; border-radius: 10px; cursor: pointer;
 }
-.ars-sort.on { background: #df0b81; color: #fff; border-color: #1c1b1b; }
+.ars-sort-dir {
+  padding: 8px 12px; white-space: nowrap;
+  font-size: 12px; font-weight: 800; color: #fff;
+  background: #df0b81; border: 2px solid #1c1b1b; cursor: pointer;
+}
 
 .ars-tools { display: flex; gap: 8px; margin-bottom: 12px; }
 .ars-tool {

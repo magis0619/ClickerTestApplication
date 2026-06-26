@@ -316,8 +316,17 @@ export const STAGE_COUNT = STAGES.length;
 /** 無限の回廊（endless）のステージ番号。ワールドのダンジョン一覧からは除外する */
 export const ENDLESS_INDEX = STAGES.findIndex((s) => s.endless);
 
-/** ワールド定義：番号と、それに属するダンジョン（STAGESの添字）の並び */
-export interface WorldDef { world: number; name: string; stageIndices: number[]; }
+/** ワールドごとのコンセプト名（背景テーマと対応） */
+export const WORLD_CONCEPTS: Record<number, string> = {
+  1: "芽吹きの森",
+  2: "業火の火山",
+  3: "永久凍土",
+  4: "雷鳴の天空",
+  5: "星辰の深淵",
+};
+
+/** ワールド定義：番号・名前・コンセプト・属するダンジョン（STAGESの添字）の並び */
+export interface WorldDef { world: number; name: string; concept: string; stageIndices: number[]; }
 export const WORLDS: WorldDef[] = (() => {
   const map = new Map<number, number[]>();
   STAGES.forEach((s, i) => {
@@ -327,7 +336,9 @@ export const WORLDS: WorldDef[] = (() => {
   });
   return [...map.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([world, stageIndices]) => ({ world, name: `WORLD ${world}`, stageIndices }));
+    .map(([world, stageIndices]) => ({
+      world, name: `WORLD ${world}`, concept: WORLD_CONCEPTS[world] ?? "", stageIndices,
+    }));
 })();
 
 /** 選択画面で見せる「ドロップしうる武器」一覧（重複なし） */

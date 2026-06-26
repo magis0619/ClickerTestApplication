@@ -54,14 +54,135 @@
     ]
   },
   {
-    "name": "灰燼の城塞",
-    "desc": "新たなワールドの幕開け。闇の暴君が待ち受ける",
+    "name": "灼熱の坑道",
+    "desc": "業火の火山へ。溶けた岩の中を進む",
     "world": 2,
     "recommendLv": 34,
     "waves": [
-      ["frost_drake", "vile_specter"],
-      ["storm_wyvern", "frost_dragon"],
-      ["shadow_tyrant", "carapace_tyrant"]
+      ["ember_hound", "stone_sentinel"],
+      ["mud_beetle", "ember_hound", "vile_specter"],
+      ["carapace_tyrant"]
+    ]
+  },
+  {
+    "name": "溶岩の回廊",
+    "desc": "煮えたぎる溶岩の通路。闇の暴君が潜む",
+    "world": 2,
+    "recommendLv": 38,
+    "waves": [
+      ["vile_specter", "stone_sentinel"],
+      ["ember_hound", "storm_wyvern"],
+      ["shadow_tyrant"]
+    ]
+  },
+  {
+    "name": "業火の山頂",
+    "desc": "火口の頂。灼熱の主が待ち受ける",
+    "world": 2,
+    "recommendLv": 44,
+    "waves": [
+      ["stone_sentinel", "vile_specter"],
+      ["ember_hound", "stone_sentinel", "vile_specter"],
+      ["carapace_tyrant", "ember_hound"]
+    ]
+  },
+  {
+    "name": "凍てつく洞窟",
+    "desc": "永久凍土の領域。凍える魔物が棲む",
+    "world": 3,
+    "recommendLv": 48,
+    "waves": [
+      ["frost_imp", "ice_crawler"],
+      ["frost_drake", "frost_imp"],
+      ["frost_dragon"]
+    ]
+  },
+  {
+    "name": "氷晶の宮殿",
+    "desc": "凍りついた宮殿。影の暴君が彷徨う",
+    "world": 3,
+    "recommendLv": 54,
+    "waves": [
+      ["ice_crawler", "frost_drake"],
+      ["frost_imp", "storm_wyvern"],
+      ["shadow_tyrant"]
+    ]
+  },
+  {
+    "name": "絶対零度の玉座",
+    "desc": "凍土の最奥。氷竜が玉座に座す",
+    "world": 3,
+    "recommendLv": 60,
+    "waves": [
+      ["frost_drake", "ice_crawler"],
+      ["frost_dragon", "frost_imp"],
+      ["frost_dragon", "shadow_lurker"]
+    ]
+  },
+  {
+    "name": "嵐の回廊",
+    "desc": "雷鳴轟く天空。飛翔する魔物の群れ",
+    "world": 4,
+    "recommendLv": 64,
+    "waves": [
+      ["thunder_hawk", "sky_moth"],
+      ["storm_wyvern", "thunder_hawk"],
+      ["wraith_monarch"]
+    ]
+  },
+  {
+    "name": "雷雲の砦",
+    "desc": "雷雲に浮かぶ砦。影の暴君が守る",
+    "world": 4,
+    "recommendLv": 70,
+    "waves": [
+      ["storm_wyvern", "shadow_lurker"],
+      ["thunder_hawk", "vile_specter"],
+      ["shadow_tyrant"]
+    ]
+  },
+  {
+    "name": "天空の神殿",
+    "desc": "雲海の上の神殿。空の覇者が君臨する",
+    "world": 4,
+    "recommendLv": 78,
+    "waves": [
+      ["storm_wyvern", "thunder_hawk"],
+      ["wraith_monarch", "storm_wyvern"],
+      ["carapace_tyrant", "storm_wyvern"]
+    ]
+  },
+  {
+    "name": "虚無の門",
+    "desc": "星辰の深淵への入口。影が蠢く",
+    "world": 5,
+    "recommendLv": 84,
+    "waves": [
+      ["shadow_lurker", "gloom_shade"],
+      ["vile_specter", "shadow_lurker"],
+      ["shadow_tyrant"]
+    ]
+  },
+  {
+    "name": "深淵の回廊",
+    "desc": "底なしの闇。強敵が連なる",
+    "world": 5,
+    "recommendLv": 92,
+    "waves": [
+      ["gloom_shade", "vile_specter"],
+      ["shadow_tyrant", "shadow_lurker"],
+      ["carapace_tyrant", "vile_specter"]
+    ]
+  },
+  {
+    "name": "星辰の玉座",
+    "desc": "全ての終わり。深淵の王が待つ最終試練",
+    "world": 5,
+    "recommendLv": 100,
+    "waves": [
+      ["vile_specter", "shadow_lurker"],
+      ["shadow_tyrant", "gloom_shade"],
+      ["abyss_sovereign"]
     ]
   },
   {

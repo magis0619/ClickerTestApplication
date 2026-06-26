@@ -142,8 +142,62 @@ const THEME_FOREST: BattleTheme = {
   ],
 };
 
+/** ワールド2：火山（赤×橙の灰と火の粉） */
+const THEME_VOLCANO: BattleTheme = {
+  bg: "#fbeadf",
+  grid: "#e2c2ab",
+  motes: ["#ff7a3c", "#ffb061", "#ff4d4d", "#ffe1a8"],
+  glows: [
+    { color: "#ff7a3c", a: 0.24, r: 250, sx: 0.06, sy: 0.05 },
+    { color: "#ff3d3d", a: 0.18, r: 200, sx: 0.08, sy: 0.06 },
+    { color: "#ffd36b", a: 0.14, r: 170, sx: 0.04, sy: 0.05 },
+  ],
+};
+
+/** ワールド3：氷（水色×白の雪と氷晶） */
+const THEME_FROST: BattleTheme = {
+  bg: "#e9f4fb",
+  grid: "#bcd6e6",
+  motes: ["#8fd6ff", "#cfeeff", "#aab8ff", "#ffffff"],
+  glows: [
+    { color: "#8fd6ff", a: 0.24, r: 250, sx: 0.04, sy: 0.04 },
+    { color: "#5fa8ff", a: 0.18, r: 200, sx: 0.06, sy: 0.05 },
+    { color: "#e6f6ff", a: 0.16, r: 180, sx: 0.03, sy: 0.05 },
+  ],
+};
+
+/** ワールド4：雷雲の天空（紫×黄の稲妻と光） */
+const THEME_STORM: BattleTheme = {
+  bg: "#efeaf7",
+  grid: "#c8bedd",
+  motes: ["#b98cff", "#ffe14d", "#8fb4ff", "#e0c2ff"],
+  glows: [
+    { color: "#9b6bff", a: 0.24, r: 250, sx: 0.06, sy: 0.05 },
+    { color: "#ffe14d", a: 0.14, r: 180, sx: 0.09, sy: 0.07 },
+    { color: "#6f8bff", a: 0.18, r: 200, sx: 0.05, sy: 0.05 },
+  ],
+};
+
+/** ワールド5：星辰の深淵（マゼンタ×藍の星屑） */
+const THEME_ABYSS: BattleTheme = {
+  bg: "#f0ecf6",
+  grid: "#c9c0dc",
+  motes: ["#c86bff", "#ff7de9", "#7d9bff", "#ffe98a"],
+  glows: [
+    { color: "#c86bff", a: 0.24, r: 250, sx: 0.05, sy: 0.04 },
+    { color: "#6f7bff", a: 0.20, r: 210, sx: 0.07, sy: 0.06 },
+    { color: "#ff7de9", a: 0.14, r: 170, sx: 0.04, sy: 0.05 },
+  ],
+};
+
 /** ワールド番号 → テーマ */
-const BATTLE_THEMES: Record<number, BattleTheme> = { 1: THEME_FOREST };
+const BATTLE_THEMES: Record<number, BattleTheme> = {
+  1: THEME_FOREST,
+  2: THEME_VOLCANO,
+  3: THEME_FROST,
+  4: THEME_STORM,
+  5: THEME_ABYSS,
+};
 function battleTheme(world?: number): BattleTheme {
   return (world != null && BATTLE_THEMES[world]) || THEME_DEFAULT;
 }

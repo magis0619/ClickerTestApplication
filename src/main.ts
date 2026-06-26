@@ -88,9 +88,7 @@ function withFade(action: () => void): void {
   }, 340);
 }
 
-/** 直近に描画していた戦闘インスタンス。ウェーブ切替の検知に使う */
-let lastBattleRef: typeof game.battle = null;
-/** 次ウェーブへ移った瞬間、黒からぬるっと明転させる（フェードイン） */
+/** 戦闘→リザルトなど、黒からぬるっと明転させる（フェードイン） */
 function fadeInBattle(): void {
   fadeEl.style.transition = "none";
   fadeEl.classList.add("show"); // いったん即座に真っ黒へ
@@ -869,6 +867,7 @@ function worldCard(wd: typeof WORLDS[number]): HTMLElement {
   top.className = "world-top";
   top.innerHTML =
     `<span class="world-tag">WORLD ${wd.world}</span>` +
+    (wd.concept ? `<span class="world-concept">${wd.concept}</span>` : "") +
     `<span class="world-prog">${cleared} / ${total} CLEAR</span>`;
   card.appendChild(top);
 
@@ -909,7 +908,7 @@ function worldCard(wd: typeof WORLDS[number]): HTMLElement {
 
 function buildStageSelect(): void {
   const wd = WORLDS.find((w) => w.world === selectedWorld) ?? WORLDS[0];
-  controls.appendChild(screenHead(`WORLD ${wd.world}`, "🗺 DUNGEONS"));
+  controls.appendChild(screenHead(`WORLD ${wd.world}`, wd.concept || "🗺 DUNGEONS"));
 
   const back = document.createElement("button");
   back.className = "world-back";
@@ -1073,24 +1072,32 @@ function buildInventory(): void {
     return;
   }
 
-  // 並び替え（キー選択。アクティブなキーをもう一度押すと昇順/降順を切替）
+  // 並び替え：プルダウンでキーを選び、隣のボタンで昇順/降順を切替（ボタンを減らす）
   const sortRow = document.createElement("div");
   sortRow.className = "ars-sorts";
   const sortDefs: [SortKey, string][] = [
     ["rarity", "レア度"], ["acquired", "入手順"], ["atk", "ATK"], ["break", "ブレイク"],
   ];
+  const sortLbl = document.createElement("span");
+  sortLbl.className = "ars-sort-lbl";
+  sortLbl.textContent = "並び替え";
+  const sel = document.createElement("select");
+  sel.className = "ars-sort-sel";
   for (const [key, label] of sortDefs) {
-    const on = invSortKey === key;
-    const btn = document.createElement("button");
-    btn.className = "ars-sort" + (on ? " on" : "");
-    btn.textContent = label + (on ? (invSortDesc ? " ▼" : " ▲") : "");
-    btn.addEventListener("click", () => {
-      if (invSortKey === key) invSortDesc = !invSortDesc;
-      else { invSortKey = key; invSortDesc = true; }
-      buildControls();
-    });
-    sortRow.appendChild(btn);
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = label;
+    if (invSortKey === key) opt.selected = true;
+    sel.appendChild(opt);
   }
+  sel.addEventListener("change", () => { invSortKey = sel.value as SortKey; buildControls(); });
+  const dir = document.createElement("button");
+  dir.className = "ars-sort-dir";
+  dir.textContent = invSortDesc ? "▼ 降順" : "▲ 昇順";
+  dir.addEventListener("click", () => { invSortDesc = !invSortDesc; buildControls(); });
+  sortRow.appendChild(sortLbl);
+  sortRow.appendChild(sel);
+  sortRow.appendChild(dir);
   controls.appendChild(sortRow);
 
   // ツール（ロック絞り込み・複数削除モード）
@@ -1445,7 +1452,6 @@ function buildBattleTop(): void {
 }
 
 function buildBattle(): void {
-  lastBattleRef = game.battle; // この戦闘を基準に（ウェーブ切替の二重フェードを防ぐ）
   buildBattleTop();
 
   // ===== HP / AP セグメントバー =====
@@ -2041,12 +2047,8 @@ function loop(now: number): void {
   }
   if (game.screen !== renderedScreen) buildControls();
 
-  // ウェーブが切り替わった（新しい戦闘に入れ替わった）瞬間は黒からぬるっと明転。
-  // ただしボス開始警告（暗転演出）中は、その演出に任せてフェードしない
-  if (game.screen === "battle" && game.battle && game.battle !== lastBattleRef) {
-    lastBattleRef = game.battle;
-    if (!game.battle.inIntro) fadeInBattle();
-  }
+  // ウェーブ切替（敵を倒して次の敵が出る）は暗転させない。
+  // 新しい敵は spawnT のスライドイン＋spawnLock の待ち時間でぬるっと登場する。
 
   // バトル枠（canvas）は戦闘中のみ描画
   if (game.screen === "battle" && game.battle) {
