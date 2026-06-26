@@ -1221,6 +1221,8 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
     return;
   }
 
+  // ウェーブ開始（STAGE N / FLOOR N）は、ゲームのデザイン準拠の不透明な
+  // ネオブルータリズム調バナー（白パネル＋太い黒枠＋ハードシャドウ）で出す
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(W / 2, cy);
@@ -1228,31 +1230,26 @@ function drawAnnounce(ctx: CanvasRenderingContext2D, f: FloatText): void {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  const size = 44;
+  const size = 38;
   ctx.font = `900 ${size}px 'Anybody', 'Hiragino Kaku Gothic ProN', sans-serif`;
   const tw = ctx.measureText(f.text).width;
-  const bw = tw + 64;
-  const bh = 62;
+  const bw = tw + 76;
+  const bh = 64;
+  const x = -bw / 2, y = -bh / 2, r = 12;
 
-  // 暗幕の帯
-  ctx.fillStyle = "rgba(10,8,20,0.58)";
-  roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 8);
-  ctx.fill();
-  // 上下のアクセントライン（告知色）
+  // ハードシャドウ
+  ctx.fillStyle = "#1c1b1b";
+  roundRect(ctx, x + 6, y + 7, bw, bh, r); ctx.fill();
+  // 本体（不透明な告知色パネル＋太い黒枠）
   ctx.fillStyle = f.color;
-  ctx.fillRect(-bw / 2, -bh / 2, bw, 4);
-  ctx.fillRect(-bw / 2, bh / 2 - 4, bw, 4);
+  roundRect(ctx, x, y, bw, bh, r); ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = "#1c1b1b";
+  roundRect(ctx, x, y, bw, bh, r); ctx.stroke();
 
-  // 文字（厚い暗色アウトライン＋告知色のグロー＋白い本体）
+  // 文字（白本体＋濃い縁取り）
   ctx.lineJoin = "round";
-  ctx.shadowColor = f.color;
-  ctx.shadowBlur = 22;
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = "#0c0a18";
-  ctx.strokeText(f.text, 0, 2);
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = f.color;
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#1c1b1b";
   ctx.strokeText(f.text, 0, 2);
   ctx.fillStyle = "#ffffff";
   ctx.fillText(f.text, 0, 2);

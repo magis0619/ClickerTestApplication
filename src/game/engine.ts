@@ -40,6 +40,8 @@ import {
   SPAWN_LOCK_MS,
   BREAK_TURNS,
   BREAK_CRIT_MULT,
+  BREAK_RATE_MULT,
+  BREAK_WEAK_MULT,
   rollEnemyDrop,
   rollEnemyGold,
 } from "./data.ts";
@@ -502,7 +504,10 @@ export class Battle {
     this.shake(150, crit ? 5 : 3);
 
     if (!e.isBroken) {
-      e.breakGauge += (mods?.breakPower ?? 0) * skill.breakMult;
+      // ブレイク蓄積：全体倍率で上がりやすく、弱点属性ならさらに大きく溜まる
+      let breakGain = (mods?.breakPower ?? 0) * skill.breakMult * BREAK_RATE_MULT;
+      if (weak) breakGain *= BREAK_WEAK_MULT;
+      e.breakGauge += breakGain;
       if (e.breakGauge >= e.def.breakThreshold) {
         e.breakTurns = BREAK_TURNS;
         e.breakGauge = 0;

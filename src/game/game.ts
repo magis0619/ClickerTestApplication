@@ -168,7 +168,7 @@ export class Game {
       this.endlessFloor = 1;
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false));
       this.battle.playerDefense = this.defense;
-      this.battle.announce("1階", "#9fd9ff");
+      this.battle.announce("FLOOR 1", "#9fd9ff");
     } else {
       this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
       this.battle.playerDefense = this.defense;
@@ -176,7 +176,7 @@ export class Game {
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
       if (this.isBossWave) this.battle.beginBossIntro();
-      else this.battle.announce(`ステージ${this.waveIndex + 1}`, "#ffd35f");
+      else this.battle.announce(`STAGE ${this.waveIndex + 1}`, "#ffd35f");
     }
     this.screen = "battle";
   }
@@ -335,7 +335,7 @@ export class Game {
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en);
       this.battle.playerDefense = this.defense;
-      this.battle.announce(`${this.endlessFloor}階`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
+      this.battle.announce(`FLOOR ${this.endlessFloor}`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
 
@@ -355,7 +355,7 @@ export class Game {
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
       if (this.isBossWave) this.battle.beginBossIntro();
-      else this.battle.announce(`ステージ${this.waveIndex + 1}`, "#ffd35f");
+      else this.battle.announce(`STAGE ${this.waveIndex + 1}`, "#ffd35f");
       return;
     }
 
