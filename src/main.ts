@@ -413,9 +413,19 @@ function buildTitle(): void {
 function buildTopHeader(): void {
   topbarEl.innerHTML = "";
   topbarEl.className = "topbar nb-topbar";
+  // 左の空きスペースにプレイヤーレベルのゲージ（LV＋EXPバー）を常時表示
   const brand = document.createElement("div");
   brand.className = "nb-brand";
-  brand.textContent = ""; // ブランド表記は非表示（左スペーサーとして残す）
+  const lv = game.save.playerLevel;
+  const maxed = lv >= MAX_PLAYER_LEVEL;
+  const need = game.expForNextLevel();
+  const ratio = maxed ? 1 : Math.max(0, Math.min(1, game.save.playerExp / need));
+  brand.innerHTML =
+    `<div class="nb-lv">` +
+    `<span class="nb-lv-badge">LV ${lv}</span>` +
+    `<div class="nb-lv-bar"><span style="width:${ratio * 100}%"></span></div>` +
+    `<span class="nb-lv-exp">${maxed ? "MAX" : `${game.save.playerExp}/${need}`}</span>` +
+    `</div>`;
   const right = document.createElement("div");
   right.className = "nb-top-right";
   const gold = document.createElement("span");
