@@ -52,6 +52,8 @@ let battleHud: {
   enLabel: HTMLElement; enSegs: HTMLElement[]; enWrap: HTMLElement; enFill: HTMLElement;
 } | null = null;
 let renderedScreen = "";
+/** 直近に描画した戦闘インスタンス（乱入で入れ替わったらタイトル更新） */
+let lastBattleObj: typeof game.battle = null;
 
 // ===== 画面遷移の暗転オーバーレイ =====
 const fadeEl = document.createElement("div");
@@ -1750,7 +1752,8 @@ function buildBattleTop(): void {
   battleTop.innerHTML = "";
   const title = document.createElement("div");
   title.className = "bt-title";
-  const name = game.isEndless ? `THE_CORRIDOR ${game.endlessFloor}F` : game.currentStage.name;
+  const name = game.battle?.isAmbush ? "⚡ 乱入ボス出現！"
+    : game.isEndless ? `THE_CORRIDOR ${game.endlessFloor}F` : game.currentStage.name;
   title.innerHTML = `<span class="bt-title-mark">▶</span> ${name}`;
 
   const right = document.createElement("div");
@@ -2165,6 +2168,16 @@ function buildResultPanel(): void {
   stats.innerHTML = chips;
   panel.appendChild(stats);
 
+  // 乱入イベントの結果表示
+  if (game.lastAmbush) {
+    const amb = document.createElement("div");
+    amb.className = "result-ambush" + (game.lastAmbushWon ? " won" : "");
+    amb.innerHTML = game.lastAmbushWon
+      ? `⚡ 乱入ボス討伐！ <b>アストラル級の戦利品</b>を獲得！`
+      : `⚡ 乱入ボスが出現… 討伐ならず（ダンジョンの宝は確保）`;
+    panel.appendChild(amb);
+  }
+
   // レベルアップ表示（経験値で最大HPが上がった）
   if (game.lastLevelUps > 0) {
     const lvup = document.createElement("div");
@@ -2454,6 +2467,11 @@ function loop(now: number): void {
 
   // ウェーブ切替（敵を倒して次の敵が出る）は暗転させない。
   // 新しい敵は spawnT のスライドイン＋spawnLock の待ち時間でぬるっと登場する。
+  // 乱入ボスへ入れ替わったら戦闘上部（タイトル）だけ更新する
+  if (game.screen === "battle" && game.battle && game.battle !== lastBattleObj) {
+    lastBattleObj = game.battle;
+    if (renderedScreen === "battle") buildBattleTop();
+  }
 
   // バトル枠（canvas）は戦闘中のみ描画
   if (game.screen === "battle" && game.battle) {

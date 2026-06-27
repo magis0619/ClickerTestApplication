@@ -33,6 +33,10 @@ import {
   STAGE_CLEAR_HOLD_MS,
   STAGE_CLEAR_SLOWMO_MS,
   BOSS_INTRO_MS,
+  WARN_TOTAL_MS,
+  WARN_BLACK_MS,
+  WARN_SHOW_MS,
+  WARN_FADE_MS,
   READY_WAIT_MIN_MS,
   READY_WAIT_MAX_MS,
   TELEGRAPH_SCALE,
@@ -232,6 +236,11 @@ export class Battle {
   /** ボス戦開始の警告演出（暗転＋BOSS BATTLE）の残り時間(ms)。>0の間は操作・進行を凍結 */
   introT = 0;
   introMax = 0;
+  /** 乱入ボスの WARNING 演出の残り時間(ms)。>0の間は操作・進行を凍結 */
+  warnT = 0;
+  warnMax = 0;
+  /** この戦闘が乱入（レアボス）戦か */
+  isAmbush = false;
   /** 戦闘開始直後の行動禁止時間(ms)。敵が出てくる瞬間は操作不可（>0の間） */
   spawnLockT = SPAWN_LOCK_MS;
   /** 敗北演出中フラグ。スロー＋敗北宣言を見せてから lost へ移す */
@@ -305,14 +314,14 @@ export class Battle {
    * ・敗北演出中
    */
   get actionsLocked(): boolean {
-    return this.spawnLockT > 0 || this.winPending || this.losePending || this.aliveEnemies.length === 0;
+    return this.warnT > 0 || this.spawnLockT > 0 || this.winPending || this.losePending || this.aliveEnemies.length === 0;
   }
 
   // ===== プレイヤー行動 =====
 
   /** スキル使用。成功でtrue。mods=装備武器のステータス（攻撃力・会心・ブレイク） */
   useSkill(skill: Skill, mods?: WeaponMods): boolean {
-    if (this.phase !== "fighting" || this.introT > 0) return false;
+    if (this.phase !== "fighting" || this.introT > 0 || this.warnT > 0) return false;
     if (this.actionsLocked) return false; // 開始直後・勝敗演出中は不可
     if (this.windupT > 0) return false; // 攻撃の溜め中は新しい行動を受け付けない
     // 敵の攻撃フェーズ（カウント0＝攻撃前待機／予兆中）はガードのみ。攻撃・ためる・集中は不可
@@ -446,7 +455,7 @@ export class Battle {
 
   /** 休憩：ENを回復（攻撃はしない）。実行できたら true */
   rest(): boolean {
-    if (this.phase !== "fighting" || this.introT > 0) return false;
+    if (this.phase !== "fighting" || this.introT > 0 || this.warnT > 0) return false;
     if (this.actionsLocked) return false; // 開始直後・勝敗演出中は休憩不可（連打防止）
     if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
     if (this.inEnemyAttackPhase) return false; // 攻撃前待機／予兆中はガードのみ
@@ -519,7 +528,7 @@ export class Battle {
 
   /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める。判定結果を返す */
   guard(): GuardResult {
-    if (this.phase !== "fighting" || this.introT > 0) return "none";
+    if (this.phase !== "fighting" || this.introT > 0 || this.warnT > 0) return "none";
     if (this.actionsLocked) return "none"; // 開始直後・勝敗演出中はガードも不可
     // 予兆中の敵のうち、最も着弾が近い（telegraphTが小さい）ものを対象に
     const targets = this.enemies.filter((e) => e.inTelegraph);
@@ -755,6 +764,12 @@ export class Battle {
       return;
     }
 
+    // 乱入ボスの WARNING 演出中：進行・操作を凍結（実時間でタイマーだけ進める）
+    if (this.warnT > 0) {
+      this.warnT = Math.max(0, this.warnT - realDt);
+      return;
+    }
+
     // ボス開始警告：暗転＋BOSS BATTLE を見せる間は進行・操作を凍結（バナーだけ進める）
     if (this.introT > 0) {
       this.introT = Math.max(0, this.introT - realDt);
@@ -918,6 +933,34 @@ export class Battle {
   }
   /** ボス開始警告の最中か（暗転中・操作不可） */
   get inIntro(): boolean { return this.introT > 0; }
+
+  /** 乱入ボスの WARNING 演出を開始（暗転→WARNING→ボス登場） */
+  beginAmbushWarning(): void {
+    this.warnT = this.warnMax = WARN_TOTAL_MS;
+    this.isAmbush = true;
+    this.sfx.push("boss");
+  }
+  /** WARNING 演出中か */
+  get inWarn(): boolean { return this.warnT > 0; }
+  /** WARNING 演出の経過時間(ms) */
+  get warnAge(): number { return this.warnMax - this.warnT; }
+  /** 暗幕の不透明度(0..1)。最後のフェードでボスが現れる */
+  get warnBlackAlpha(): number {
+    if (this.warnT <= 0) return 0;
+    const age = this.warnAge;
+    if (age < WARN_BLACK_MS + WARN_SHOW_MS) return 1;
+    return Math.max(0, 1 - (age - (WARN_BLACK_MS + WARN_SHOW_MS)) / WARN_FADE_MS);
+  }
+  /** WARNING ロゴの不透明度(0..1) */
+  get warnLogoAlpha(): number {
+    if (this.warnT <= 0) return 0;
+    const age = this.warnAge;
+    if (age < WARN_BLACK_MS) return 0;
+    const fadeIn = 400;
+    if (age < WARN_BLACK_MS + fadeIn) return (age - WARN_BLACK_MS) / fadeIn;
+    if (age < WARN_BLACK_MS + WARN_SHOW_MS) return 1;
+    return Math.max(0, 1 - (age - (WARN_BLACK_MS + WARN_SHOW_MS)) / WARN_FADE_MS);
+  }
 
   /** ステージクリア演出中か（最終ボス撃破→STAGE CLEAR表示中）。紙吹雪などを出す */
   get isVictoryFx(): boolean { return this.winPending && this.isFinalWave; }

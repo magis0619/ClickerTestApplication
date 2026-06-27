@@ -14,6 +14,7 @@ import stageClearUrl from "../assets/stage_clear.png";
 import defeatedUrl from "../assets/defeated.png";
 import perfectUrl from "../assets/perfect.png";
 import bossBattleUrl from "../assets/boss_battle.png";
+import warningUrl from "../assets/warning.png";
 
 /** バナー演出用のドット絵画像（白を透過したPNG）。読み込めたものだけ使う */
 function loadImg(url: string): HTMLImageElement {
@@ -25,6 +26,7 @@ const BADGE_CLEAR = loadImg(stageClearUrl);
 const BADGE_DEFEATED = loadImg(defeatedUrl);
 const BADGE_PERFECT = loadImg(perfectUrl);
 const BADGE_BOSS = loadImg(bossBattleUrl);
+const BADGE_WARN = loadImg(warningUrl);
 /** 画像が表示可能か */
 function imgReady(img: HTMLImageElement): boolean { return img.complete && img.naturalWidth > 0; }
 /**
@@ -455,7 +457,27 @@ export function render(
     ctx.fillStyle = `rgba(6,4,12,${b.victoryFade})`;
     ctx.fillRect(0, 0, W, H);
   }
+  if (b.inWarn) drawAmbushWarning(ctx, b); // 乱入ボスの WARNING 演出（最前面）
   if (b.phase !== "fighting") drawResult(ctx, b);
+}
+
+/** 乱入ボスの WARNING 演出：暗転＋グリッチ調の WARNING 画像（添付画像）をフェードで見せる */
+function drawAmbushWarning(ctx: CanvasRenderingContext2D, b: Battle): void {
+  const black = b.warnBlackAlpha;
+  if (black > 0) { ctx.fillStyle = `rgba(2,1,6,${black})`; ctx.fillRect(0, 0, W, H); }
+  const la = b.warnLogoAlpha;
+  if (la > 0 && imgReady(BADGE_WARN)) {
+    const img = BADGE_WARN;
+    // カバー配置（縦長画像を画面いっぱいに。中央のWARNINGが見えるよう中央寄せ）
+    const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+    const jx = (Math.random() * 2 - 1) * 3 * la; // 軽いグリッチ揺れ
+    ctx.save();
+    ctx.globalAlpha = la;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, (W - w) / 2 + jx, (H - h) / 2, w, h);
+    ctx.restore();
+  }
 }
 
 /** STAGE CLEAR の盛り上げ演出：舞い落ちる紙吹雪＋数回の花火バースト */

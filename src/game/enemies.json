@@ -357,5 +357,20 @@
     "boss": true,
     "bigBoss": true,
     "desc": "深淵の王。全てを呑み込む最強の存在。"
+  },
+  {
+    "id": "rift_reaver",
+    "name": "リフトリーバー",
+    "kind": "phantom",
+    "maxHp": 900,
+    "attack": 40,
+    "telegraphMs": 720,
+    "countStart": 3,
+    "breakThreshold": 200,
+    "dropWeaponId": "w_astral_edge",
+    "dropRate": 100,
+    "boss": true,
+    "bigBoss": true,
+    "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。"
   }
 ]

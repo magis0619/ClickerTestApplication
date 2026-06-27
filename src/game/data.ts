@@ -321,6 +321,17 @@ export const ENEMIES: EnemyDef[] = (enemiesJson as RawEnemy[]).map((e) => e as E
 const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id]; }
 
+// ===== 乱入イベント（ステージクリア後に低確率でレアボスが乱入） =====
+/** 乱入レアボスのID */
+export const AMBUSH_BOSS_ID = "rift_reaver";
+/** 乱入の発生確率（通常ダンジョンのクリア時） */
+export const AMBUSH_CHANCE = 0.1;
+/** ワールド係数で強化した乱入ボスのコピーを返す */
+export function ambushBoss(world?: number): EnemyDef {
+  const base = ENEMY_MAP[AMBUSH_BOSS_ID];
+  return scaleWaveForWorld([base], world)[0];
+}
+
 // ===== レアモンスター出現 =====
 /** レアモンスターのID（煌びやかで強い・レア武器を落とす） */
 export const RARE_ENEMY_ID = "gem_drake";
@@ -522,6 +533,12 @@ export const STAGE_CLEAR_SLOWMO_MS = 1400;
 
 /** ボス戦開始の警告演出（画面を暗くし BOSS BATTLE を見せる）の長さ(ms) */
 export const BOSS_INTRO_MS = 2000;
+
+// ===== 乱入ボスの WARNING 演出（暗転→WARNING→ボス登場）の各フェーズ長(ms) =====
+export const WARN_BLACK_MS = 1000;   // 完全暗転
+export const WARN_SHOW_MS = 3000;    // WARNING 表示
+export const WARN_FADE_MS = 800;     // WARNING＋暗転が晴れてボスが現れる
+export const WARN_TOTAL_MS = WARN_BLACK_MS + WARN_SHOW_MS + WARN_FADE_MS;
 
 // ===== 攻撃の「溜め待ち」（カウント0到達後、! が出るまでのランダムな間） =====
 // カウントが0になった敵は、すぐには攻撃せず 0 のままランダムな時間だけ待ってから

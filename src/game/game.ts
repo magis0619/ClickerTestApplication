@@ -3,7 +3,7 @@ import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
-  playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL,
+  playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress } from "./progress.ts";
@@ -38,6 +38,12 @@ export class Game {
   lastExp = 0;
   /** この冒険で上がったレベル数（result表示用） */
   lastLevelUps = 0;
+  /** 乱入ボス戦の最中か */
+  inAmbush = false;
+  /** 乱入が発生したか（result表示用） */
+  lastAmbush = false;
+  /** 乱入ボスを倒したか（result表示用） */
+  lastAmbushWon = false;
   private rotation: Record<WeaponClass, number> = { slash: 0, pierce: 0, crush: 0 };
 
   constructor() {
@@ -209,6 +215,9 @@ export class Game {
     this.lastFlawless = true;
     this.lastExp = 0;
     this.lastLevelUps = 0;
+    this.inAmbush = false;
+    this.lastAmbush = false;
+    this.lastAmbushWon = false;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     if (this.isEndless) {
       this.endlessFloor = 1;
@@ -372,6 +381,23 @@ export class Game {
     if (!this.battle) return;
     this.accumulateStats();
 
+    // 乱入ボス撃破：アストラル級ドロップ＋ゴールド＋EXPを上乗せしてリザルトへ
+    if (this.inAmbush) {
+      const drops = this.battle.collectedDrops();
+      this.save.inventory.push(...drops);
+      this.save.gold += this.battle.goldEarned;
+      this.lastDrops.push(...drops);
+      this.lastGold += this.battle.goldEarned;
+      this.lastLevelUps += this.addPlayerExp(this.battle.expEarned);
+      this.lastExp += this.battle.expEarned;
+      writeSave(this.save);
+      this.inAmbush = false;
+      this.lastAmbushWon = true;
+      this.lastWon = true;
+      this.screen = "result";
+      return;
+    }
+
     // 無限の回廊：1階クリアごとに報酬を即確定し、次の階へ（HP/EN引き継ぎ）
     if (this.isEndless) {
       const drops = this.battle.collectedDrops();
@@ -428,12 +454,36 @@ export class Game {
     writeSave(this.save);
     // 実績：ノーダメージ達成（ステージ全体を無傷でクリア）
     if (this.lastFlawless) { progress.flawlessClears += 1; saveProgress(); }
+    // 乱入イベント：低確率でレアボスが乱入。宝は確保済みなので、ここから割り込む
+    if (Math.random() < AMBUSH_CHANCE) { this.startAmbush(); return; }
     this.screen = "result";
   }
 
+  /** 乱入ボス戦を開始（STAGE CLEAR の後に WARNING 演出で割り込む） */
+  private startAmbush(): void {
+    this.inAmbush = true;
+    this.lastAmbush = true;
+    this.rotation = { slash: 0, pierce: 0, crush: 0 };
+    // 乱入ボスはフルHP/ENの特別戦（負けてもダンジョンの宝は確保済み）
+    this.battle = new Battle([ambushBoss(this.currentStage.world)], this.playerMaxHp, undefined, this.playerMaxHp);
+    this.battle.playerDefense = this.defense;
+    this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+    this.battle.enemies.forEach((e) => { e.spawnT = 0; }); // 登場は WARNING 演出に任せる
+    this.battle.beginAmbushWarning();
+    // 画面は battle のまま（UIは流用）
+  }
+
   private onLose(): void {
-    this.lastWon = false;
     this.accumulateStats();
+    // 乱入ボスに敗北：ダンジョンの宝は確保済み。クリア扱いのままリザルトへ（ボーナスのみ取り逃し）
+    if (this.inAmbush) {
+      this.inAmbush = false;
+      this.lastAmbushWon = false;
+      this.lastWon = true; // ステージはクリア済み
+      this.screen = "result";
+      return;
+    }
+    this.lastWon = false;
     if (this.isEndless) {
       // 回廊では各階の報酬は確定済み。到達階を記録して結果へ
       this.lastFloor = this.endlessFloor;
