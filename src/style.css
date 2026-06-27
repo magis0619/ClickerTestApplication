@@ -1531,6 +1531,16 @@ body.in-battle {
   box-shadow: 3px 3px 0 #1c1b1b;
 }
 .bt-gear:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1c1b1b; }
+.bt-lv {
+  display: flex; align-items: baseline; gap: 3px;
+  height: 34px; padding: 0 8px;
+  border: 2px solid #1c1b1b;
+  background: #ffd34d;
+  color: #1c1b1b;
+  box-shadow: 3px 3px 0 #1c1b1b;
+}
+.bt-lv-cap { font-size: 10px; font-weight: 800; letter-spacing: 0.04em; }
+.bt-lv-num { font-size: 18px; font-weight: 900; line-height: 1; }
 .bt-portrait {
   width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;

@@ -191,6 +191,18 @@ const THEME_ABYSS: BattleTheme = {
   ],
 };
 
+/** 乱入レアボス専用：闇の深淵（暗く蠢く影。動きのある闇） */
+const THEME_VOID: BattleTheme = {
+  bg: "#0a0712",
+  grid: "#241a3c",
+  motes: ["#c64bff", "#3ae6ff", "#7d4bff", "#ff3b6b"],
+  glows: [
+    { color: "#5a1a8a", a: 0.42, r: 290, sx: 0.07, sy: 0.06 },
+    { color: "#1a2f8a", a: 0.32, r: 240, sx: 0.09, sy: 0.08 },
+    { color: "#8a1a52", a: 0.28, r: 210, sx: 0.06, sy: 0.09 },
+  ],
+};
+
 /** ワールド番号 → テーマ */
 const BATTLE_THEMES: Record<number, BattleTheme> = {
   1: THEME_FOREST,
@@ -251,6 +263,23 @@ function drawAmbientMotes(ctx: CanvasRenderingContext2D, theme: BattleTheme): vo
     ctx.fillStyle = cols[i % cols.length];
     ctx.fillRect(Math.round(x), Math.round(y), size, size);
   }
+  ctx.restore();
+}
+
+/** 乱入ボス戦の闇ビネット：四隅を黒く沈め、ゆっくり脈動させて「蠢く闇」感を出す */
+function drawVoidVignette(ctx: CanvasRenderingContext2D): void {
+  const t = Date.now() / 1000;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 1.4); // ゆっくり脈動
+  const cx = W / 2 + Math.sin(t * 0.5) * 14;
+  const cy = H * 0.42 + Math.cos(t * 0.4) * 12;
+  const inner = W * (0.22 + 0.04 * pulse);
+  const outer = W * 0.78;
+  const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+  grad.addColorStop(0, "rgba(4,2,10,0)");
+  grad.addColorStop(1, `rgba(2,1,6,${(0.72 + 0.16 * pulse).toFixed(3)})`);
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
 
@@ -364,16 +393,18 @@ export function render(
   b: Battle,
   stage?: { index: number; count: number; wave?: number; waves?: number; boss?: boolean; floor?: number; world?: number },
 ): void {
-  // ワールドのコンセプトに合わせた背景テーマ（ワールド1＝森：緑）
-  const theme = battleTheme(stage?.world);
+  // ワールドのコンセプトに合わせた背景テーマ（ワールド1＝森：緑）。
+  // 乱入レアボス戦だけは専用の「闇の深淵」テーマで暗く蠢かせる
+  const theme = b.isAmbush ? THEME_VOID : battleTheme(stage?.world);
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, W, H);
   drawBackdropGlow(ctx, theme);
   drawDotGrid(ctx, theme);
   drawAmbientMotes(ctx, theme);
+  if (b.isAmbush) drawVoidVignette(ctx); // 周囲を闇で締める脈動ビネット
 
-  // 地面のライン（淡いグレー）
-  ctx.strokeStyle = "#d2c7cf";
+  // 地面のライン（闇の深淵では暗く沈める）
+  ctx.strokeStyle = b.isAmbush ? "#2a2140" : "#d2c7cf";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, GROUND_Y);

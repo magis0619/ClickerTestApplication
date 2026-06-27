@@ -1828,6 +1828,10 @@ function buildBattleTop(): void {
       buildControls();
     });
   });
+  // 現在のプレイヤーレベル（画面上部・音量ボタンの左に表示）
+  const lv = document.createElement("div");
+  lv.className = "bt-lv";
+  lv.innerHTML = `<span class="bt-lv-cap">LV</span><span class="bt-lv-num">${game.save.playerLevel}</span>`;
   const gear = document.createElement("button");
   gear.className = "bt-gear";
   gear.textContent = "⚙";
@@ -1836,6 +1840,7 @@ function buildBattleTop(): void {
   port.className = "bt-portrait";
   port.appendChild(makeSpriteCanvas(WARDEN, 3));
   right.appendChild(exit);
+  right.appendChild(lv);
   right.appendChild(gear);
   right.appendChild(port);
 
