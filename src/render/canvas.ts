@@ -8,7 +8,7 @@ import {
   WARDEN, WARDEN_ATTACK, WARDEN_HURT, CARAPACE, AERIAL, PHANTOM, BOSS,
   CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, ENEMY_BY_ID, type Sprite,
 } from "./sprites.ts";
-import type { EnemyKind } from "../game/types.ts";
+import type { EnemyKind, EnemyDef } from "../game/types.ts";
 import { settings } from "../game/settings.ts";
 import stageClearUrl from "../assets/stage_clear.png";
 import defeatedUrl from "../assets/defeated.png";
@@ -288,11 +288,15 @@ const ENEMY_TEL_SPRITE: Record<EnemyKind, Sprite> = {
 };
 /** 待機フレーム（撃破演出などで使う静止画）。敵IDごとの専用→種別→共通の順で解決 */
 function enemyStill(e: EnemyState): Sprite {
-  const custom = ENEMY_BY_ID[e.def.id];
+  return enemyCodexSprite(e.def);
+}
+/** 敵definから待機スプライトを解決（図鑑などEnemyStateを持たない場面用） */
+export function enemyCodexSprite(def: EnemyDef): Sprite {
+  const custom = ENEMY_BY_ID[def.id];
   if (custom) return custom.base;
-  if (e.def.rare) return RARE;
-  if (e.def.boss) return BOSS;
-  return ENEMY_SPRITE[e.def.kind];
+  if (def.rare) return RARE;
+  if (def.boss) return BOSS;
+  return ENEMY_SPRITE[def.kind];
 }
 /** 状態に応じて敵のフレーム（待機/予兆）を選ぶ */
 function enemyFrame(e: EnemyState): Sprite {

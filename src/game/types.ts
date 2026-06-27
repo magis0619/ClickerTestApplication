@@ -92,6 +92,8 @@ export interface EnemyDef {
   rare?: boolean;
   /** 特大ボス（通常ボスより大きなドット絵で描く＝ワールド最終ボスなど） */
   bigBoss?: boolean;
+  /** 図鑑用の説明文 */
+  desc?: string;
 }
 
 /** レアリティ（高いほど強く、出にくい） */
@@ -190,7 +192,7 @@ export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" 
 export type BattlePhase = "fighting" | "won" | "lost";
 
 /** 画面（ゲーム全体の状態遷移） */
-export type Screen = "title" | "worldSelect" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result" | "howto" | "achievements";
+export type Screen = "title" | "worldSelect" | "stageSelect" | "inventory" | "forge" | "shop" | "battle" | "result" | "howto" | "achievements" | "codex";
 
 /** ショップで購入できる武器とその価格 */
 export interface ShopItem {
@@ -225,4 +227,8 @@ export interface SaveData {
   locked: string[];
   /** 無限の回廊で到達した最高階 */
   bestFloor: number;
+  /** プレイヤーレベル（1始まり。最大HPが上がる） */
+  playerLevel: number;
+  /** 現在レベル内で蓄積した経験値 */
+  playerExp: number;
 }

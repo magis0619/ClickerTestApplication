@@ -314,11 +314,11 @@ export function effectiveWeapon(inst: WeaponInstance): Weapon | undefined {
 interface RawEnemy {
   id: string; name: string; kind: EnemyKind; maxHp: number; attack: number;
   telegraphMs: number; countStart: number; breakThreshold: number;
-  dropWeaponId?: string; dropRate?: number; boss?: boolean; rare?: boolean;
+  dropWeaponId?: string; dropRate?: number; boss?: boolean; rare?: boolean; desc?: string;
 }
-const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(
-  (enemiesJson as RawEnemy[]).map((e) => [e.id, e as EnemyDef]),
-);
+/** 全敵データ（図鑑用。定義順） */
+export const ENEMIES: EnemyDef[] = (enemiesJson as RawEnemy[]).map((e) => e as EnemyDef);
+const ENEMY_MAP: Record<string, EnemyDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id]; }
 
 // ===== レアモンスター出現 =====
@@ -439,7 +439,26 @@ export function endlessFloorEnemies(floor: number): EnemyDef[] {
 }
 
 // ===== プレイヤー =====
+/** プレイヤー基礎最大HP（レベル1）。レベルで上昇する */
 export const PLAYER_MAX_HP = 130;
+/** レベルアップ1段ごとの最大HP上昇量 */
+export const HP_PER_LEVEL = 12;
+/** プレイヤーレベル上限 */
+export const MAX_PLAYER_LEVEL = 50;
+/** レベル level → level+1 に必要な経験値 */
+export function playerExpForNext(level: number): number {
+  return Math.round(60 + (level - 1) * 45);
+}
+/** プレイヤーレベルでの最大HP */
+export function playerMaxHpAt(level: number): number {
+  return PLAYER_MAX_HP + (Math.max(1, level) - 1) * HP_PER_LEVEL;
+}
+/** 敵を撃破して得られる経験値（強い敵・ボスほど多い） */
+export function enemyExp(def: EnemyDef): number {
+  const base = def.maxHp * 0.22 + def.attack * 1.6;
+  const boss = def.boss ? 2.2 : def.rare ? 1.8 : 1;
+  return Math.max(1, Math.round(base * boss));
+}
 // ENは最大10のシンプルな管理に。スキルコストは1〜10。
 export const PLAYER_MAX_EN = 10;
 

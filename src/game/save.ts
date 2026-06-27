@@ -12,7 +12,7 @@ export function defaultSave(): SaveData {
     const w = getWeapon(it.baseId);
     if (w && !equipped[w.weapon]) equipped[w.weapon] = it.uid;
   }
-  return { inventory: inv, equipped, equippedShield: DEFAULT_SHIELD_ID, bestStage: 0, gold: 0, purchased: [], locked: [], bestFloor: 0 };
+  return { inventory: inv, equipped, equippedShield: DEFAULT_SHIELD_ID, bestStage: 0, gold: 0, purchased: [], locked: [], bestFloor: 0, playerLevel: 1, playerExp: 0 };
 }
 
 /** 装備が無効（売却・データ不整合）な系統を、所持品から補完する */
@@ -43,6 +43,8 @@ export function loadSave(): SaveData {
       purchased: Array.isArray(parsed.purchased) ? parsed.purchased : [],
       locked: Array.isArray(parsed.locked) ? parsed.locked : [],
       bestFloor: typeof parsed.bestFloor === "number" ? parsed.bestFloor : 0,
+      playerLevel: typeof parsed.playerLevel === "number" && parsed.playerLevel >= 1 ? parsed.playerLevel : 1,
+      playerExp: typeof parsed.playerExp === "number" && parsed.playerExp >= 0 ? parsed.playerExp : 0,
     };
     fixEquipped(save);
     return save;

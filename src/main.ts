@@ -1,5 +1,5 @@
 import "./style.css";
-import { render, enemySlots, makeSpriteCanvas } from "./render/canvas.ts";
+import { render, enemySlots, makeSpriteCanvas, enemyCodexSprite } from "./render/canvas.ts";
 import {
   WARDEN, SHIELD_BY_ID, SHIELD_WOOD, SLEEP, getWeaponSprite, chestSprite,
   CARAPACE, AERIAL, PHANTOM, BOSS, RARE, ENEMY_BY_ID,
@@ -10,7 +10,8 @@ import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview, COMBOS,
-  PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
+  WEAPONS, ENEMIES, SKILLS, SKILL_KIND_LABEL,
+  PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS, MAX_PLAYER_LEVEL,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN, shieldPassiveDesc,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
@@ -270,6 +271,7 @@ function buildControls(): void {
     case "result": buildResult(); break;
     case "howto": buildHowTo(); break;
     case "achievements": buildAchievements(); break;
+    case "codex": buildCodex(); break;
   }
   // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
   if (screenChanged) {
@@ -299,6 +301,22 @@ function buildTitle(): void {
   sub.textContent = "タイミングアクションRPG";
   hero.appendChild(sub);
   controls.appendChild(hero);
+
+  // プレイヤーレベル＋経験値バー
+  const lv = game.save.playerLevel;
+  const maxed = lv >= MAX_PLAYER_LEVEL;
+  const need = game.expForNextLevel();
+  const cur = game.save.playerExp;
+  const ratio = maxed ? 1 : Math.max(0, Math.min(1, cur / need));
+  const lvPanel = document.createElement("div");
+  lvPanel.className = "lv-panel";
+  lvPanel.innerHTML =
+    `<div class="lv-row"><span class="lv-badge">LV ${lv}</span>` +
+    `<span class="lv-hp">最大HP ${game.playerMaxHp}</span>` +
+    `<span class="lv-exp">${maxed ? "MAX" : `EXP ${cur} / ${need}`}</span></div>` +
+    `<div class="lv-bar"><span style="width:${ratio * 100}%"></span></div>`;
+  controls.appendChild(lvPanel);
+
   controls.appendChild(ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect())));
   controls.appendChild(ctaButton("遊び方を見る", "howto", () => { game.goHowTo(); buildControls(); }));
 
@@ -313,7 +331,11 @@ function buildTitle(): void {
   ach.className = "home-sub-btn";
   ach.innerHTML = `🏆 実績`;
   ach.addEventListener("click", () => { game.goAchievements(); buildControls(); });
-  subRow.appendChild(daily); subRow.appendChild(ach);
+  const codex = document.createElement("button");
+  codex.className = "home-sub-btn";
+  codex.innerHTML = `📚 図鑑`;
+  codex.addEventListener("click", () => { game.goCodex(); buildControls(); });
+  subRow.appendChild(daily); subRow.appendChild(ach); subRow.appendChild(codex);
   controls.appendChild(subRow);
 
   controls.appendChild(bottomNav());
@@ -554,6 +576,80 @@ function buildAchievements(): void {
     });
     row.appendChild(claim);
     list.appendChild(row);
+  }
+  controls.appendChild(list);
+  controls.appendChild(bottomNav());
+}
+
+/** 図鑑：選択中タブ */
+let codexTab: "weapon" | "enemy" | "shield" | "skill" = "weapon";
+
+/** 図鑑画面：武器・敵・盾・スキルの一覧＋説明 */
+function buildCodex(): void {
+  controls.appendChild(screenHead("CODEX", "📚 図鑑"));
+  const back = document.createElement("button");
+  back.className = "world-back";
+  back.textContent = "◀ ホームへ";
+  back.addEventListener("click", () => { game.goTitle(); buildControls(); });
+  controls.appendChild(back);
+
+  // タブ
+  const tabs = document.createElement("div");
+  tabs.className = "ars-tabs";
+  const tabDefs: [typeof codexTab, string][] = [["weapon", "武器"], ["enemy", "敵"], ["shield", "盾"], ["skill", "スキル"]];
+  for (const [key, label] of tabDefs) {
+    const t = document.createElement("button");
+    t.className = "ars-tab" + (codexTab === key ? " on" : "");
+    t.textContent = label;
+    t.addEventListener("click", () => { codexTab = key; buildControls(); });
+    tabs.appendChild(t);
+  }
+  controls.appendChild(tabs);
+
+  const list = document.createElement("div");
+  list.className = "codex-list";
+
+  /** 1エントリの行を組み立てる */
+  const row = (icon: HTMLElement | null, name: string, rarity: Rarity | null, meta: string, desc: string): HTMLElement => {
+    const el = document.createElement("div");
+    el.className = "codex-row" + (rarity ? " " + rarityGlowClass(rarity) : "");
+    const ic = document.createElement("div");
+    ic.className = "codex-icon";
+    if (icon) ic.appendChild(icon);
+    el.appendChild(ic);
+    const body = document.createElement("div");
+    body.className = "codex-body";
+    const rarTag = rarity ? `<span ${rarityAttr(rarity, "codex-rar")}>${RARITY_LABEL[rarity]}</span>` : "";
+    body.innerHTML =
+      `<div class="codex-head"><span class="codex-name">${name}</span>${rarTag}</div>` +
+      `<div class="codex-meta">${meta}</div>` +
+      `<div class="codex-desc">${desc}</div>`;
+    el.appendChild(body);
+    return el;
+  };
+  const spriteEl = (sp: Sprite): HTMLElement => { const c = makeSpriteCanvas(sp, 3); c.className = "wpn-sprite"; return c; };
+
+  if (codexTab === "weapon") {
+    for (const w of WEAPONS) {
+      const meta = `${WEAPON_LABEL[w.weapon]}・ATK ${w.attack}・会心 ${w.critChance}%・ブレイク ${w.breakPower}`;
+      list.appendChild(row(weaponSpriteEl(w.id, w.weapon, 3), w.name, w.rarity, meta, w.desc || ""));
+    }
+  } else if (codexTab === "enemy") {
+    for (const e of ENEMIES) {
+      const tag = e.bigBoss ? "特大ボス" : e.boss ? "ボス" : e.rare ? "レア" : KIND_LABEL[e.kind];
+      const meta = `${tag}・HP ${e.maxHp}・弱点 ${WEAPON_LABEL[WEAKNESS[e.kind]]}`;
+      list.appendChild(row(spriteEl(enemyCodexSprite(e)), e.name, null, meta, e.desc || ""));
+    }
+  } else if (codexTab === "shield") {
+    for (const sh of game.shields) {
+      const meta = `DEF ${sh.defense}${sh.passive ? `・✦${sh.passive.name}` : ""}`;
+      const desc = sh.desc + (sh.passive ? `／${shieldPassiveDesc(sh.passive)}` : "");
+      list.appendChild(row(spriteEl(SHIELD_BY_ID[sh.id] ?? SHIELD_WOOD), sh.name, sh.rarity, meta, desc));
+    }
+  } else {
+    for (const s of SKILLS) {
+      list.appendChild(row(null, s.name, s.rarity, `${SKILL_KIND_LABEL[s.kind]}・EN ${s.enCost}`, skillDescription(s)));
+    }
   }
   controls.appendChild(list);
   controls.appendChild(bottomNav());
@@ -1847,8 +1943,8 @@ function updateBattleHud(): void {
   if (!battleHud || !game.battle) return;
   const b = game.battle;
   const hp = Math.max(0, Math.ceil(b.playerHp));
-  const hpRatio = Math.max(0, Math.min(1, b.playerHp / PLAYER_MAX_HP));
-  battleHud.hpLabel.textContent = `HP [${hp}/${PLAYER_MAX_HP}]`;
+  const hpRatio = Math.max(0, Math.min(1, b.playerHp / b.maxHp));
+  battleHud.hpLabel.textContent = `HP [${hp}/${b.maxHp}]`;
   // 連続フィルの幅を更新（CSSのtransitionでぬるっと増減）
   battleHud.hpFill.style.width = `${hpRatio * 100}%`;
   battleHud.crit.style.visibility = hpRatio <= 0.25 ? "visible" : "hidden";
@@ -2064,9 +2160,18 @@ function buildResultPanel(): void {
   const chip = (label: string, val: string, cls = ""): string =>
     `<span class="result-stat ${cls}"><span class="result-stat-l">${label}</span><span class="result-stat-v">${val}</span></span>`;
   let chips = chip("最大ダメージ", game.lastMaxHit.toLocaleString()) + chip("パーフェクト", `${game.lastPerfects}回`);
+  if (game.lastExp > 0) chips += chip("EXP", `+${game.lastExp}`);
   if (good && game.lastFlawless) chips += chip("NO DAMAGE", "達成", "result-stat-flawless");
   stats.innerHTML = chips;
   panel.appendChild(stats);
+
+  // レベルアップ表示（経験値で最大HPが上がった）
+  if (game.lastLevelUps > 0) {
+    const lvup = document.createElement("div");
+    lvup.className = "result-lvup";
+    lvup.innerHTML = `⬆ LEVEL UP! <b>LV ${game.save.playerLevel}</b>（最大HP ${game.playerMaxHp}）`;
+    panel.appendChild(lvup);
+  }
 
   // ゴールド・ドロップ（勝利／回廊時）：まずゴールドを0からカウントアップ→その後に宝箱開封
   if (good) {

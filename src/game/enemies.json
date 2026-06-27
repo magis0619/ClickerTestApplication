@@ -9,7 +9,8 @@
     "countStart": 3,
     "breakThreshold": 35,
     "dropWeaponId": "w_iron_edge",
-    "dropRate": 70
+    "dropRate": 70,
+    "desc": "藁と土で固めた人形。動きは鈍いが打たれ強い。"
   },
   {
     "id": "dust_imp",
@@ -21,7 +22,8 @@
     "countStart": 3,
     "breakThreshold": 30,
     "dropWeaponId": "w_steel_lance",
-    "dropRate": 40
+    "dropRate": 40,
+    "desc": "砂塵に潜む小悪魔。素早く突いてくる。"
   },
   {
     "id": "shell_crawler",
@@ -33,7 +35,8 @@
     "countStart": 5,
     "breakThreshold": 45,
     "dropWeaponId": "w_quake_hammer",
-    "dropRate": 45
+    "dropRate": 45,
+    "desc": "硬い甲殻を持つ這行種。打撃で殻を砕け。"
   },
   {
     "id": "wraith_feather",
@@ -45,7 +48,8 @@
     "countStart": 4,
     "breakThreshold": 52,
     "dropWeaponId": "w_wind_pike",
-    "dropRate": 50
+    "dropRate": 50,
+    "desc": "羽根状の霊体。ひらりと舞い、刺突に弱い。"
   },
   {
     "id": "gloom_shade",
@@ -57,7 +61,8 @@
     "countStart": 2,
     "breakThreshold": 58,
     "dropWeaponId": "w_storm_saber",
-    "dropRate": 45
+    "dropRate": 45,
+    "desc": "影が固まった存在。斬撃でかき消せる。"
   },
   {
     "id": "venom_lurker",
@@ -69,7 +74,8 @@
     "countStart": 3,
     "breakThreshold": 50,
     "dropWeaponId": "w_wind_pike",
-    "dropRate": 35
+    "dropRate": 35,
+    "desc": "毒を帯びた飛翔種。油断すると削られる。"
   },
   {
     "id": "ember_hound",
@@ -81,7 +87,8 @@
     "countStart": 2,
     "breakThreshold": 55,
     "dropWeaponId": "w_storm_saber",
-    "dropRate": 35
+    "dropRate": 35,
+    "desc": "火の粉をまとう獣の霊。連続攻撃が得意。"
   },
   {
     "id": "stone_sentinel",
@@ -93,7 +100,8 @@
     "countStart": 4,
     "breakThreshold": 70,
     "dropWeaponId": "w_titan_breaker",
-    "dropRate": 25
+    "dropRate": 25,
+    "desc": "石像の番人。重い一撃を放つ堅牢な守り手。"
   },
   {
     "id": "shell_warden",
@@ -106,7 +114,8 @@
     "breakThreshold": 90,
     "dropWeaponId": "w_dragoon_blade",
     "dropRate": 100,
-    "boss": true
+    "boss": true,
+    "desc": "甲殻種の長。分厚い殻で攻守に優れるボス。"
   },
   {
     "id": "wraith_monarch",
@@ -119,7 +128,8 @@
     "breakThreshold": 110,
     "dropWeaponId": "w_void_glaive",
     "dropRate": 100,
-    "boss": true
+    "boss": true,
+    "desc": "霊鳥の王。空を制し鋭い刺突を狙うボス。"
   },
   {
     "id": "carapace_tyrant",
@@ -132,7 +142,8 @@
     "breakThreshold": 140,
     "dropWeaponId": "w_astral_edge",
     "dropRate": 100,
-    "boss": true
+    "boss": true,
+    "desc": "甲殻の暴君。圧倒的な耐久と攻撃力を誇るボス。"
   },
   {
     "id": "frost_imp",
@@ -144,7 +155,8 @@
     "countStart": 3,
     "breakThreshold": 72,
     "dropWeaponId": "w_storm_saber",
-    "dropRate": 30
+    "dropRate": 30,
+    "desc": "冷気をまとう小悪魔。凍てつく一撃に注意。"
   },
   {
     "id": "ice_crawler",
@@ -156,7 +168,8 @@
     "countStart": 4,
     "breakThreshold": 90,
     "dropWeaponId": "w_quake_hammer",
-    "dropRate": 30
+    "dropRate": 30,
+    "desc": "氷の殻を持つ這行種。打撃で砕ける。"
   },
   {
     "id": "frost_drake",
@@ -168,7 +181,8 @@
     "countStart": 3,
     "breakThreshold": 82,
     "dropWeaponId": "w_ice_needle",
-    "dropRate": 30
+    "dropRate": 30,
+    "desc": "氷を吐く飛竜の幼体。刺突が弱点。"
   },
   {
     "id": "frost_dragon",
@@ -181,7 +195,8 @@
     "breakThreshold": 135,
     "dropWeaponId": "w_void_glaive",
     "dropRate": 100,
-    "boss": true
+    "boss": true,
+    "desc": "永久凍土の氷竜。凍てつくブレスを放つボス。"
   },
   {
     "id": "sand_crab",
@@ -193,7 +208,8 @@
     "countStart": 4,
     "breakThreshold": 25,
     "dropWeaponId": "w_war_mallet",
-    "dropRate": 60
+    "dropRate": 60,
+    "desc": "砂地の蟹。硬い殻は打撃で割れる。"
   },
   {
     "id": "bone_ghost",
@@ -205,7 +221,8 @@
     "countStart": 3,
     "breakThreshold": 22,
     "dropWeaponId": "w_iron_edge",
-    "dropRate": 45
+    "dropRate": 45,
+    "desc": "骨の亡霊。斬撃で消し去れる弱い霊。"
   },
   {
     "id": "sky_moth",
@@ -217,7 +234,8 @@
     "countStart": 4,
     "breakThreshold": 28,
     "dropWeaponId": "w_steel_lance",
-    "dropRate": 50
+    "dropRate": 50,
+    "desc": "大きな蛾。鱗粉を散らし舞う。刺突が有効。"
   },
   {
     "id": "mud_beetle",
@@ -229,7 +247,8 @@
     "countStart": 4,
     "breakThreshold": 52,
     "dropWeaponId": "w_stone_mace",
-    "dropRate": 40
+    "dropRate": 40,
+    "desc": "泥に潜む甲虫。硬い背を打撃で狙え。"
   },
   {
     "id": "shadow_lurker",
@@ -241,7 +260,8 @@
     "countStart": 2,
     "breakThreshold": 60,
     "dropWeaponId": "w_shadow_blade",
-    "dropRate": 35
+    "dropRate": 35,
+    "desc": "闇に潜む追跡者。素早い斬撃で対抗を。"
   },
   {
     "id": "thunder_hawk",
@@ -253,7 +273,8 @@
     "countStart": 3,
     "breakThreshold": 55,
     "dropWeaponId": "w_ice_needle",
-    "dropRate": 35
+    "dropRate": 35,
+    "desc": "雷をまとう鷹。高速の急降下に警戒。"
   },
   {
     "id": "iron_tortoise",
@@ -265,7 +286,8 @@
     "countStart": 5,
     "breakThreshold": 85,
     "dropWeaponId": "w_earth_crusher",
-    "dropRate": 20
+    "dropRate": 20,
+    "desc": "鉄甲の亀。守りが非常に固い。打撃で崩せ。"
   },
   {
     "id": "vile_specter",
@@ -277,7 +299,8 @@
     "countStart": 2,
     "breakThreshold": 75,
     "dropWeaponId": "w_flame_sword",
-    "dropRate": 20
+    "dropRate": 20,
+    "desc": "邪悪な亡霊。高威力の呪詛を放つ。"
   },
   {
     "id": "storm_wyvern",
@@ -289,7 +312,8 @@
     "countStart": 3,
     "breakThreshold": 88,
     "dropWeaponId": "w_thunder_spear",
-    "dropRate": 25
+    "dropRate": 25,
+    "desc": "嵐を呼ぶ飛竜。強烈な突風で攻める。"
   },
   {
     "id": "shadow_tyrant",
@@ -302,7 +326,8 @@
     "breakThreshold": 120,
     "dropWeaponId": "w_mjolnir",
     "dropRate": 100,
-    "boss": true
+    "boss": true,
+    "desc": "影の暴君。圧倒的な闇の力を操るボス。"
   },
   {
     "id": "gem_drake",
@@ -315,7 +340,8 @@
     "breakThreshold": 80,
     "dropWeaponId": "w_thunder_spear",
     "dropRate": 100,
-    "rare": true
+    "rare": true,
+    "desc": "宝石を宿す稀少な竜。倒せば貴重な戦利品。"
   },
   {
     "id": "abyss_sovereign",
@@ -329,6 +355,7 @@
     "dropWeaponId": "w_astral_edge",
     "dropRate": 100,
     "boss": true,
-    "bigBoss": true
+    "bigBoss": true,
+    "desc": "深淵の王。全てを呑み込む最強の存在。"
   }
 ]

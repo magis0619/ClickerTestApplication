@@ -2470,6 +2470,24 @@ body.theme-nb {
 }
 .ach-claim:disabled { background: #d7d0d7; color: #8a7f90; cursor: default; }
 
+/* ===== 図鑑 ===== */
+.codex-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 16px; }
+.codex-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+  background: #fff; border: 2.5px solid #1c1b1b; border-radius: 12px; box-shadow: 3px 3px 0 #1c1b1b;
+}
+.codex-icon {
+  width: 54px; height: 54px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: #1a1226; border: 2px solid #1c1b1b; border-radius: 10px;
+}
+.codex-icon .wpn-sprite { height: 44px; width: auto; image-rendering: pixelated; }
+.codex-body { flex: 1; min-width: 0; }
+.codex-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.codex-name { font-size: 15px; font-weight: 900; color: #1c1b1b; }
+.codex-rar { font-size: 11px; font-weight: 800; }
+.codex-meta { font-family: "Space Mono", monospace; font-size: 11px; font-weight: 700; color: #8a7f90; margin: 2px 0; }
+.codex-desc { font-size: 12px; color: #4a4453; line-height: 1.5; }
+
 /* ===== チュートリアル（コーチマーク） ===== */
 .coach-overlay { position: fixed; inset: 0; z-index: 200; }
 .coach-hole {
@@ -2527,6 +2545,23 @@ body.theme-nb {
   font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
   font-size: 14px; font-weight: 700; color: #1c1b1b; text-align: center; margin-bottom: 12px;
 }
+/* ホームのレベル＋経験値パネル */
+.lv-panel {
+  width: min(340px, 96%); margin: 14px auto 0; padding: 10px 12px;
+  background: #fff; border: 3px solid #1c1b1b; border-radius: 12px; box-shadow: 4px 4px 0 #1c1b1b;
+}
+.lv-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lv-badge { font-family: "Space Mono", monospace; font-size: 15px; font-weight: 900; color: #fff; background: #df0b81; border: 2px solid #1c1b1b; border-radius: 8px; padding: 1px 8px; }
+.lv-hp { font-size: 12px; font-weight: 800; color: #1c1b1b; }
+.lv-exp { margin-left: auto; font-family: "Space Mono", monospace; font-size: 11px; font-weight: 800; color: #8a7f90; }
+.lv-bar { height: 9px; background: #e6dfe6; border: 2px solid #1c1b1b; border-radius: 999px; overflow: hidden; }
+.lv-bar span { display: block; height: 100%; background: linear-gradient(180deg, #8fe0ff, #18c6e8); }
+.result-lvup {
+  text-align: center; font-size: 14px; font-weight: 900; color: #0a7f97;
+  background: #e9fbff; border: 2px solid #1c1b1b; border-radius: 10px; padding: 8px; margin-bottom: 12px;
+}
+.result-lvup b { color: #df0b81; }
+
 .result-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 12px; }
 .result-stat {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;

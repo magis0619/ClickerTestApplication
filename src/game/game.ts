@@ -3,6 +3,7 @@ import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
+  playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress } from "./progress.ts";
@@ -33,6 +34,10 @@ export class Game {
   lastMaxHit = 0;
   lastPerfects = 0;
   lastFlawless = true;
+  /** この冒険で得た経験値合計（result表示用） */
+  lastExp = 0;
+  /** この冒険で上がったレベル数（result表示用） */
+  lastLevelUps = 0;
   private rotation: Record<WeaponClass, number> = { slash: 0, pierce: 0, crush: 0 };
 
   constructor() {
@@ -48,9 +53,36 @@ export class Game {
   goWorldSelect(): void { this.screen = "worldSelect"; }
   goHowTo(): void { this.screen = "howto"; }
   goAchievements(): void { this.screen = "achievements"; }
+  goCodex(): void { this.screen = "codex"; }
 
   /** ゴールドを加算して保存（実績・デイリー報酬の受け取り用） */
   addGold(n: number): void { this.save.gold += n; writeSave(this.save); }
+
+  // ===== プレイヤーレベル（経験値で最大HPが上昇） =====
+  /** 現在の最大HP（レベル依存） */
+  get playerMaxHp(): number { return playerMaxHpAt(this.save.playerLevel); }
+  /** 次のレベルに必要な経験値 */
+  expForNextLevel(): number { return playerExpForNext(this.save.playerLevel); }
+  /**
+   * 経験値を加算してレベルアップ処理。上がったレベル数を返す。
+   * 上限レベルでは経験値を蓄積しない。
+   */
+  addPlayerExp(n: number): number {
+    if (n <= 0) return 0;
+    if (this.save.playerLevel >= MAX_PLAYER_LEVEL) { this.save.playerExp = 0; return 0; }
+    this.save.playerExp += n;
+    let ups = 0;
+    while (this.save.playerLevel < MAX_PLAYER_LEVEL) {
+      const need = playerExpForNext(this.save.playerLevel);
+      if (this.save.playerExp < need) break;
+      this.save.playerExp -= need;
+      this.save.playerLevel += 1;
+      ups += 1;
+    }
+    if (this.save.playerLevel >= MAX_PLAYER_LEVEL) this.save.playerExp = 0;
+    writeSave(this.save);
+    return ups;
+  }
 
   /** 所持ゴールド */
   get gold(): number { return this.save.gold; }
@@ -175,15 +207,17 @@ export class Game {
     this.lastMaxHit = 0;
     this.lastPerfects = 0;
     this.lastFlawless = true;
+    this.lastExp = 0;
+    this.lastLevelUps = 0;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     if (this.isEndless) {
       this.endlessFloor = 1;
-      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false));
+      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false), undefined, undefined, this.playerMaxHp);
       this.battle.playerDefense = this.defense;
       this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       this.battle.announce("FLOOR 1", "#9fd9ff");
     } else {
-      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[0], this.isBossWave), this.currentStage.world));
+      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[0], this.isBossWave), this.currentStage.world), undefined, undefined, this.playerMaxHp);
       this.battle.playerDefense = this.defense;
       this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
@@ -346,21 +380,26 @@ export class Game {
       this.lastDrops.push(...drops);
       this.lastGold += this.battle.goldEarned;
       if (this.endlessFloor > this.save.bestFloor) this.save.bestFloor = this.endlessFloor;
+      // 経験値は階ごとに即確定（回廊は各階で報酬確定のため）。レベルアップで全回復
+      const ups = this.addPlayerExp(this.battle.expEarned);
+      this.lastExp += this.battle.expEarned;
+      this.lastLevelUps += ups;
       writeSave(this.save);
-      const hp = this.battle.playerHp;
+      const hp = ups > 0 ? this.playerMaxHp : this.battle.playerHp;
       const en = this.battle.playerEn;
       this.endlessFloor += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
-      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en);
+      this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en, this.playerMaxHp);
       this.battle.playerDefense = this.defense;
       this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       this.battle.announce(`FLOOR ${this.endlessFloor}`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
 
-    // この戦闘のドロップ・ゴールドを蓄積
+    // この戦闘のドロップ・ゴールド・経験値を蓄積（経験値はステージクリア時にまとめて反映）
     this.lastDrops.push(...this.battle.collectedDrops());
     this.lastGold += this.battle.goldEarned;
+    this.lastExp += this.battle.expEarned;
 
     if (this.waveIndex < this.waveCount - 1) {
       // まだ戦闘が残る：HP/ENを引き継いで次の戦闘へ
@@ -368,7 +407,7 @@ export class Game {
       const en = this.battle.playerEn;
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
-      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), this.currentStage.world), hp, en);
+      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), this.currentStage.world), hp, en, this.playerMaxHp);
       this.battle.playerDefense = this.defense;
       this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
@@ -385,6 +424,7 @@ export class Game {
     if (stageNum > this.save.bestStage) this.save.bestStage = stageNum;
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
+    this.lastLevelUps += this.addPlayerExp(this.lastExp); // 蓄積した経験値をまとめて反映
     writeSave(this.save);
     // 実績：ノーダメージ達成（ステージ全体を無傷でクリア）
     if (this.lastFlawless) { progress.flawlessClears += 1; saveProgress(); }

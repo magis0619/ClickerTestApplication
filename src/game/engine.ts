@@ -47,6 +47,7 @@ import {
   RAGE_MULT,
   rollEnemyDrop,
   rollEnemyGold,
+  enemyExp,
 } from "./data.ts";
 import { settings } from "./settings.ts";
 
@@ -245,13 +246,20 @@ export class Battle {
    */
   isFinalWave = false;
 
+  /** プレイヤーの最大HP（レベルで変動。HUD・回復上限に使う） */
+  maxHp: number = PLAYER_MAX_HP;
+  /** この戦闘で得た経験値（リザルト集計用） */
+  expEarned = 0;
+
   constructor(
     defs: EnemyDef[],
-    startHp: number = PLAYER_MAX_HP,
+    startHp?: number,
     startEn: number = PLAYER_MAX_EN,
+    maxHp: number = PLAYER_MAX_HP,
   ) {
     this.enemies = defs.map((d) => new EnemyState(d));
-    this.playerHp = Math.max(1, Math.min(PLAYER_MAX_HP, startHp));
+    this.maxHp = maxHp;
+    this.playerHp = startHp == null ? maxHp : Math.max(1, Math.min(maxHp, startHp));
     this.playerEn = Math.max(0, Math.min(PLAYER_MAX_EN, startEn));
   }
 
@@ -470,7 +478,7 @@ export class Battle {
     }
     // 盾パッシブ「自己再生」：行動するたびに少量HP回復
     if (this.shieldPassive?.kind === "regen" && this.playerHp > 0) {
-      this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + this.shieldPassive.value);
+      this.playerHp = Math.min(this.maxHp, this.playerHp + this.shieldPassive.value);
     }
     // カウント処理のあとに状態異常を経過させる（毒ダメージ・凍結/弱体/激昂の減少）
     this.tickStatuses();
@@ -604,6 +612,7 @@ export class Battle {
     e.drop = rollEnemyDrop(e.def); // 率で武器ドロップ（外れあり＝撃破時は宝箱で表示）
     const gold = rollEnemyGold(e.def); // 強い敵ほど多い
     this.goldEarned += gold;
+    this.expEarned += enemyExp(e.def); // プレイヤー経験値（レベル＝最大HPに反映）
     // 撃破でEN回復（攻め続けるご褒美）
     const enBefore = this.playerEn;
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + KILL_EN_RECOVER);
@@ -637,7 +646,7 @@ export class Battle {
         // === このゲームで一番気持ちいい瞬間 ===
         dmg = 0;
         this.perfectCount += 1;
-        this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + PERFECT_HP_RECOVER);
+        this.playerHp = Math.min(this.maxHp, this.playerHp + PERFECT_HP_RECOVER);
         this.playerEn = PLAYER_MAX_EN; // パーフェクトはENを最大まで全回復
         // 一瞬の静止→ホワイトアウト→スロー＋弾きエフェクト＋軽い揺れ
         this.hitstopT = HITSTOP_MS;
