@@ -158,6 +158,31 @@ export interface WeaponInstance {
   exp?: number;
   /** 覚醒回数（10レベルごとの壁を同武器合成で突破した回数） */
   awakened?: number;
+  /** 装着した秘石ID列（ソケットごと。null=空きソケット）。長さはレアリティ依存 */
+  sockets?: (string | null)[];
+}
+
+/** 秘石（ジェム）の効果種別：攻撃力／ブレイク蓄積／会心 */
+export type GemKind = "attack" | "break" | "crit";
+
+/** 秘石テンプレ。武器のソケットに装着して武器を強化する */
+export interface Gem {
+  id: string;
+  name: string;
+  kind: GemKind;
+  /** 等級（1..3。高いほど強い） */
+  tier: number;
+  /** 表示色 */
+  color: string;
+  desc: string;
+  /** 攻撃力の加算割合（例 0.16=+16%） */
+  atkPct?: number;
+  /** ブレイク蓄積の加算割合 */
+  breakPct?: number;
+  /** 会心率の加算(%) */
+  critAdd?: number;
+  /** 会心威力の加算（会心倍率に上乗せ。例 0.3=×倍率+0.3） */
+  critMult?: number;
 }
 
 /** 武器インスタンス由来の補正（攻撃時に戦闘へ渡す＝武器本体のステータス） */
@@ -166,6 +191,8 @@ export interface WeaponMods {
   attack: number;
   critChance: number;
   breakPower: number;
+  /** 会心発生時の倍率に上乗せする加算（秘石由来。0=なし） */
+  critMult?: number;
 }
 
 /** ステージ定義。各ステージは複数回の戦闘（waves）を持つ。endless=無限の回廊 */
@@ -233,4 +260,6 @@ export interface SaveData {
   playerExp: number;
   /** ステージごとの最高スター獲得数（stageIndex → 1..3）。攻略度に使う */
   stageStars: Record<number, number>;
+  /** 所持している秘石（gemId → 個数） */
+  gems: Record<string, number>;
 }

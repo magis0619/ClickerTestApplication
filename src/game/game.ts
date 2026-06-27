@@ -4,6 +4,7 @@ import {
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
   playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
+  socketBonuses, socketCount, rollGemDrop,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress, addMissionProgress } from "./progress.ts";
@@ -24,6 +25,8 @@ export class Game {
   /** 直近の戦闘結果（result画面用） */
   lastWon = false;
   lastDrops: WeaponInstance[] = [];
+  /** この冒険で入手した秘石ID（result表示用） */
+  lastGems: string[] = [];
   /** この冒険で得たゴールド合計（result画面用） */
   lastGold = 0;
   /** 無限の回廊：現在の階 */
@@ -214,6 +217,7 @@ export class Game {
     this.stageIndex = i;
     this.waveIndex = 0;
     this.lastDrops = [];
+    this.lastGems = [];
     this.lastGold = 0;
     this.lastFloor = 0;
     this.lastMaxHit = 0;
@@ -298,7 +302,10 @@ export class Game {
     const skill = this.currentSkill(cls);
     const w = this.equippedWeapon(cls);
     if (!skill || !w) return null;
-    const mods = { weapon: w.weapon, attack: w.attack, critChance: w.critChance, breakPower: w.breakPower };
+    // 秘石の会心威力は Weapon に乗らないため、装着分を mods.critMult として渡す
+    const inst = this.equippedInstance(cls);
+    const critMult = inst ? socketBonuses(inst).critMult : 0;
+    const mods = { weapon: w.weapon, attack: w.attack, critChance: w.critChance, breakPower: w.breakPower, critMult };
     if (this.battle.useSkill(skill, mods)) {
       this.rotation[cls] += 1;
       return skill;
@@ -404,6 +411,7 @@ export class Game {
       this.lastAmbushWon = true;
       this.lastAmbushDrop = drops.length > 0;
       progress.ambushWins += 1; saveProgress(); // 実績：乱入ボス討伐
+      this.awardGem(rollGemDrop(this.currentStage.world, true)); // 乱入ボスは確定で上位秘石
       this.lastWon = true;
       this.screen = "result";
       return;
@@ -467,6 +475,8 @@ export class Game {
     addMissionProgress("dm_clear", 1);
     if (this.lastRank === "S" || this.lastRank === "A") addMissionProgress("dm_rank", 1);
     if (this.lastRank === "S") { progress.rankSClears += 1; saveProgress(); }
+    // 秘石ドロップ：ボス（最終戦）撃破で中確率
+    this.awardGem(rollGemDrop(this.currentStage.world, false));
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
     this.lastLevelUps += this.addPlayerExp(this.lastExp); // 蓄積した経験値をまとめて反映
@@ -493,6 +503,52 @@ export class Game {
     else rank = "C";
     this.lastRank = rank;
     this.lastStars = rank === "S" ? 3 : rank === "A" ? 2 : 1;
+  }
+
+  // ===== 秘石（ジェム） =====
+  /** 秘石を1個入手（所持加算＋result記録＋保存）。idがundefinedなら何もしない */
+  private awardGem(id: string | undefined): void {
+    if (!id) return;
+    this.save.gems[id] = (this.save.gems[id] ?? 0) + 1;
+    this.lastGems.push(id);
+    writeSave(this.save);
+  }
+  /** 武器のソケット配列をレアリティ依存の長さに整える */
+  private ensureSockets(inst: WeaponInstance): (string | null)[] {
+    const n = socketCount(inst);
+    if (!inst.sockets) inst.sockets = [];
+    while (inst.sockets.length < n) inst.sockets.push(null);
+    if (inst.sockets.length > n) inst.sockets.length = n;
+    return inst.sockets;
+  }
+  /** 武器の現在のソケット（長さ正規化済みのコピー） */
+  weaponSockets(inst: WeaponInstance): (string | null)[] {
+    return this.ensureSockets(inst).slice();
+  }
+  /** 秘石を装着。slotに既存があればインベントリに戻す。成功でtrue */
+  socketGem(weaponUid: string, slot: number, gemId: string): boolean {
+    const inst = this.save.inventory.find((it) => it.uid === weaponUid);
+    if (!inst || (this.save.gems[gemId] ?? 0) <= 0) return false;
+    const sockets = this.ensureSockets(inst);
+    if (slot < 0 || slot >= sockets.length) return false;
+    const prev = sockets[slot];
+    if (prev) this.save.gems[prev] = (this.save.gems[prev] ?? 0) + 1; // 既存は戻す
+    sockets[slot] = gemId;
+    this.save.gems[gemId] -= 1;
+    if (this.save.gems[gemId] <= 0) delete this.save.gems[gemId];
+    writeSave(this.save);
+    return true;
+  }
+  /** 秘石を外してインベントリに戻す */
+  unsocketGem(weaponUid: string, slot: number): boolean {
+    const inst = this.save.inventory.find((it) => it.uid === weaponUid);
+    if (!inst || !inst.sockets) return false;
+    const prev = inst.sockets[slot];
+    if (!prev) return false;
+    this.save.gems[prev] = (this.save.gems[prev] ?? 0) + 1;
+    inst.sockets[slot] = null;
+    writeSave(this.save);
+    return true;
   }
 
   /** 乱入ボス戦を開始（STAGE CLEAR の後に WARNING 演出で割り込む） */

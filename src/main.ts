@@ -14,6 +14,7 @@ import {
   WEAPONS, ENEMIES, SKILLS, SKILL_KIND_LABEL,
   PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS, MAX_PLAYER_LEVEL,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN, shieldPassiveDesc,
+  GEMS, getGem, socketBonuses,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
@@ -958,6 +959,9 @@ function buildForgePanel(target: WeaponInstance): void {
   }
   controls.appendChild(expBox);
 
+  // 秘石ソケット（レベル/覚醒の状態に関わらず常に装着可能）
+  buildSocketSection(target);
+
   // 別の武器を選ぶ
   const back = document.createElement("button");
   back.className = "forge-back";
@@ -972,6 +976,91 @@ function buildForgePanel(target: WeaponInstance): void {
   } else {
     buildEnhanceSection(target);
   }
+}
+
+/** 秘石ソケットのセクション：装着スロットを並べ、タップで秘石を選んで装着 */
+function buildSocketSection(target: WeaponInstance): void {
+  const sect = document.createElement("div");
+  sect.className = "forge-section gem-section";
+  const bonus = socketBonuses(target);
+  const parts: string[] = [];
+  if (bonus.atkPct) parts.push(`攻撃 +${Math.round(bonus.atkPct * 100)}%`);
+  if (bonus.breakPct) parts.push(`Break +${Math.round(bonus.breakPct * 100)}%`);
+  if (bonus.critAdd) parts.push(`会心 +${bonus.critAdd}%`);
+  if (bonus.critMult) parts.push(`会心威力 +${bonus.critMult.toFixed(2)}`);
+  sect.innerHTML =
+    `<div class="forge-sect-head">秘石ソケット ${parts.length ? `<span class="gem-bonus-sum">（${parts.join(" / ")}）</span>` : ""}</div>`;
+  const row = document.createElement("div");
+  row.className = "gem-slots";
+  const slots = game.weaponSockets(target);
+  slots.forEach((gid, i) => {
+    const slot = document.createElement("button");
+    const g = gid ? getGem(gid) : null;
+    slot.className = "gem-slot" + (g ? " filled" : "");
+    if (g) {
+      slot.style.borderColor = g.color;
+      slot.innerHTML =
+        `<span class="gem-dot" style="background:${g.color}"></span>` +
+        `<span class="gem-slot-info"><span class="gem-slot-name">${g.name}</span>` +
+        `<span class="gem-slot-desc">${g.desc}</span></span>`;
+    } else {
+      slot.innerHTML = `<span class="gem-slot-empty">＋ 空きソケット</span>`;
+    }
+    slot.addEventListener("click", () => { audio.sfxUiClick(); openGemPicker(target, i); });
+    row.appendChild(slot);
+  });
+  sect.appendChild(row);
+  controls.appendChild(sect);
+}
+
+/** 秘石ピッカー：所持秘石から1つ選んでスロットに装着（既存は外す） */
+function openGemPicker(target: WeaponInstance, slot: number): void {
+  const overlay = document.createElement("div");
+  overlay.className = "settings-modal";
+  const sheet = document.createElement("div");
+  sheet.className = "settings-sheet gem-sheet";
+  const cur = game.weaponSockets(target)[slot];
+  const curGem = cur ? getGem(cur) : null;
+  sheet.innerHTML =
+    `<div class="settings-head"><div class="settings-title">秘石を選ぶ</div><button class="settings-x">×</button></div>`;
+  const list = document.createElement("div");
+  list.className = "gem-pick-list";
+
+  // 現在装着中なら「外す」
+  if (curGem) {
+    const off = document.createElement("button");
+    off.className = "gem-pick-row gem-pick-off";
+    off.innerHTML = `<span class="gem-dot" style="background:${curGem.color}"></span>` +
+      `<span class="gem-pick-info"><b>装着中：${curGem.name}</b><span class="gem-pick-desc">タップで外す</span></span>`;
+    off.addEventListener("click", () => { game.unsocketGem(target.uid, slot); audio.sfxGuard(); overlay.remove(); buildControls(); });
+    list.appendChild(off);
+  }
+
+  // 所持している秘石（個数>0）
+  const owned = GEMS.filter((g) => (game.save.gems[g.id] ?? 0) > 0);
+  if (owned.length === 0 && !curGem) {
+    const empty = document.createElement("div");
+    empty.className = "inv-empty";
+    empty.textContent = "所持している秘石がありません。ボスや乱入ボスを倒して入手しよう。";
+    list.appendChild(empty);
+  }
+  for (const g of owned) {
+    const cnt = game.save.gems[g.id] ?? 0;
+    const r = document.createElement("button");
+    r.className = "gem-pick-row";
+    r.innerHTML =
+      `<span class="gem-dot" style="background:${g.color}"></span>` +
+      `<span class="gem-pick-info"><b>${g.name}</b><span class="gem-pick-desc">${g.desc}</span></span>` +
+      `<span class="gem-pick-cnt">×${cnt}</span>`;
+    r.addEventListener("click", () => { game.socketGem(target.uid, slot, g.id); audio.sfxPerfect(); overlay.remove(); buildControls(); });
+    list.appendChild(r);
+  }
+  sheet.appendChild(list);
+  overlay.appendChild(sheet);
+  const close = (): void => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  sheet.querySelector(".settings-x")?.addEventListener("click", close);
+  document.body.appendChild(overlay);
 }
 
 /** 経験値を与える素材選択セクション */
@@ -2310,6 +2399,24 @@ function buildResultPanel(): void {
   if (good && game.lastFlawless) chips += chip("NO DAMAGE", "達成", "result-stat-flawless");
   stats.innerHTML = chips;
   panel.appendChild(stats);
+
+  // 入手した秘石（ボス／乱入ボスのドロップ）
+  if (game.lastGems.length > 0) {
+    const gemBox = document.createElement("div");
+    gemBox.className = "result-gems";
+    // 同じ秘石はまとめて個数表示
+    const counts = new Map<string, number>();
+    for (const id of game.lastGems) counts.set(id, (counts.get(id) ?? 0) + 1);
+    let html = `<span class="result-gems-lbl">💎 秘石を入手</span>`;
+    for (const [id, n] of counts) {
+      const g = getGem(id);
+      if (!g) continue;
+      html += `<span class="result-gem-chip" style="border-color:${g.color}">` +
+        `<span class="gem-dot" style="background:${g.color}"></span>${g.name}${n > 1 ? ` ×${n}` : ""}</span>`;
+    }
+    gemBox.innerHTML = html;
+    panel.appendChild(gemBox);
+  }
 
   // 乱入イベントの結果表示
   if (game.lastAmbush) {

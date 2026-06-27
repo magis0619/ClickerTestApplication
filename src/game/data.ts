@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef, ShopItem, ShopChest, Shield, SkillStatus, StatusKind,
+  LastSkill, ComboDef, ShopItem, ShopChest, Shield, SkillStatus, StatusKind, Gem, GemKind,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -302,12 +302,83 @@ export function effectiveWeapon(inst: WeaponInstance): Weapon | undefined {
   const aw = inst.awakened ?? 0;
   const lvMult = 1 + (lv - 1) * 0.06; // 1レベルごとに基礎の+6%
   const awMult = 1 + aw * 0.10;       // 覚醒ごとに+10%
+  const gem = socketBonuses(inst);    // 装着した秘石の合計ボーナス
   return {
     ...w,
-    attack: Math.round(w.attack * lvMult * awMult),
-    breakPower: Math.round(w.breakPower * lvMult * awMult),
-    critChance: w.critChance + aw * 2,
+    attack: Math.round(w.attack * lvMult * awMult * (1 + gem.atkPct)),
+    breakPower: Math.round(w.breakPower * lvMult * awMult * (1 + gem.breakPct)),
+    critChance: w.critChance + aw * 2 + gem.critAdd,
   };
+}
+
+// ===== 秘石（ジェム）：武器のソケットに装着して強化する =====
+/** レアリティごとのソケット数（高レアほど多い） */
+export const SOCKETS_BY_RARITY: Record<Rarity, number> = {
+  common: 1, uncommon: 1, rare: 2, epic: 2, legend: 3, astral: 4,
+};
+/** その武器インスタンスのソケット数（レアリティ依存） */
+export function socketCount(inst: WeaponInstance): number {
+  const w = getWeapon(inst.baseId);
+  return w ? SOCKETS_BY_RARITY[w.rarity] : 1;
+}
+
+/** 効果種別ごとの表示情報 */
+export const GEM_KIND_INFO: Record<GemKind, { label: string; color: string }> = {
+  attack: { label: "攻撃", color: "#ff4d6a" },
+  break: { label: "ブレイク", color: "#ff9e2e" },
+  crit: { label: "会心", color: "#ffd34d" },
+};
+/** 全秘石（3種 × 3等級）。tierが上がるほど効果が高い */
+export const GEMS: Gem[] = [
+  { id: "gem_atk_1", name: "攻撃の秘石Ⅰ", kind: "attack", tier: 1, color: "#ff8095", desc: "攻撃力 +8%", atkPct: 0.08 },
+  { id: "gem_atk_2", name: "攻撃の秘石Ⅱ", kind: "attack", tier: 2, color: "#ff4d6a", desc: "攻撃力 +16%", atkPct: 0.16 },
+  { id: "gem_atk_3", name: "攻撃の秘石Ⅲ", kind: "attack", tier: 3, color: "#ff1f47", desc: "攻撃力 +28%", atkPct: 0.28 },
+  { id: "gem_brk_1", name: "烈破の秘石Ⅰ", kind: "break", tier: 1, color: "#ffc06b", desc: "ブレイク蓄積 +12%", breakPct: 0.12 },
+  { id: "gem_brk_2", name: "烈破の秘石Ⅱ", kind: "break", tier: 2, color: "#ff9e2e", desc: "ブレイク蓄積 +24%", breakPct: 0.24 },
+  { id: "gem_brk_3", name: "烈破の秘石Ⅲ", kind: "break", tier: 3, color: "#ff7a00", desc: "ブレイク蓄積 +40%", breakPct: 0.40 },
+  { id: "gem_crt_1", name: "会心の秘石Ⅰ", kind: "crit", tier: 1, color: "#ffe27a", desc: "会心率 +6% / 会心威力 +0.15", critAdd: 6, critMult: 0.15 },
+  { id: "gem_crt_2", name: "会心の秘石Ⅱ", kind: "crit", tier: 2, color: "#ffd34d", desc: "会心率 +12% / 会心威力 +0.30", critAdd: 12, critMult: 0.30 },
+  { id: "gem_crt_3", name: "会心の秘石Ⅲ", kind: "crit", tier: 3, color: "#ffc400", desc: "会心率 +20% / 会心威力 +0.50", critAdd: 20, critMult: 0.50 },
+];
+const GEM_MAP: Record<string, Gem> = Object.fromEntries(GEMS.map((g) => [g.id, g]));
+export function getGem(id: string): Gem | undefined { return GEM_MAP[id]; }
+
+/** 装着済み秘石の合計ボーナス */
+export interface SocketBonus { atkPct: number; breakPct: number; critAdd: number; critMult: number; }
+export function socketBonuses(inst: WeaponInstance): SocketBonus {
+  const b: SocketBonus = { atkPct: 0, breakPct: 0, critAdd: 0, critMult: 0 };
+  for (const gid of inst.sockets ?? []) {
+    const g = gid ? GEM_MAP[gid] : undefined;
+    if (!g) continue;
+    b.atkPct += g.atkPct ?? 0;
+    b.breakPct += g.breakPct ?? 0;
+    b.critAdd += g.critAdd ?? 0;
+    b.critMult += g.critMult ?? 0;
+  }
+  return b;
+}
+
+/**
+ * ボス/乱入ボス撃破時の秘石ドロップを抽選。落ちなければ undefined。
+ * 通常ボスは中確率で低〜中等級、乱入ボスは確定で中〜高等級。ワールドが進むほど等級が上がりやすい。
+ */
+export function rollGemDrop(world: number | undefined, isAmbush: boolean): string | undefined {
+  if (!isAmbush && Math.random() >= 0.6) return undefined; // 通常ボスは60%
+  const w = world ?? 1;
+  // 等級重み（ambushや高ワールドほど上位が出やすい）
+  let tier: number;
+  const r = Math.random();
+  if (isAmbush) {
+    tier = r < 0.45 ? 3 : r < 0.85 ? 2 : 1;
+  } else if (w >= 4) {
+    tier = r < 0.15 ? 3 : r < 0.55 ? 2 : 1;
+  } else if (w >= 2) {
+    tier = r < 0.35 ? 2 : 1;
+  } else {
+    tier = r < 0.15 ? 2 : 1;
+  }
+  const pool = GEMS.filter((g) => g.tier === tier);
+  return pool[Math.floor(Math.random() * pool.length)].id;
 }
 
 // ===== 敵（enemies.json から読み込み） =====

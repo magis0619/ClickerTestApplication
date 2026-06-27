@@ -574,10 +574,10 @@ export class Battle {
     if (this.charge > 1) dmg *= this.charge;
     if (this.rageTurns > 0) dmg *= RAGE_MULT;             // 激昂（攻撃up）
     if (e.vulnerableTurns > 0) dmg *= VULNERABLE_MULT;    // 弱体（防御down）
-    // 会心＝武器の会心率＋スキルの加算。発生で skill.critMult 倍
+    // 会心＝武器の会心率＋スキルの加算。発生で (skillの倍率＋秘石の会心威力) 倍
     const critChance = ((mods?.critChance ?? 0) + skill.critAdd) / 100;
     const crit = critChance > 0 && Math.random() < critChance;
-    if (crit) dmg *= skill.critMult;
+    if (crit) dmg *= skill.critMult + (mods?.critMult ?? 0);
     dmg = Math.round(dmg);
 
     const wasAlive = e.alive;

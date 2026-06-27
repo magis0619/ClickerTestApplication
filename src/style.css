@@ -2136,6 +2136,48 @@ body.theme-nb {
   background: #df0b81; color: #fff; border: 2.5px solid #1c1b1b; box-shadow: 4px 4px 0 #1c1b1b; border-radius: 12px;
 }
 .theme-nb .forge-apply:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
+
+/* ===== 秘石（ジェム）ソケット ===== */
+.gem-bonus-sum { font-size: 11px; font-weight: 800; color: #0a7f97; }
+.gem-slots { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.gem-slot {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; text-align: left;
+  background: #faf7fb; border: 2px dashed #c8bfce; border-radius: 11px; cursor: pointer;
+}
+.gem-slot.filled { border-style: solid; background: #fff; box-shadow: 2px 2px 0 #1c1b1b; }
+.gem-dot {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #1c1b1b;
+  box-shadow: 0 0 6px currentColor;
+}
+.gem-slot-info { display: flex; flex-direction: column; min-width: 0; }
+.gem-slot-name { font-size: 13px; font-weight: 900; color: #1c1b1b; }
+.gem-slot-desc { font-size: 11px; color: #8a7f90; }
+.gem-slot-empty { font-size: 13px; font-weight: 800; color: #a99fae; }
+
+/* 秘石ピッカー（モーダル） */
+.gem-sheet { text-align: left; }
+.gem-pick-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.gem-pick-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; text-align: left;
+  background: #fff; border: 2px solid #1c1b1b; border-radius: 11px; cursor: pointer; box-shadow: 3px 3px 0 #1c1b1b;
+}
+.gem-pick-row:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1c1b1b; }
+.gem-pick-off { background: #fff0f0; }
+.gem-pick-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gem-pick-info b { font-size: 14px; color: #1c1b1b; }
+.gem-pick-desc { font-size: 11px; color: #8a7f90; }
+.gem-pick-cnt { flex-shrink: 0; font-family: "Space Mono", monospace; font-size: 13px; font-weight: 900; color: #0a7f97; }
+
+/* リザルトの入手秘石 */
+.result-gems {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; margin-bottom: 12px;
+}
+.result-gems-lbl { font-size: 12px; font-weight: 900; color: #0a7f97; width: 100%; text-align: center; }
+.result-gem-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px;
+  font-size: 12px; font-weight: 800; color: #1c1b1b;
+  background: #fff; border: 2px solid #1c1b1b; border-radius: 999px;
+}
 .theme-nb .forge-apply:disabled { background: #b7afb6; box-shadow: 4px 4px 0 #b7afb6; color: #ece7ea; }
 .theme-nb .forge-awaken { border-color: #8a3ad0; }
 .theme-nb .forge-awaken-btn { background: #8a3ad0; box-shadow: 4px 4px 0 #1c1b1b; }
