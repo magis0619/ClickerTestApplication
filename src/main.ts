@@ -305,7 +305,7 @@ function buildTopHeader(): void {
   topbarEl.className = "topbar nb-topbar";
   const brand = document.createElement("div");
   brand.className = "nb-brand";
-  brand.textContent = "BATTLE_ROYALE_V1";
+  brand.textContent = ""; // ブランド表記は非表示（左スペーサーとして残す）
   const right = document.createElement("div");
   right.className = "nb-top-right";
   const gold = document.createElement("span");
@@ -423,7 +423,7 @@ function rarityGlowClass(r: Rarity): string {
 
 // ===== 鍛冶屋（武器強化） =====
 function buildForge(): void {
-  controls.appendChild(screenHead("MASTER FORGE", "🔧 SCREEN_21"));
+  controls.appendChild(screenHead("MASTER FORGE"));
 
   const target = forgeTargetUid
     ? game.save.inventory.find((it) => it.uid === forgeTargetUid)
@@ -661,7 +661,7 @@ function buildAwakenSection(target: WeaponInstance): void {
 }
 
 function buildShop(): void {
-  controls.appendChild(screenHead("GRAND BAZAAR", "SCREEN_19"));
+  controls.appendChild(screenHead("GRAND BAZAAR"));
 
   // FLASH DEALS = 宝箱（横スクロールの大カード／購入で即開封）
   controls.appendChild(sectionLabel("FLASH DEALS", timerChip()));
@@ -1029,7 +1029,7 @@ function powerPanel(): HTMLElement {
 }
 
 function buildInventory(): void {
-  controls.appendChild(screenHead("ARSENAL"));
+  controls.appendChild(screenHead("INVENTORY"));
 
   // 所持容量バー（INVENTORY CAPACITY）
   const count = game.save.inventory.length;
