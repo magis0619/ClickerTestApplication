@@ -1499,11 +1499,15 @@ body.in-battle {
 .bt-stats { margin: 12px 0; }
 .bt-stat-row {
   display: flex; align-items: baseline; justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .bt-stat-label {
-  font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 22px; font-weight: 900; letter-spacing: 1.5px; color: #1c1b1b;
+  font-family: "Press Start 2P", "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
+  font-size: 15px; letter-spacing: 0; color: #ffffff;
+  /* 白文字＋太い黒フチ（ピクセルフォントのレトロ表記） */
+  text-shadow:
+    -2px 0 #1c1b1b, 2px 0 #1c1b1b, 0 -2px #1c1b1b, 0 2px #1c1b1b,
+    -2px -2px #1c1b1b, 2px -2px #1c1b1b, -2px 2px #1c1b1b, 2px 2px #1c1b1b;
 }
 .bt-crit {
   font-family: "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
@@ -1524,7 +1528,7 @@ body.in-battle {
 /* バトルのHP/AP：太い黒枠＋ハードシャドウのチャンキーなセグメントバー（送付デザイン準拠）。
    連続フィルで「ぬるっと」増減しつつ、黒い仕切り＋上面グロスで艶のあるブロックに見せる */
 .bt-seg-fluid {
-  position: relative; overflow: hidden; gap: 0; height: 28px; margin: 6px 0 12px;
+  position: relative; overflow: hidden; gap: 0; height: 28px; margin: 6px 0 7px;
   background: #2f2632; border: 3px solid #1c1b1b; border-radius: 6px; box-shadow: 4px 4px 0 #1c1b1b;
 }
 .bt-seg-fluid .bt-seg-fill {

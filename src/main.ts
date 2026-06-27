@@ -193,7 +193,7 @@ const topbarEl = document.querySelector(".topbar") as HTMLElement;
 
 // 規定フォントを先読み（canvasの文字が初回からデザイン通りに描画されるように）
 if (document.fonts) {
-  for (const f of ["900 16px Anybody", "700 16px 'Space Mono'", "800 16px 'Hanken Grotesk'"]) {
+  for (const f of ["900 16px Anybody", "700 16px 'Space Mono'", "800 16px 'Hanken Grotesk'", "16px 'Press Start 2P'"]) {
     document.fonts.load(f).catch(() => {});
   }
 }
