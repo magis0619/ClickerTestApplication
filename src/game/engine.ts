@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus, ShieldPassive } from "./types.ts";
 import {
   matchCombo,
   FLOAT_TTL,
@@ -162,6 +162,8 @@ export class Battle {
   charge = 1;
   /** プレイヤーの防御力（装備盾由来）。被ダメージから減算する */
   playerDefense = 0;
+  /** 装備盾のパッシブ効果（なければ null） */
+  shieldPassive: ShieldPassive | null = null;
   /** 激昂（攻撃up）の残りターン。>0 の間は与ダメージ上昇 */
   rageTurns = 0;
 
@@ -466,6 +468,10 @@ export class Battle {
       e.count -= 1;
       if (e.count < 0) e.count = 0;
     }
+    // 盾パッシブ「自己再生」：行動するたびに少量HP回復
+    if (this.shieldPassive?.kind === "regen" && this.playerHp > 0) {
+      this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + this.shieldPassive.value);
+    }
     // カウント処理のあとに状態異常を経過させる（毒ダメージ・凍結/弱体/激昂の減少）
     this.tickStatuses();
   }
@@ -516,7 +522,8 @@ export class Battle {
     targets.sort((a, b) => a.telegraphT - b.telegraphT);
     const e = targets[0];
     const diff = e.telegraphT; // 着弾までの残り時間
-    const ln = settings.leniency; // 猶予倍率（設定で各窓を広げられる）
+    // 猶予倍率（設定＋盾パッシブ「達人の構え」で各窓を広げられる）
+    const ln = settings.leniency + (this.shieldPassive?.kind === "guardWindow" ? this.shieldPassive.value : 0);
     let result: GuardResult;
     if (diff <= PERFECT_WINDOW_MS * ln) result = "perfect";
     else if (diff <= JUST_WINDOW_MS * ln) result = "just";
@@ -543,7 +550,10 @@ export class Battle {
     let dmg = atk;
     const weak = mods ? WEAKNESS[e.def.kind] === mods.weapon : false;
     if (weak) dmg *= WEAKNESS_MULTIPLIER;
-    if (e.isBroken) dmg *= BREAK_CRIT_MULT;
+    if (e.isBroken) {
+      dmg *= BREAK_CRIT_MULT;
+      if (this.shieldPassive?.kind === "breakBonus") dmg *= 1 + this.shieldPassive.value; // 盾「破壊衝動」
+    }
     if (this.charge > 1) dmg *= this.charge;
     if (this.rageTurns > 0) dmg *= RAGE_MULT;             // 激昂（攻撃up）
     if (e.vulnerableTurns > 0) dmg *= VULNERABLE_MULT;    // 弱体（防御down）
@@ -679,6 +689,14 @@ export class Battle {
         this.shake(340, 7);
         this.sfx.push("hurt");
         break;
+    }
+    // 盾パッシブ「星の反撃」：被弾した（パーフェクト以外）とき、攻撃してきた敵へ反射ダメージ
+    if (guard !== "perfect" && this.shieldPassive?.kind === "thorns" && e.alive) {
+      const counter = Math.max(1, Math.round(e.def.attack * this.shieldPassive.value));
+      e.hp = Math.max(0, e.hp - counter);
+      e.hitFlash = 200;
+      this.pushDamage(counter, idx, false, false);
+      if (e.hp <= 0) this.killEnemy(e, idx);
     }
     // パーフェクト以外は被弾＝のけぞり演出（生身ガードも軽く反応）
     if (guard !== "perfect") this.playerHitT = guard === "none" ? 320 : 220;

@@ -180,10 +180,12 @@ export class Game {
       this.endlessFloor = 1;
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false));
       this.battle.playerDefense = this.defense;
+      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       this.battle.announce("FLOOR 1", "#9fd9ff");
     } else {
       this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[0], this.isBossWave), this.currentStage.world));
       this.battle.playerDefense = this.defense;
+      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
@@ -279,8 +281,11 @@ export class Game {
     if (!getShield(id)) return false;
     this.save.equippedShield = id;
     writeSave(this.save);
-    // 戦闘中なら即座に防御力へ反映
-    if (this.battle) this.battle.playerDefense = this.defense;
+    // 戦闘中なら即座に防御力・パッシブへ反映
+    if (this.battle) {
+      this.battle.playerDefense = this.defense;
+      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+    }
     return true;
   }
   /** 現在の防御力（装備盾の defense） */
@@ -348,6 +353,7 @@ export class Game {
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en);
       this.battle.playerDefense = this.defense;
+      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       this.battle.announce(`FLOOR ${this.endlessFloor}`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
@@ -364,6 +370,7 @@ export class Game {
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), this.currentStage.world), hp, en);
       this.battle.playerDefense = this.defense;
+      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す

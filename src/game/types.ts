@@ -98,8 +98,22 @@ export interface EnemyDef {
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astral";
 
 /**
- * 盾。武器とは別枠で装備する防具。スキルは持たず「防御力」のみを持ち、
- * 被ダメージを軽減する（パーフェクト無効化を除く）。将来パッシブ追加の余地あり。
+ * 盾のパッシブ効果。
+ * regen=毎行動HP回復 / guardWindow=ガード判定窓拡大 /
+ * breakBonus=ブレイク中の敵への与ダメ増 / thorns=被弾時に反撃（敵攻撃力×value）
+ */
+export type ShieldPassiveKind = "regen" | "guardWindow" | "breakBonus" | "thorns";
+export interface ShieldPassive {
+  kind: ShieldPassiveKind;
+  /** 効果量（regen=HP, guardWindow=判定倍率加算, breakBonus/thorns=割合） */
+  value: number;
+  /** パッシブ名（UI表示用） */
+  name: string;
+}
+
+/**
+ * 盾。武器とは別枠で装備する防具。スキルは持たず「防御力」とパッシブ効果を持ち、
+ * 被ダメージを軽減する（パーフェクト無効化を除く）。
  */
 export interface Shield {
   id: string;
@@ -108,6 +122,8 @@ export interface Shield {
   /** 防御力（被ダメージから減算する） */
   defense: number;
   desc: string;
+  /** パッシブ効果（任意。木盾は無し） */
+  passive?: ShieldPassive;
 }
 
 /**

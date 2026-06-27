@@ -123,11 +123,24 @@ export function getWeapon(id: string): Weapon | undefined { return WEAPONS.find(
 // プレイヤーは最初から全種を所持し、インベントリで付け替える。
 export const SHIELDS: Shield[] = [
   { id: "sh_wood",    name: "ウッドバックラー",     rarity: "common",   defense: 2,  desc: "軽い木の小盾。最低限の備え。" },
-  { id: "sh_iron",    name: "アイアンガード",       rarity: "uncommon", defense: 5,  desc: "鉄板を張った頑丈な盾。" },
-  { id: "sh_knight",  name: "ナイトエイジス",       rarity: "rare",     defense: 8,  desc: "騎士団の紋章を刻んだ堅盾。" },
-  { id: "sh_obsidian",name: "オブシディアンウォール", rarity: "epic",     defense: 12, desc: "黒曜石の壁。重い一撃も受け止める。" },
-  { id: "sh_astral",  name: "アストラルバリア",     rarity: "legend",   defense: 18, desc: "星辰の力を宿す究極の防壁。" },
+  { id: "sh_iron",    name: "アイアンガード",       rarity: "uncommon", defense: 5,  desc: "鉄板を張った頑丈な盾。",
+    passive: { kind: "regen", value: 3, name: "自己再生" } },
+  { id: "sh_knight",  name: "ナイトエイジス",       rarity: "rare",     defense: 8,  desc: "騎士団の紋章を刻んだ堅盾。",
+    passive: { kind: "guardWindow", value: 0.25, name: "達人の構え" } },
+  { id: "sh_obsidian",name: "オブシディアンウォール", rarity: "epic",     defense: 12, desc: "黒曜石の壁。重い一撃も受け止める。",
+    passive: { kind: "breakBonus", value: 0.3, name: "破壊衝動" } },
+  { id: "sh_astral",  name: "アストラルバリア",     rarity: "legend",   defense: 18, desc: "星辰の力を宿す究極の防壁。",
+    passive: { kind: "thorns", value: 0.5, name: "星の反撃" } },
 ];
+/** パッシブ効果の説明文（UI表示用） */
+export function shieldPassiveDesc(p: NonNullable<Shield["passive"]>): string {
+  switch (p.kind) {
+    case "regen": return `行動するたびにHPを${p.value}回復`;
+    case "guardWindow": return `ガード判定の猶予が広がる（+${Math.round(p.value * 100)}%）`;
+    case "breakBonus": return `ブレイク中の敵への与ダメージ+${Math.round(p.value * 100)}%`;
+    case "thorns": return `被弾時、敵の攻撃力の${Math.round(p.value * 100)}%を反射ダメージ`;
+  }
+}
 const SHIELD_MAP: Record<string, Shield> = Object.fromEntries(SHIELDS.map((s) => [s.id, s]));
 export function getShield(id: string): Shield | undefined { return SHIELD_MAP[id]; }
 /** 初期装備の盾ID（最弱の木盾） */

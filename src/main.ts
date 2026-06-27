@@ -11,7 +11,7 @@ import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
   getWeapon, getSkill, skillDescription, isRainbowRarity, matchCombo, stageDropPreview, COMBOS,
   PLAYER_MAX_HP, PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS,
-  effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
+  effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN, shieldPassiveDesc,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
@@ -1427,9 +1427,8 @@ function shieldGrid(): HTMLElement {
       `<span class="ars-card-fav"></span></div>` +
       `<div class="ars-card-img"></div>` +
       `<div class="ars-card-name">${sh.name}</div>` +
-      (equipped
-        ? `<div class="ars-card-eq">EQUIPPED</div>`
-        : `<div class="ars-card-stats"><span>DEF ${sh.defense}</span></div>`);
+      `<div class="ars-card-stats"><span>DEF ${sh.defense}</span>${sh.passive ? `<span class="ars-card-passive">✦${sh.passive.name}</span>` : ""}</span></div>` +
+      (equipped ? `<div class="ars-card-eq">EQUIPPED</div>` : "");
     const sprite = SHIELD_BY_ID[sh.id] ?? SHIELD_WOOD;
     const cv = makeSpriteCanvas(sprite, 3); cv.className = "wpn-sprite";
     card.querySelector(".ars-card-img")?.appendChild(cv);
@@ -1454,6 +1453,10 @@ function openShieldModal(id: string): void {
     `<span class="wpn-chip wpn-chip-cls">盾</span></div>` +
     `<div class="wpn-sheet-img"></div>` +
     `<div class="wpn-sheet-stats">${statBox("DEF", `${sh.defense}`)}</div>` +
+    (sh.passive
+      ? `<div class="shield-passive"><span class="shield-passive-name">✦ ${sh.passive.name}</span>` +
+        `<span class="shield-passive-desc">${shieldPassiveDesc(sh.passive)}</span></div>`
+      : `<div class="shield-passive shield-passive-none">パッシブ効果なし</div>`) +
     `<div class="wpn-sheet-desc">${sh.desc}</div>`;
   const mcv = makeSpriteCanvas(SHIELD_BY_ID[sh.id] ?? SHIELD_WOOD, 6); mcv.className = "wpn-sprite";
   sheet.querySelector(".wpn-sheet-img")?.appendChild(mcv);
@@ -2196,8 +2199,9 @@ function buildHowTo(): void {
   guard.appendChild(howStep("⭐", "JUST（早め）", `被ダメージを大きく軽減しAP <b>+${JUST_EN_RECOVER}</b> 回復。`));
   guard.appendChild(howStep("🛡", "GUARD（通常）", "被ダメージを軽減。タイミングを逃しても守りにはなる。"));
   guard.appendChild(howText(
-    "インベントリの<b>盾</b>タブで盾を装備すると<b>防御力</b>が上がり、" +
-    "受けるダメージがさらに減る（パーフェクトは元々0なので影響なし）。",
+    "インベントリの<b>盾</b>タブで盾を装備すると<b>防御力</b>が上がり、受けるダメージが減る" +
+    "（パーフェクトは元々0なので影響なし）。盾ごとに<b>パッシブ効果</b>（自己再生・ガード窓拡大・" +
+    "ブレイク特効・反撃など）も持つので、戦い方に合わせて選ぼう。",
   ));
   controls.appendChild(howSection("04", "ガードのコツ", guard));
 

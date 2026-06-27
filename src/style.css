@@ -2222,6 +2222,15 @@ body.theme-nb {
 .wpn-stat-diff.up { color: #1f9d4d; }
 .wpn-stat-diff.down { color: #d23030; }
 .wpn-sheet-cmp { text-align: center; font-size: 11px; font-weight: 700; color: #8a7f90; margin: -6px 0 12px; }
+/* 盾のパッシブ表示 */
+.shield-passive {
+  display: flex; flex-direction: column; gap: 3px; padding: 9px 11px; margin-bottom: 12px;
+  background: #fff6e0; border: 2px solid #1c1b1b; border-radius: 10px;
+}
+.shield-passive-name { font-size: 14px; font-weight: 900; color: #b08900; }
+.shield-passive-desc { font-size: 12px; color: #5a5260; line-height: 1.5; }
+.shield-passive-none { color: #8a7f90; font-size: 12px; font-weight: 700; text-align: center; }
+.ars-card-passive { display: block; color: #b08900; font-weight: 800; font-size: 11px; margin-top: 1px; }
 .wpn-sheet-desc { font-size: 13px; line-height: 1.5; color: #4a4453; margin-bottom: 12px; padding: 8px 10px; background: #fff; border: 2px solid #1c1b1b; }
 .wpn-sheet-stats:has(.wpn-stat:only-child) { grid-template-columns: 1fr; }
 .wpn-sheet-log { margin-bottom: 12px; }
