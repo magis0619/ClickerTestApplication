@@ -5,20 +5,104 @@ import { settings } from "../game/settings.ts";
 
 type Wave = OscillatorType;
 
-// --- メロディ定義（16分音符 × 32 = 2小節, 120BPM）。null は休符 ---
-const A4 = 440, B4 = 493.88, C5 = 523.25, D5 = 587.33, E5 = 659.25, G4 = 392;
+// --- メロディ定義（16分音符 × 32 = 2小節）。null は休符 ---
 const _ = null;
+// 音名→周波数（必要な音だけ）
+const E4 = 329.63, F4 = 349.23, G4 = 392, A4 = 440, B4 = 493.88;
+const C5 = 523.25, D5 = 587.33, E5 = 659.25, F5 = 698.46, G5 = 783.99, A5 = 880;
+const F1 = 43.65, A1 = 55, B1 = 61.74, C2 = 65.41, D2 = 73.42, E2 = 82.41, F2 = 87.31, G2 = 98, A2 = 110;
 
-const LEAD: (number | null)[] = [
-  A4, _, C5, _, E5, _, D5, _, C5, _, A4, _, E5, _, _, _,
-  G4, _, B4, _, D5, _, C5, _, B4, _, G4, _, D5, _, _, _,
-];
+/** 1曲ぶんの演奏データ（リード＋ベース＋テンポ＋波形） */
+interface BgmTrack {
+  lead: (number | null)[];
+  bass: (number | null)[];
+  bpm: number;
+  leadWave: Wave;
+  bassWave: Wave;
+}
 
-const A2 = 110, G2 = 98, F2 = 87.31, E2 = 82.41;
-const BASS: (number | null)[] = [
-  A2, _, _, _, A2, _, _, _, F2, _, _, _, F2, _, _, _,
-  G2, _, _, _, G2, _, _, _, E2, _, _, _, E2, _, _, _,
-];
+/** メニュー/既定：明るいハイパーポップ */
+const TRACK_MENU: BgmTrack = {
+  bpm: 120, leadWave: "square", bassWave: "triangle",
+  lead: [
+    A4, _, C5, _, E5, _, D5, _, C5, _, A4, _, E5, _, _, _,
+    G4, _, B4, _, D5, _, C5, _, B4, _, G4, _, D5, _, _, _,
+  ],
+  bass: [
+    A2, _, _, _, A2, _, _, _, F2, _, _, _, F2, _, _, _,
+    G2, _, _, _, G2, _, _, _, E2, _, _, _, E2, _, _, _,
+  ],
+};
+
+/** ワールド1：森（やさしい長調・牧歌的） */
+const TRACK_FOREST: BgmTrack = {
+  bpm: 112, leadWave: "square", bassWave: "triangle",
+  lead: [
+    A4, _, C5, _, E5, _, _, C5, D5, _, _, _, C5, _, A4, _,
+    G4, _, A4, _, C5, _, E5, _, D5, _, C5, _, A4, _, _, _,
+  ],
+  bass: [
+    A2, _, _, _, E2, _, _, _, F2, _, _, _, C2, _, _, _,
+    G2, _, _, _, D2, _, _, _, A2, _, _, _, E2, _, _, _,
+  ],
+};
+
+/** ワールド2：火山（疾走する短調・切迫） */
+const TRACK_VOLCANO: BgmTrack = {
+  bpm: 132, leadWave: "sawtooth", bassWave: "square",
+  lead: [
+    E5, _, E5, D5, E5, _, G5, _, E5, _, D5, _, B4, _, _, _,
+    C5, _, C5, B4, C5, _, E5, _, D5, _, B4, _, A4, _, _, _,
+  ],
+  bass: [
+    E2, _, E2, _, E2, _, E2, _, C2, _, C2, _, C2, _, C2, _,
+    G2, _, G2, _, G2, _, G2, _, A2, _, A2, _, B1, _, _, _,
+  ],
+};
+
+/** ワールド3：氷（澄んだ高音・スロー＆スパース） */
+const TRACK_FROST: BgmTrack = {
+  bpm: 100, leadWave: "triangle", bassWave: "triangle",
+  lead: [
+    E5, _, _, _, G5, _, _, _, A5, _, _, G5, E5, _, _, _,
+    D5, _, _, _, E5, _, _, _, C5, _, _, _, _, _, _, _,
+  ],
+  bass: [
+    A2, _, _, _, _, _, _, _, F2, _, _, _, _, _, _, _,
+    G2, _, _, _, _, _, _, _, C2, _, _, _, _, _, _, _,
+  ],
+};
+
+/** ワールド4：雷（高速・緊張） */
+const TRACK_STORM: BgmTrack = {
+  bpm: 140, leadWave: "square", bassWave: "square",
+  lead: [
+    B4, _, D5, _, F5, _, D5, _, B4, _, F5, _, E5, _, _, _,
+    A4, _, C5, _, E5, _, C5, _, A4, _, E5, _, D5, _, _, _,
+  ],
+  bass: [
+    B1, _, B1, _, B1, _, B1, _, G2, _, G2, _, G2, _, G2, _,
+    A2, _, A2, _, A2, _, A2, _, E2, _, E2, _, E2, _, E2, _,
+  ],
+};
+
+/** ワールド5：深淵（暗く荘厳・スロー） */
+const TRACK_ABYSS: BgmTrack = {
+  bpm: 92, leadWave: "triangle", bassWave: "sine",
+  lead: [
+    A4, _, _, _, C5, _, _, B4, A4, _, _, _, E5, _, _, _,
+    F4, _, _, _, A4, _, _, G4, F4, _, _, _, E4, _, _, _,
+  ],
+  bass: [
+    A1, _, _, _, _, _, _, _, F1, _, _, _, _, _, _, _,
+    D2, _, _, _, _, _, _, _, E2, _, _, _, _, _, _, _,
+  ],
+};
+
+/** ワールド番号 → BGMトラック */
+const WORLD_TRACKS: Record<number, BgmTrack> = {
+  1: TRACK_FOREST, 2: TRACK_VOLCANO, 3: TRACK_FROST, 4: TRACK_STORM, 5: TRACK_ABYSS,
+};
 
 // BGM/SFX の基準音量（設定値 0..1 を掛ける）
 const BGM_BASE = 0.16;
@@ -35,7 +119,8 @@ export class AudioEngine {
   private timer: number | null = null;
   private nextNoteTime = 0;
   private step = 0;
-  private readonly bpm = 120;
+  /** 現在再生中のトラック（既定はメニュー） */
+  private track: BgmTrack = TRACK_MENU;
 
   /** ユーザー操作後に呼ぶ（AudioContextは操作起点でないと鳴らせない） */
   init(): void {
@@ -76,16 +161,32 @@ export class AudioEngine {
     return this.muted;
   }
 
+  /** 再生するBGMトラックを切り替える（ワールド遷移・戦闘開始時に呼ぶ） */
+  private setTrack(t: BgmTrack): void {
+    if (this.track === t) return;
+    this.track = t;
+    this.step = 0; // 小節の頭から鳴らし直す
+  }
+  /** 指定ワールドの戦闘BGMへ切り替え（未定義ワールドはメニュー曲） */
+  playWorldBgm(world?: number): void {
+    this.setTrack((world != null && WORLD_TRACKS[world]) || TRACK_MENU);
+  }
+  /** メニュー/ホームのBGMへ戻す */
+  playMenuBgm(): void {
+    this.setTrack(TRACK_MENU);
+  }
+
   private scheduler(): void {
     if (!this.ctx) return;
-    const secPerStep = 60 / this.bpm / 4; // 16分音符
+    const tr = this.track;
+    const secPerStep = 60 / tr.bpm / 4; // 16分音符
     while (this.nextNoteTime < this.ctx.currentTime + 0.12) {
-      const lead = LEAD[this.step];
-      if (lead) this.tone(lead, this.nextNoteTime, secPerStep * 0.9, "square", 0.5);
-      const bass = BASS[this.step];
-      if (bass) this.tone(bass, this.nextNoteTime, secPerStep * 3.5, "triangle", 0.8);
+      const lead = tr.lead[this.step];
+      if (lead) this.tone(lead, this.nextNoteTime, secPerStep * 0.9, tr.leadWave, 0.5);
+      const bass = tr.bass[this.step];
+      if (bass) this.tone(bass, this.nextNoteTime, secPerStep * 3.5, tr.bassWave, 0.8);
       this.nextNoteTime += secPerStep;
-      this.step = (this.step + 1) % LEAD.length;
+      this.step = (this.step + 1) % tr.lead.length;
     }
   }
 

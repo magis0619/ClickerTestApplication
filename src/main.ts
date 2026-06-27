@@ -319,6 +319,9 @@ function buildControls(): void {
   menuBg.style.display = inBattle ? "none" : "";
   battleTop.style.display = inBattle ? "" : "none";
   if (!inBattle) battleTop.innerHTML = "";
+  // BGM：戦闘中はワールド別テーマ曲、それ以外はメニュー曲（同じ曲なら内部でno-op）
+  if (inBattle) audio.playWorldBgm(game.currentStage?.world);
+  else audio.playMenuBgm();
   if (menuThemed) buildTopHeader();
   else { topbarEl.innerHTML = ""; topbarEl.className = "topbar"; }
   switch (game.screen) {
