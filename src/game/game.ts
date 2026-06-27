@@ -5,6 +5,7 @@ import {
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
+import { progress, saveProgress } from "./progress.ts";
 import type {
   Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef, ShopChest, Shield,
 } from "./types.ts";
@@ -46,6 +47,10 @@ export class Game {
   goShop(): void { this.screen = "shop"; }
   goWorldSelect(): void { this.screen = "worldSelect"; }
   goHowTo(): void { this.screen = "howto"; }
+  goAchievements(): void { this.screen = "achievements"; }
+
+  /** ゴールドを加算して保存（実績・デイリー報酬の受け取り用） */
+  addGold(n: number): void { this.save.gold += n; writeSave(this.save); }
 
   /** 所持ゴールド */
   get gold(): number { return this.save.gold; }
@@ -374,6 +379,8 @@ export class Game {
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
     writeSave(this.save);
+    // 実績：ノーダメージ達成（ステージ全体を無傷でクリア）
+    if (this.lastFlawless) { progress.flawlessClears += 1; saveProgress(); }
     this.screen = "result";
   }
 
@@ -389,12 +396,16 @@ export class Game {
     this.screen = "result";
   }
 
-  /** 現在の戦闘の戦績を冒険全体の集計へ反映する */
+  /** 現在の戦闘の戦績を冒険全体の集計＋累計進捗へ反映する */
   private accumulateStats(): void {
     if (!this.battle) return;
     this.lastMaxHit = Math.max(this.lastMaxHit, this.battle.maxHit);
     this.lastPerfects += this.battle.perfectCount;
     if (this.battle.tookDamage) this.lastFlawless = false;
+    // 実績用の累計（パーフェクト・撃破数）。デイリーとは別に常時加算
+    progress.perfectsTotal += this.battle.perfectCount;
+    progress.killsTotal += this.battle.killCount;
+    saveProgress();
   }
 
   /** result画面用：現在の戦闘の敵数（描画維持用） */

@@ -2419,6 +2419,64 @@ body.theme-nb {
 }
 .settings-mute.on { background: #e7e1e4; color: #8a7f90; }
 
+/* ===== ホームのミニボタン（デイリー・実績） ===== */
+.home-sub { display: flex; gap: 10px; width: min(340px, 96%); margin: 10px auto 0; }
+.home-sub-btn {
+  position: relative; flex: 1; padding: 11px; border: 3px solid #1c1b1b; border-radius: 12px;
+  background: #ffffff; color: #1c1b1b; font-size: 14px; font-weight: 900; cursor: pointer;
+  box-shadow: 4px 4px 0 #1c1b1b; transition: transform 0.05s, box-shadow 0.05s;
+}
+.home-sub-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1c1b1b; }
+.home-sub-btn.ready { background: #fff0a8; }
+.home-sub-dot {
+  position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
+  background: #df0b81; color: #fff; border: 2px solid #1c1b1b; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== デイリー モーダル ===== */
+.daily-sheet { text-align: center; }
+.daily-emoji { font-size: 56px; margin: 6px 0; }
+.daily-msg { font-size: 15px; font-weight: 800; color: #1c1b1b; margin-bottom: 6px; }
+.daily-streak { font-size: 12px; font-weight: 700; color: #8a7f90; margin-bottom: 14px; }
+.daily-claim { width: 100%; }
+
+/* ===== 実績画面 ===== */
+.ach-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.ach-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: #fff; border: 2.5px solid #1c1b1b; border-radius: 14px; box-shadow: 4px 4px 0 #1c1b1b;
+}
+.ach-row.done { background: #fffbe9; }
+.ach-main { flex: 1; min-width: 0; }
+.ach-name { font-size: 15px; font-weight: 900; color: #1c1b1b; }
+.ach-desc { font-size: 12px; color: #5a5260; margin: 1px 0 5px; }
+.ach-bar { height: 7px; background: #e6dfe6; border: 1px solid #1c1b1b; border-radius: 999px; overflow: hidden; }
+.ach-bar span { display: block; height: 100%; background: #df0b81; }
+.ach-prog { font-family: "Space Mono", monospace; font-size: 11px; font-weight: 800; color: #8a7f90; margin-top: 4px; }
+.ach-claim {
+  flex-shrink: 0; align-self: stretch; min-width: 78px; padding: 8px 10px;
+  border: 2px solid #1c1b1b; border-radius: 10px; background: #df0b81; color: #fff;
+  font-size: 12px; font-weight: 900; cursor: pointer;
+}
+.ach-claim:disabled { background: #d7d0d7; color: #8a7f90; cursor: default; }
+
+/* ===== チュートリアル（コーチマーク） ===== */
+.coach-overlay { position: fixed; inset: 0; z-index: 200; }
+.coach-hole {
+  position: fixed; display: none; border: 3px solid #ffd34d; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(8, 5, 14, 0.72); pointer-events: none;
+}
+.coach-tip {
+  position: fixed; width: min(330px, 92%); background: #fff; border: 3px solid #1c1b1b;
+  border-radius: 14px; box-shadow: 6px 6px 0 #1c1b1b; padding: 14px;
+}
+.coach-step { font-family: "Space Mono", monospace; font-size: 11px; font-weight: 900; color: #df0b81; margin-bottom: 4px; }
+.coach-text { font-size: 14px; font-weight: 700; line-height: 1.6; color: #1c1b1b; margin-bottom: 12px; }
+.coach-acts { display: flex; gap: 8px; }
+.coach-skip { flex: 0 0 auto; padding: 9px 12px; border: 2px solid #1c1b1b; border-radius: 10px; background: #fff; color: #8a7f90; font-size: 13px; font-weight: 800; cursor: pointer; }
+.coach-next { flex: 1; padding: 9px; border: 2px solid #1c1b1b; border-radius: 10px; background: #df0b81; color: #fff; font-size: 14px; font-weight: 900; cursor: pointer; }
+
 .confirm-modal {
   position: fixed; inset: 0; z-index: 140;
   display: flex; align-items: center; justify-content: center; padding: 20px;

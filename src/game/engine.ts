@@ -216,6 +216,8 @@ export class Battle {
   perfectCount = 0;
   /** 戦績：被弾したか（false のままならノーダメージ達成） */
   tookDamage = false;
+  /** この戦闘で撃破した敵の数（実績集計用） */
+  killCount = 0;
   /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
@@ -584,6 +586,7 @@ export class Battle {
 
   /** 敵を撃破：ノックバック・フェード・ドロップ（宝箱）演出を開始する */
   private killEnemy(e: EnemyState, idx: number): void {
+    this.killCount += 1; // 実績集計用
     e.deathT = DEATH_ANIM_MS;
     e.deathDir = 1; // プレイヤーは左、敵は右向きなので右奥へ吹き飛ぶ
     e.breakTurns = 0;

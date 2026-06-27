@@ -15,6 +15,7 @@ import {
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
+import { progress, saveProgress, ACHIEVEMENTS, dailyAvailable, claimDaily } from "./game/progress.ts";
 import type {
   Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
   EnemyKind, EnemyDef, StageDef,
@@ -268,6 +269,7 @@ function buildControls(): void {
     case "battle": buildBattle(); break;
     case "result": buildResult(); break;
     case "howto": buildHowTo(); break;
+    case "achievements": buildAchievements(); break;
   }
   // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
   if (screenChanged) {
@@ -299,6 +301,21 @@ function buildTitle(): void {
   controls.appendChild(hero);
   controls.appendChild(ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect())));
   controls.appendChild(ctaButton("遊び方を見る", "howto", () => { game.goHowTo(); buildControls(); }));
+
+  // デイリーボーナス＋実績へのミニボタン
+  const subRow = document.createElement("div");
+  subRow.className = "home-sub";
+  const daily = document.createElement("button");
+  daily.className = "home-sub-btn" + (dailyAvailable() ? " ready" : "");
+  daily.innerHTML = `🎁 デイリー${dailyAvailable() ? `<span class="home-sub-dot">!</span>` : ""}`;
+  daily.addEventListener("click", () => { audio.init(); openDailyModal(); });
+  const ach = document.createElement("button");
+  ach.className = "home-sub-btn";
+  ach.innerHTML = `🏆 実績`;
+  ach.addEventListener("click", () => { game.goAchievements(); buildControls(); });
+  subRow.appendChild(daily); subRow.appendChild(ach);
+  controls.appendChild(subRow);
+
   controls.appendChild(bottomNav());
 }
 
@@ -338,6 +355,60 @@ function screenHead(title: string, tag?: string, titleClass = ""): HTMLElement {
   html += `<h2 class="nb-title ${titleClass}">${title}</h2>`;
   wrap.innerHTML = html;
   return wrap;
+}
+
+/** チュートリアル進行中はゲームループ（戦闘進行）を止める */
+let tutorialActive = false;
+
+/** 初回バトルのインタラクティブ・チュートリアル（実画面にスポットライト＋吹き出しで誘導） */
+function startTutorial(): void {
+  if (progress.tutorialDone || tutorialActive) return;
+  tutorialActive = true;
+  const steps: { sel: string | null; text: string }[] = [
+    { sel: null, text: "ようこそ、守人！まずは戦いの基本を確認しよう。" },
+    { sel: ".bt-skills .sk-card", text: "SLASH / PIERCE / STRIKE で攻撃。青いAPゲージを消費するよ。" },
+    { sel: "#screen", text: "敵カード左上の色と記号（斬/突/打）が弱点。弱点で攻撃すると大ダメージ＆ブレイクしやすい！" },
+    { sel: ".bt-guard", text: "敵に「!」が出たらGUARD！ 引きつけてジャストで受けると“パーフェクト”＝ノーダメージで反撃。" },
+    { sel: ".bt-rest2", text: "APが切れたらREST で回復。攻めと回復を使い分けよう。" },
+    { sel: "#screen", text: "攻撃で敵のブレイクゲージ（HP下の黄バー）を削るとダウン！大ダメージのチャンス。さあ、始めよう！" },
+  ];
+  let i = 0;
+  const overlay = document.createElement("div");
+  overlay.className = "coach-overlay";
+  const hole = document.createElement("div"); hole.className = "coach-hole";
+  const tip = document.createElement("div"); tip.className = "coach-tip";
+  overlay.appendChild(hole); overlay.appendChild(tip);
+  document.body.appendChild(overlay);
+  const finish = (): void => { tutorialActive = false; progress.tutorialDone = true; saveProgress(); overlay.remove(); };
+  const show = (): void => {
+    const s = steps[i];
+    const el = s.sel ? document.querySelector(s.sel) as HTMLElement | null : null;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      hole.style.display = "block";
+      hole.style.left = `${r.left - 6}px`; hole.style.top = `${r.top - 6}px`;
+      hole.style.width = `${r.width + 12}px`; hole.style.height = `${r.height + 12}px`;
+    } else {
+      hole.style.display = "none";
+    }
+    tip.innerHTML = `<div class="coach-step">${i + 1} / ${steps.length}</div><div class="coach-text">${s.text}</div>`;
+    const acts = document.createElement("div"); acts.className = "coach-acts";
+    const skip = document.createElement("button"); skip.className = "coach-skip"; skip.textContent = "スキップ"; skip.onclick = finish;
+    const next = document.createElement("button"); next.className = "coach-next";
+    next.textContent = i === steps.length - 1 ? "はじめる" : "次へ";
+    next.onclick = (): void => { i++; if (i >= steps.length) finish(); else show(); };
+    acts.appendChild(skip); acts.appendChild(next); tip.appendChild(acts);
+    // 吹き出しはハイライト要素の下（無ければ上）に。要素無しは中央
+    tip.style.left = "50%"; tip.style.transform = "translateX(-50%)";
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom + 12 < window.innerHeight - 170) { tip.style.top = `${r.bottom + 12}px`; tip.style.bottom = "auto"; }
+      else { tip.style.top = "auto"; tip.style.bottom = `${window.innerHeight - r.top + 12}px`; }
+    } else {
+      tip.style.top = "50%"; tip.style.bottom = "auto"; tip.style.transform = "translate(-50%, -50%)";
+    }
+  };
+  show();
 }
 
 /** 設定モーダル（音量・演出・難易度補助のスライダー） */
@@ -388,11 +459,104 @@ function openSettingsModal(): void {
   muteWrap.appendChild(muteBtn);
   sheet.appendChild(muteWrap);
 
+  // チュートリアルをもう一度（次のバトルで再生）
+  const tutWrap = document.createElement("div");
+  tutWrap.className = "settings-row";
+  const tutBtn = document.createElement("button");
+  tutBtn.className = "settings-mute";
+  const syncTut = (): void => { tutBtn.textContent = progress.tutorialDone ? "📖 チュートリアルをもう一度" : "📖 次のバトルでチュートリアル表示"; };
+  syncTut();
+  tutBtn.addEventListener("click", () => { progress.tutorialDone = false; saveProgress(); syncTut(); });
+  tutWrap.appendChild(tutBtn);
+  sheet.appendChild(tutWrap);
+
   overlay.appendChild(sheet);
   const close = (): void => overlay.remove();
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
   sheet.querySelector(".settings-x")?.addEventListener("click", close);
   document.body.appendChild(overlay);
+}
+
+/** デイリーボーナスのモーダル（1日1回ゴールド。連続日数でボーナス増） */
+function openDailyModal(): void {
+  const overlay = document.createElement("div");
+  overlay.className = "settings-modal";
+  const sheet = document.createElement("div");
+  sheet.className = "settings-sheet daily-sheet";
+  const avail = dailyAvailable();
+  sheet.innerHTML =
+    `<div class="settings-head"><div class="settings-title">DAILY BONUS</div><button class="settings-x">×</button></div>` +
+    `<div class="daily-emoji">🎁</div>` +
+    `<div class="daily-msg">${avail ? "今日のボーナスを受け取ろう！" : "本日は受け取り済み。また明日！"}</div>` +
+    `<div class="daily-streak">連続ログイン ${progress.dailyStreak} 日</div>`;
+  const btn = document.createElement("button");
+  btn.className = "nb-cta daily-claim";
+  btn.textContent = avail ? "受け取る" : "受け取り済み";
+  btn.disabled = !avail;
+  btn.addEventListener("click", () => {
+    const r = claimDaily();
+    if (r.gold > 0) {
+      game.addGold(r.gold);
+      audio.sfxWin();
+      sheet.querySelector(".daily-msg")!.textContent = `+${r.gold} G を受け取った！`;
+      sheet.querySelector(".daily-streak")!.textContent = `連続ログイン ${r.streak} 日`;
+      btn.textContent = "受け取り済み"; btn.disabled = true;
+      buildTopHeader(); // 所持ゴールド表示を更新
+    }
+  });
+  sheet.appendChild(btn);
+  overlay.appendChild(sheet);
+  const close = (): void => { overlay.remove(); if (game.screen === "title") buildControls(); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  sheet.querySelector(".settings-x")?.addEventListener("click", close);
+  document.body.appendChild(overlay);
+}
+
+/** 実績画面：条件・進捗・受け取り（報酬ゴールド） */
+function buildAchievements(): void {
+  controls.appendChild(screenHead("ACHIEVEMENTS"));
+  const back = document.createElement("button");
+  back.className = "world-back";
+  back.textContent = "◀ ホームへ";
+  back.addEventListener("click", () => { game.goTitle(); buildControls(); });
+  controls.appendChild(back);
+
+  const ctx = {
+    bestStage: game.save.bestStage, bestFloor: game.save.bestFloor,
+    invCount: game.save.inventory.length, perfects: progress.perfectsTotal,
+    kills: progress.killsTotal, flawless: progress.flawlessClears,
+  };
+  const list = document.createElement("div");
+  list.className = "ach-list";
+  for (const a of ACHIEVEMENTS) {
+    const cur = Math.min(a.cur(ctx), a.goal);
+    const done = cur >= a.goal;
+    const claimed = progress.claimed.includes(a.id);
+    const pct = Math.round((cur / a.goal) * 100);
+    const row = document.createElement("div");
+    row.className = "ach-row" + (done ? " done" : "");
+    row.innerHTML =
+      `<div class="ach-main">` +
+      `<div class="ach-name">${done ? "🏆" : "🔒"} ${a.name}</div>` +
+      `<div class="ach-desc">${a.desc}</div>` +
+      `<div class="ach-bar"><span style="width:${pct}%"></span></div>` +
+      `<div class="ach-prog">${cur} / ${a.goal}　報酬 ${a.reward}G</div>` +
+      `</div>`;
+    const claim = document.createElement("button");
+    claim.className = "ach-claim";
+    claim.textContent = claimed ? "受取済" : (done ? "受け取る" : "未達成");
+    claim.disabled = !done || claimed;
+    claim.addEventListener("click", () => {
+      if (!done || progress.claimed.includes(a.id)) return;
+      progress.claimed.push(a.id); saveProgress();
+      game.addGold(a.reward); audio.sfxWin();
+      buildTopHeader(); buildControls();
+    });
+    row.appendChild(claim);
+    list.appendChild(row);
+  }
+  controls.appendChild(list);
+  controls.appendChild(bottomNav());
 }
 
 /** 確認ダイアログ（はい／いいえ）。はいで onYes を実行 */
@@ -1520,6 +1684,8 @@ function buildBattleTop(): void {
 
 function buildBattle(): void {
   buildBattleTop();
+  // 初回バトルだけ、レイアウト確定後にチュートリアルを開始
+  if (!progress.tutorialDone) requestAnimationFrame(() => requestAnimationFrame(startTutorial));
 
   // ===== HP / AP セグメントバー =====
   const hud = document.createElement("div");
@@ -2164,7 +2330,7 @@ function loop(now: number): void {
   last = now;
 
   const prev = game.screen;
-  game.update(dt);
+  if (!tutorialActive) game.update(dt); // チュートリアル中は戦闘を一時停止
   // 戦闘から発火した効果音を回収して鳴らす
   if (game.battle && game.battle.sfx.length) {
     for (const ev of game.battle.sfx) playSfx(ev);
