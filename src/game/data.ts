@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef, ShopItem, ShopChest, Shield,
+  LastSkill, ComboDef, ShopItem, ShopChest, Shield, SkillStatus, StatusKind,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -34,12 +34,29 @@ export const CRIT_MULT_DEFAULT = 1.5;
 interface RawSkill {
   id: string; name: string; rarity: Rarity; enCost: number; kind: SkillKind;
   hits?: number; targets?: number; critAdd?: number; critMult?: number; breakMult?: number;
+  status?: SkillStatus;
 }
 export const SKILLS: Skill[] = (skillsJson as RawSkill[]).map((s) => ({
   id: s.id, name: s.name, rarity: s.rarity, enCost: s.enCost, kind: s.kind,
   hits: s.hits ?? 1, targets: s.targets ?? 1,
   critAdd: s.critAdd ?? 0, critMult: s.critMult ?? CRIT_MULT_DEFAULT, breakMult: s.breakMult ?? 1,
+  status: s.status,
 }));
+
+// ===== 状態異常・バフ =====
+/** 毒：1ターンに敵の最大HPのこの割合だけ継続ダメージ */
+export const POISON_PCT = 0.05;
+/** 弱体（防御down）：被ダメージ倍率 */
+export const VULNERABLE_MULT = 1.5;
+/** 激昂（攻撃up）：与ダメージ倍率 */
+export const RAGE_MULT = 1.5;
+/** 状態異常の表示情報（名称・色・記号） */
+export const STATUS_INFO: Record<StatusKind, { label: string; color: string; mark: string }> = {
+  poison: { label: "毒", color: "#57d36b", mark: "毒" },
+  freeze: { label: "凍結", color: "#5fe0ff", mark: "凍" },
+  vulnerable: { label: "弱体", color: "#b96bff", mark: "弱" },
+  rage: { label: "激昂", color: "#ff6b6b", mark: "激" },
+};
 const SKILL_MAP: Record<string, Skill> = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
 export function getSkill(id: string): Skill { return SKILL_MAP[id]; }
 
@@ -57,6 +74,12 @@ export function skillDescription(s: Skill): string {
   if (s.critAdd) parts.push(`会心率+${s.critAdd}%`);
   if (s.critMult !== CRIT_MULT_DEFAULT) parts.push(`会心${s.critMult}倍`);
   if (s.breakMult !== 1) parts.push(`ブレイク${s.breakMult}倍`);
+  if (s.status) {
+    const i = STATUS_INFO[s.status.kind];
+    if (s.status.kind === "rage") parts.push(`自身に${i.label}(攻撃up)${s.status.turns}T`);
+    else if (s.status.kind === "vulnerable") parts.push(`${i.label}(防御down)${s.status.turns}T付与`);
+    else parts.push(`${i.label}${s.status.turns}T付与`);
+  }
   return parts.join("・");
 }
 
@@ -351,6 +374,25 @@ export function stageDropPreview(stageIndex: number): string[] {
     for (const e of wave) if (e.dropWeaponId && !ids.includes(e.dropWeaponId)) ids.push(e.dropWeaponId);
   }
   return ids;
+}
+
+// ===== ワールド難易度カーブ：後のワールドほど敵を強くする =====
+// 同じ敵を流用しても、ワールド係数で HP/攻撃/ブレイク閾値を底上げして段階的な難易度に。
+// ワールド1は等倍（既存バランス・セーブ感覚を維持）。
+export const WORLD_DIFFICULTY: Record<number, number> = { 1: 1.0, 2: 1.35, 3: 1.8, 4: 2.4, 5: 3.1 };
+export function worldScale(world?: number): number {
+  return (world != null && WORLD_DIFFICULTY[world]) || 1;
+}
+/** ウェーブの敵をワールド係数でスケールした「コピー」を返す（元データは破壊しない） */
+export function scaleWaveForWorld(enemies: EnemyDef[], world?: number): EnemyDef[] {
+  const m = worldScale(world);
+  if (m === 1) return enemies;
+  return enemies.map((e) => ({
+    ...e,
+    maxHp: Math.round(e.maxHp * m),
+    attack: Math.round(e.attack * m),
+    breakThreshold: Math.round(e.breakThreshold * m),
+  }));
 }
 
 // ===== 無限の回廊：階層ごとにランダムな敵を生成（階が深いほど強い） =====

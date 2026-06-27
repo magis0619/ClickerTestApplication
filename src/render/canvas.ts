@@ -394,6 +394,7 @@ export function render(
     ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
   }
   drawPlayer(ctx, b);
+  if (b.rageTurns > 0) drawPlayerBuff(ctx, "激", "#ff6b6b"); // 激昂（攻撃up）中の表示
   b.enemies.forEach((e, i) =>
     drawEnemyCard(ctx, e, layout[i], i === imminent, i === b.targetIndex && e.alive));
   if (b.perfectFxT > 0 && b.perfectFxIndex >= 0) {
@@ -726,6 +727,25 @@ function drawRareGlitter(ctx: CanvasRenderingContext2D, L: EnemyLayout): void {
   ctx.restore();
 }
 
+/** プレイヤーのバフ表示（頭上に小さなチップ） */
+function drawPlayerBuff(ctx: CanvasRenderingContext2D, mark: string, color: string): void {
+  const cx = PLAYER_POS.x + 10, cy = PLAYER_POS.y - 96;
+  const w = 20, h = 20;
+  const t = Date.now() / 1000;
+  ctx.save();
+  ctx.globalAlpha = 0.85 + 0.15 * Math.sin(t * 6); // ゆらぎで「効果中」を強調
+  ctx.fillStyle = color;
+  roundRect(ctx, cx - w / 2, cy - h / 2, w, h, 6); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = "#1c1b1b";
+  roundRect(ctx, cx - w / 2, cy - h / 2, w, h, 6); ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "900 12px 'Hiragino Kaku Gothic ProN', sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(mark, cx, cy + 0.5);
+  ctx.textBaseline = "alphabetic";
+  ctx.restore();
+}
+
 function drawEnemyCard(
   ctx: CanvasRenderingContext2D,
   e: EnemyState,
@@ -793,6 +813,27 @@ function drawEnemyCard(
     ctx.fillStyle = "#ffffff";
     ctx.fillText(mark, cxp + cw / 2, cyp + ch / 2 + 0.5);
     ctx.textBaseline = "alphabetic";
+  }
+
+  // === 状態異常チップ（毒/凍結/弱体）を右上に重ねる ===
+  {
+    const sts: { mark: string; color: string; n: number }[] = [];
+    if (e.poisonTurns > 0) sts.push({ mark: "毒", color: "#3fae54", n: e.poisonTurns });
+    if (e.frozenTurns > 0) sts.push({ mark: "凍", color: "#2bb6e0", n: e.frozenTurns });
+    if (e.vulnerableTurns > 0) sts.push({ mark: "弱", color: "#9a4fe0", n: e.vulnerableTurns });
+    const sw = 18, sh = 18, sgap = 3;
+    sts.forEach((s, i) => {
+      const sx = L.left + L.w - 7 - sw - i * (sw + sgap), sy = L.top + 7;
+      ctx.fillStyle = s.color;
+      roundRect(ctx, sx, sy, sw, sh, 5); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#1c1b1b";
+      roundRect(ctx, sx, sy, sw, sh, 5); ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "900 11px 'Hiragino Kaku Gothic ProN', sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(s.mark, sx + sw / 2, sy + sh / 2 + 0.5);
+      ctx.textBaseline = "alphabetic";
+    });
   }
 
   // === 名前（大きく・読みやすく：濃い縁取り付き） ===

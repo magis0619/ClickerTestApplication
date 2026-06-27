@@ -2,7 +2,7 @@ import { Battle } from "./engine.ts";
 import {
   STAGES, STAGE_COUNT, getWeapon, getSkill, PLAYER_MAX_HP, makeInstance, endlessFloorEnemies,
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
-  withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID,
+  withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import type {
@@ -177,7 +177,7 @@ export class Game {
       this.battle.playerDefense = this.defense;
       this.battle.announce("FLOOR 1", "#9fd9ff");
     } else {
-      this.battle = new Battle(withRareSpawn(this.currentStage.waves[0], this.isBossWave));
+      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[0], this.isBossWave), this.currentStage.world));
       this.battle.playerDefense = this.defense;
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
@@ -357,7 +357,7 @@ export class Game {
       const en = this.battle.playerEn;
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
-      this.battle = new Battle(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), hp, en);
+      this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), this.currentStage.world), hp, en);
       this.battle.playerDefense = this.defense;
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;

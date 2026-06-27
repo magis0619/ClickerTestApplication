@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus } from "./types.ts";
 import {
   matchCombo,
   FLOAT_TTL,
@@ -42,6 +42,9 @@ import {
   BREAK_CRIT_MULT,
   BREAK_RATE_MULT,
   BREAK_WEAK_MULT,
+  POISON_PCT,
+  VULNERABLE_MULT,
+  RAGE_MULT,
   rollEnemyDrop,
   rollEnemyGold,
 } from "./data.ts";
@@ -113,6 +116,12 @@ export class EnemyState {
   atkAnimT = 0;
   /** 撃破時に確定したドロップ（宝箱の色＝レアリティ表示に使う） */
   drop?: WeaponInstance;
+  /** 状態異常の残りターン（プレイヤーの行動ごとに減少） */
+  poisonTurns = 0;
+  frozenTurns = 0;
+  vulnerableTurns = 0;
+  /** 凍結中（行動が進まない）か */
+  get frozen(): boolean { return this.frozenTurns > 0; }
 
   constructor(def: EnemyDef) {
     this.def = def;
@@ -153,6 +162,8 @@ export class Battle {
   charge = 1;
   /** プレイヤーの防御力（装備盾由来）。被ダメージから減算する */
   playerDefense = 0;
+  /** 激昂（攻撃up）の残りターン。>0 の間は与ダメージ上昇 */
+  rageTurns = 0;
 
   enemies: EnemyState[];
   targetIndex = 0;
@@ -347,12 +358,16 @@ export class Battle {
 
   /** 攻撃スキルを実行：対象数ぶんの敵に、ヒット数ぶん攻撃する。combo成立時は追撃を足す */
   private performAttack(skill: Skill, mods?: WeaponMods, combo?: ComboDef): void {
+    // 自己バフ（激昂など）はスキル使用時に付与（攻撃の前にかけてこの攻撃から乗せる）
+    if (skill.status?.target === "self") this.applySelfStatus(skill.status);
     const targets = this.pickTargets(skill.targets);
     for (const e of targets) {
       for (let h = 0; h < skill.hits; h++) {
         if (!e.alive) break;
         this.hitOne(e, skill, mods);
       }
+      // 敵への状態異常は対象ごとに付与（生存している敵のみ）
+      if (e.alive && skill.status?.target === "enemy") this.applyEnemyStatus(e, skill.status);
     }
     // 連携成立：現在の対象へ追撃（チャージ倍率が乗ったまま追加で殴る）
     if (combo) {
@@ -371,6 +386,38 @@ export class Battle {
     }
     this.consumeCharge();
     this.lungeT = Math.max(this.lungeT, 200);
+  }
+
+  /** 敵へ状態異常を付与（同種は長い方を採用） */
+  private applyEnemyStatus(e: EnemyState, st: SkillStatus): void {
+    const idx = this.enemies.indexOf(e);
+    if (st.kind === "poison") { e.poisonTurns = Math.max(e.poisonTurns, st.turns); this.pushFloat("毒", "#57d36b", idx); }
+    else if (st.kind === "freeze") { e.frozenTurns = Math.max(e.frozenTurns, st.turns); e.readyWaitT = -1; this.pushFloat("凍結", "#5fe0ff", idx); }
+    else if (st.kind === "vulnerable") { e.vulnerableTurns = Math.max(e.vulnerableTurns, st.turns); this.pushFloat("弱体", "#b96bff", idx); }
+  }
+
+  /** プレイヤーへ自己バフを付与 */
+  private applySelfStatus(st: SkillStatus): void {
+    if (st.kind === "rage") { this.rageTurns = Math.max(this.rageTurns, st.turns); this.pushFloat("激昂！攻撃up", "#ff6b6b", "player"); }
+  }
+
+  /** プレイヤー行動ごとの状態異常・バフの経過処理（毒ダメージ／凍結・弱体・激昂の減少） */
+  private tickStatuses(): void {
+    if (this.rageTurns > 0) this.rageTurns -= 1; // 激昂は1行動で1ターン消費
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (e.poisonTurns > 0) {
+        const dmg = Math.max(1, Math.round(e.def.maxHp * POISON_PCT));
+        const wasAlive = e.alive;
+        e.hp = Math.max(0, e.hp - dmg);
+        e.poisonTurns -= 1;
+        const idx = this.enemies.indexOf(e);
+        this.pushDamage(dmg, idx, false, false);
+        if (wasAlive && e.hp <= 0) this.killEnemy(e, idx);
+      }
+      if (e.vulnerableTurns > 0) e.vulnerableTurns -= 1;
+      if (e.frozenTurns > 0) e.frozenTurns -= 1;
+    }
   }
 
   /** 攻撃対象を選ぶ：現在のターゲット＋（足りなければ）他の生存敵を左から補う */
@@ -413,10 +460,12 @@ export class Battle {
         if (e.breakTurns <= 0) e.count = e.def.countStart; // 元の待ちターンに戻る
         continue;
       }
-      if (e.flinchT > 0 || e.telegraphT > 0 || e.count <= 0) continue;
+      if (e.flinchT > 0 || e.telegraphT > 0 || e.count <= 0 || e.frozen) continue; // 凍結中は行動が進まない
       e.count -= 1;
       if (e.count < 0) e.count = 0;
     }
+    // カウント処理のあとに状態異常を経過させる（毒ダメージ・凍結/弱体/激昂の減少）
+    this.tickStatuses();
   }
 
   /**
@@ -429,7 +478,7 @@ export class Battle {
     if (this.enemies.some((e) => e.telegraphT > 0)) return; // 既に1体予兆中＝順番待ち
     // 攻撃準備完了の敵を左から1体だけ選ぶ（これが今「攻撃の順番」の敵）
     const e = this.enemies.find(
-      (x) => x.alive && !x.isBroken && x.flinchT <= 0 && x.count <= 0,
+      (x) => x.alive && !x.isBroken && x.flinchT <= 0 && !x.frozen && x.count <= 0,
     );
     if (!e) return;
     // この敵の0待ち時間が未抽選なら、今ここで抽選（順番が回ってきた瞬間）
@@ -494,6 +543,8 @@ export class Battle {
     if (weak) dmg *= WEAKNESS_MULTIPLIER;
     if (e.isBroken) dmg *= BREAK_CRIT_MULT;
     if (this.charge > 1) dmg *= this.charge;
+    if (this.rageTurns > 0) dmg *= RAGE_MULT;             // 激昂（攻撃up）
+    if (e.vulnerableTurns > 0) dmg *= VULNERABLE_MULT;    // 弱体（防御down）
     // 会心＝武器の会心率＋スキルの加算。発生で skill.critMult 倍
     const critChance = ((mods?.critChance ?? 0) + skill.critAdd) / 100;
     const crit = critChance > 0 && Math.random() < critChance;

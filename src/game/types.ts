@@ -10,6 +10,17 @@ export type EnemyKind = "carapace" | "phantom" | "aerial";
 /** スキルの種類。attack=攻撃 / charge=ためる / focus=集中 */
 export type SkillKind = "attack" | "charge" | "focus";
 
+/** 状態異常・バフの種類。毒/凍結/弱体(防御down)＝敵, 激昂(攻撃up)＝自分 */
+export type StatusKind = "poison" | "freeze" | "vulnerable" | "rage";
+/** スキルが付与する状態異常・バフの定義 */
+export interface SkillStatus {
+  /** 付与対象：enemy=攻撃対象の敵 / self=プレイヤー自身 */
+  target: "enemy" | "self";
+  kind: StatusKind;
+  /** 効果ターン数（プレイヤーの行動ごとに減少） */
+  turns: number;
+}
+
 /**
  * スキル。攻撃の「やり方」を決める（攻撃力は持たず、武器本体が持つ）。
  * ドロップ時に武器レアリティ以下のプールから抽選される。
@@ -30,6 +41,8 @@ export interface Skill {
   critMult: number;
   /** ブレイク蓄積倍率（既定1） */
   breakMult: number;
+  /** 付与する状態異常・バフ（任意） */
+  status?: SkillStatus;
 }
 
 /** 直近に発動したスキル（連携＝コンボ判定に使う） */

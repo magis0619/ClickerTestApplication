@@ -2043,6 +2043,15 @@ function buildHowTo(): void {
   ));
   controls.appendChild(howSection("05", "ブレイク", brk));
 
+  // 5.5 状態異常・バフ
+  const st = document.createElement("div");
+  st.appendChild(howText("一部のスキルは攻撃に加えて<b>状態異常</b>や<b>バフ</b>を付与する（プレイヤーの行動ごとに効果ターンが減る）。"));
+  st.appendChild(howStep("🟢", "毒", "毎ターン、敵の最大HPの5%の継続ダメージ。"));
+  st.appendChild(howStep("🔵", "凍結", "その間、敵の攻撃カウントが進まない（足止め）。"));
+  st.appendChild(howStep("🟣", "弱体（防御down）", "敵が受けるダメージが1.5倍になる。"));
+  st.appendChild(howStep("🔴", "激昂（攻撃up）", "一定ターン、自分の与ダメージが1.5倍になる。"));
+  controls.appendChild(howSection("06", "状態異常・バフ", st));
+
   // 6. 連携技
   const combo = document.createElement("div");
   combo.appendChild(howText("特定のスキルを<b>続けて</b>出すと<span class='howto-gold'>連携技</span>が発動し、追撃が入る。"));
@@ -2057,7 +2066,7 @@ function buildHowTo(): void {
     clist.appendChild(item);
   }
   combo.appendChild(clist);
-  controls.appendChild(howSection("06", "連携技", combo));
+  controls.appendChild(howSection("07", "連携技", combo));
 
   // 7. レアモンスター
   const rare = document.createElement("div");
@@ -2065,14 +2074,14 @@ function buildHowTo(): void {
     "ときどき<span class='howto-gold'>煌びやかなレアモンスター</span>が出現する。手強いが、" +
     "倒すと<b>レア武器</b>を確実に落とす。見かけたら積極的に狙おう。",
   ));
-  controls.appendChild(howSection("07", "レアモンスター", rare));
+  controls.appendChild(howSection("08", "レアモンスター", rare));
 
   // 8. 育成
   const grow = document.createElement("div");
   grow.appendChild(howStep("🎒", "インベントリ", "手に入れた武器を確認・装備。系統ごとに1本ずつ装備できる。"));
   grow.appendChild(howStep("🔨", "鍛冶屋", "余った武器を素材にしてレベルアップ。上限に達したら同じ武器で「覚醒」して限界突破。"));
   grow.appendChild(howStep("🛒", "ショップ", "ゴールドで武器や宝箱を購入。宝箱からはレアリティ帯のランダム武器が出る。"));
-  controls.appendChild(howSection("08", "武器を育てる", grow));
+  controls.appendChild(howSection("09", "武器を育てる", grow));
 
   // 9. 操作（キーボード）
   const keys = document.createElement("div");
@@ -2089,7 +2098,7 @@ function buildHowTo(): void {
     row.innerHTML = `<kbd class="howto-key">${k}</kbd><span class="howto-key-desc">${d}</span>`;
     keys.appendChild(row);
   }
-  controls.appendChild(howSection("09", "キーボード操作（PC）", keys));
+  controls.appendChild(howSection("10", "キーボード操作（PC）", keys));
 
   // 出発ボタン
   const go = ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect()));

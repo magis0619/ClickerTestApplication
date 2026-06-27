@@ -5,13 +5,18 @@
   { "id": "charge",        "name": "ためる",       "rarity": "uncommon", "enCost": 2, "kind": "charge" },
   { "id": "focus",         "name": "集中",         "rarity": "uncommon", "enCost": 4, "kind": "focus" },
 
+  { "id": "venom_fang",    "name": "毒牙",         "rarity": "uncommon", "enCost": 4, "kind": "attack", "status": { "target": "enemy", "kind": "poison", "turns": 3 } },
+
   { "id": "double_hit",    "name": "2回攻撃",     "rarity": "rare",     "enCost": 5, "kind": "attack", "hits": 2 },
+  { "id": "frost_brand",   "name": "氷縛",         "rarity": "rare",     "enCost": 5, "kind": "attack", "status": { "target": "enemy", "kind": "freeze", "turns": 2 } },
+  { "id": "sunder",        "name": "破甲",         "rarity": "rare",     "enCost": 4, "kind": "attack", "status": { "target": "enemy", "kind": "vulnerable", "turns": 3 } },
   { "id": "double_target", "name": "2体攻撃",     "rarity": "rare",     "enCost": 5, "kind": "attack", "targets": 2 },
   { "id": "crit_double",   "name": "会心2倍",     "rarity": "rare",     "enCost": 4, "kind": "attack", "critMult": 2.0 },
   { "id": "break_double",  "name": "ブレイク2倍", "rarity": "rare",     "enCost": 4, "kind": "attack", "breakMult": 2 },
 
   { "id": "crit_up2",      "name": "会心60%",     "rarity": "epic",     "enCost": 4, "kind": "attack", "critAdd": 60 },
   { "id": "double_break",  "name": "ダブルクラッシュ", "rarity": "epic", "enCost": 6, "kind": "attack", "hits": 2, "breakMult": 2 },
+  { "id": "berserk",       "name": "狂戦士",       "rarity": "epic",     "enCost": 5, "kind": "attack", "status": { "target": "self", "kind": "rage", "turns": 3 } },
 
   { "id": "triple_hit",    "name": "3回攻撃",     "rarity": "legend",   "enCost": 8, "kind": "attack", "hits": 3 },
   { "id": "triple_target", "name": "3体攻撃",     "rarity": "legend",   "enCost": 8, "kind": "attack", "targets": 3 },
