@@ -44,6 +44,8 @@ export class Game {
   lastAmbush = false;
   /** 乱入ボスを倒したか（result表示用） */
   lastAmbushWon = false;
+  /** 乱入ボス討伐時にアストラル級武器が実際にドロップしたか（result表示用） */
+  lastAmbushDrop = false;
   private rotation: Record<WeaponClass, number> = { slash: 0, pierce: 0, crush: 0 };
 
   constructor() {
@@ -218,6 +220,7 @@ export class Game {
     this.inAmbush = false;
     this.lastAmbush = false;
     this.lastAmbushWon = false;
+    this.lastAmbushDrop = false;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     if (this.isEndless) {
       this.endlessFloor = 1;
@@ -393,6 +396,7 @@ export class Game {
       writeSave(this.save);
       this.inAmbush = false;
       this.lastAmbushWon = true;
+      this.lastAmbushDrop = drops.length > 0;
       this.lastWon = true;
       this.screen = "result";
       return;

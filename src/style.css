@@ -49,6 +49,52 @@ button {
   pointer-events: auto;
 }
 
+/* ===== 乱入ボス WARNING 演出（画面全体・武器ボタンも覆う） ===== */
+.warn-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130; /* fade-overlay(100)より前面。モーダル/コーチより背面 */
+  display: none;
+  overflow: hidden;
+  pointer-events: none;
+}
+.warn-overlay.on { display: block; pointer-events: auto; }
+.warn-black { position: absolute; inset: 0; background: #020106; }
+.warn-img {
+  position: absolute;
+  inset: -2%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+/* RGBずれ（クロマティックアベレーション）の色チャンネル */
+.warn-img--c { mix-blend-mode: screen; filter: brightness(1.3) sepia(1) saturate(7) hue-rotate(140deg); }
+.warn-img--m { mix-blend-mode: screen; filter: brightness(1.3) sepia(1) saturate(7) hue-rotate(-35deg); }
+/* 走査線 */
+.warn-scan {
+  position: absolute; inset: 0; opacity: 0; mix-blend-mode: overlay;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.55) 3px, rgba(0,0,0,0) 4px);
+  animation: warn-scan-roll 0.5s linear infinite;
+}
+@keyframes warn-scan-roll { from { background-position-y: 0; } to { background-position-y: 8px; } }
+/* グリッチのスライス帯 */
+.warn-slice {
+  position: absolute; left: 0; right: 0; top: 40%; height: 6%; opacity: 0;
+  background: rgba(255,45,120,0.55); mix-blend-mode: screen;
+}
+/* 赤く脈打つビネット */
+.warn-vignette {
+  position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 38%, rgba(140,0,30,0.55) 100%);
+  animation: warn-pulse 0.42s steps(2) infinite;
+}
+@keyframes warn-pulse { 0% { filter: brightness(0.7); } 100% { filter: brightness(1.25); } }
+
 #screen {
   touch-action: manipulation;
 }

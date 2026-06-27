@@ -6,6 +6,7 @@ import {
   NAV_HOME, NAV_WORLD, NAV_BAG, NAV_FORGE, NAV_SHOP, type Sprite,
 } from "./render/sprites.ts";
 import astralWardenUrl from "./assets/astral_warden.png";
+import warningUrl from "./assets/warning.png";
 import { Game, CLASSES, STAGE_COUNT } from "./game/game.ts";
 import {
   STAGES, WORLDS, ENDLESS_INDEX, WEAPON_LABEL, RARITY_LABEL, RARITY_COLOR, KIND_LABEL, WEAKNESS, WEAKNESS_MULTIPLIER,
@@ -59,6 +60,64 @@ let lastBattleObj: typeof game.battle = null;
 const fadeEl = document.createElement("div");
 fadeEl.className = "fade-overlay";
 document.body.appendChild(fadeEl);
+
+// ===== 乱入ボスの WARNING 演出オーバーレイ（画面全体・武器ボタンも覆う） =====
+// 暗転 → グリッチ調 WARNING がせり上がる → 暗転＆WARNINGが消えてボスが現れる。
+// canvasではなく画面全体の固定オーバーレイにすることで、戦闘枠だけでなく
+// 武器ボタン・タイトルまで含めて覆い、RGBずれ／走査線／スライス等のエフェクトを重ねる。
+const warnOverlay = document.createElement("div");
+warnOverlay.className = "warn-overlay";
+warnOverlay.innerHTML =
+  `<div class="warn-black"></div>` +
+  `<div class="warn-img warn-img--c"></div>` +
+  `<div class="warn-img warn-img--m"></div>` +
+  `<div class="warn-img warn-img--base"></div>` +
+  `<div class="warn-slice"></div>` +
+  `<div class="warn-scan"></div>` +
+  `<div class="warn-vignette"></div>`;
+document.body.appendChild(warnOverlay);
+warnOverlay.querySelectorAll<HTMLElement>(".warn-img").forEach((el) => {
+  el.style.backgroundImage = `url(${warningUrl})`;
+});
+const warnEl = {
+  black: warnOverlay.querySelector(".warn-black") as HTMLElement,
+  base: warnOverlay.querySelector(".warn-img--base") as HTMLElement,
+  c: warnOverlay.querySelector(".warn-img--c") as HTMLElement,
+  m: warnOverlay.querySelector(".warn-img--m") as HTMLElement,
+  slice: warnOverlay.querySelector(".warn-slice") as HTMLElement,
+  scan: warnOverlay.querySelector(".warn-scan") as HTMLElement,
+  vignette: warnOverlay.querySelector(".warn-vignette") as HTMLElement,
+};
+/** WARNING演出を毎フレーム更新（戦闘のwarn状態から駆動） */
+function updateWarnOverlay(): void {
+  const b = game.battle;
+  const on = !!(b && b.inWarn);
+  if (warnOverlay.classList.contains("on") !== on) warnOverlay.classList.toggle("on", on);
+  if (!on || !b) return;
+  warnEl.black.style.opacity = b.warnBlackAlpha.toFixed(3);
+  const la = b.warnLogoAlpha;
+  // フリッカー（明滅）＋横ジッター＋RGBずれ（クロマティックアベレーション）
+  const flicker = la * (0.82 + 0.18 * Math.random());
+  const jit = (Math.random() * 2 - 1) * 5 * la;
+  const split = (4 + Math.random() * 7) * la;
+  warnEl.base.style.opacity = flicker.toFixed(3);
+  warnEl.base.style.transform = `translate(${jit.toFixed(1)}px, ${((Math.random() * 2 - 1) * 2 * la).toFixed(1)}px)`;
+  warnEl.c.style.opacity = (0.55 * la).toFixed(3);
+  warnEl.c.style.transform = `translateX(${(jit - split).toFixed(1)}px)`;
+  warnEl.m.style.opacity = (0.55 * la).toFixed(3);
+  warnEl.m.style.transform = `translateX(${(jit + split).toFixed(1)}px)`;
+  warnEl.scan.style.opacity = (0.4 * la).toFixed(3);
+  warnEl.vignette.style.opacity = la.toFixed(3);
+  // たまにスライス（横帯のズレ）を走らせる
+  if (la > 0.25 && Math.random() < 0.18) {
+    warnEl.slice.style.opacity = (0.7 * la).toFixed(3);
+    warnEl.slice.style.top = (Math.random() * 82).toFixed(1) + "%";
+    warnEl.slice.style.height = (2 + Math.random() * 9).toFixed(1) + "%";
+    warnEl.slice.style.transform = `translateX(${((Math.random() * 2 - 1) * 26).toFixed(0)}px)`;
+  } else {
+    warnEl.slice.style.opacity = "0";
+  }
+}
 
 // ===== メニュー画面の動く背景（ハイパーポップな浮遊ピクセル） =====
 const menuBg = document.createElement("div");
@@ -2172,9 +2231,11 @@ function buildResultPanel(): void {
   if (game.lastAmbush) {
     const amb = document.createElement("div");
     amb.className = "result-ambush" + (game.lastAmbushWon ? " won" : "");
-    amb.innerHTML = game.lastAmbushWon
-      ? `⚡ 乱入ボス討伐！ <b>アストラル級の戦利品</b>を獲得！`
-      : `⚡ 乱入ボスが出現… 討伐ならず（ダンジョンの宝は確保）`;
+    amb.innerHTML = !game.lastAmbushWon
+      ? `⚡ 乱入ボスが出現… 討伐ならず（ダンジョンの宝は確保）`
+      : game.lastAmbushDrop
+        ? `⚡ 乱入ボス討伐！ <b>アストラル級の戦利品</b>を獲得！`
+        : `⚡ 乱入ボス討伐！（今回は戦利品ドロップなし…）`;
     panel.appendChild(amb);
   }
 
@@ -2490,6 +2551,7 @@ function loop(now: number): void {
       world: cur?.world,
     });
   }
+  updateWarnOverlay(); // 乱入WARNING演出（画面全体）
   requestAnimationFrame(loop);
 }
 

@@ -368,9 +368,10 @@
     "countStart": 3,
     "breakThreshold": 200,
     "dropWeaponId": "w_astral_edge",
-    "dropRate": 100,
+    "dropRate": 55,
     "boss": true,
     "bigBoss": true,
+    "rare": true,
     "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。"
   }
 ]

@@ -1125,9 +1125,62 @@ export const ABYSS_TEL: Sprite = {
   ],
 };
 
+// ===== 乱入レアボス：リフトリーバー（次元の裂け目から現れる虚無の刈り取り手）=====
+const RIFT_PAL: Record<string, string> = {
+  o: "#07060f", // 虚無の輪郭
+  v: "#3a1f6e", // 虚無の紫（暗）
+  V: "#5a32a0", // 虚無の紫（中）
+  p: "#c64bff", // 裂け目の魔光（マゼンタ）
+  c: "#3ae6ff", // 裂け目の魔光（シアン）
+  e: "#ff3b6b", // 眼光
+  E: "#ffd5e6", // 眼光（発光）
+  w: "#ffffff", // 火花
+};
+
+/** リフトリーバー：待機（鎌を下ろし宙に漂う） */
+export const RIFT_REAVER: Sprite = {
+  palette: RIFT_PAL,
+  rows: [
+    "c...........c",
+    ".o.........o.",
+    ".oc.......co.",
+    "..oo.....oo..",
+    "...ovVVVvo...",
+    "..ovVVVVVvo..",
+    "..ovVeVeVvo..",
+    "..ovVVVVVvo..",
+    "..ovpVVVpvo..",
+    "...ovVVVvo...",
+    "....ovVvo....",
+    ".....ppp.....",
+    "......o......",
+  ],
+};
+
+/** リフトリーバー：予兆/攻撃（鎌を広げ眼光が爆ぜ、裂け目が拡がる） */
+export const RIFT_REAVER_TEL: Sprite = {
+  palette: RIFT_PAL,
+  rows: [
+    "c...........c",
+    "co.........oc",
+    ".oc.......co.",
+    "..oovVVVvoo..",
+    "..ovVVVVVvo..",
+    "..ovVEVEVvo..",
+    "..owVVVVVwo..",
+    "..ovpVpVpvo..",
+    "..ovVVVVVvo..",
+    "...ovVVVvo...",
+    "....oVpVo....",
+    "....pp.pp....",
+    "......o......",
+  ],
+};
+
 // 敵IDごとの専用スプライト（base=待機 / tel=予兆・攻撃）。
 // ここに無い敵は種別共通スプライト（canvas側）にフォールバックする。
 export const ENEMY_BY_ID: Record<string, { base: Sprite; tel: Sprite }> = {
+  rift_reaver:    { base: RIFT_REAVER,    tel: RIFT_REAVER_TEL },
   abyss_sovereign: { base: ABYSS,         tel: ABYSS_TEL },
   straw_golem:    { base: STRAW_GOLEM,    tel: STRAW_GOLEM_TEL },
   stone_sentinel: { base: STONE_SENTINEL, tel: STONE_SENTINEL_TEL },
