@@ -396,7 +396,7 @@ export function getEnemy(id: string): EnemyDef | undefined { return ENEMY_MAP[id
 /** 乱入レアボスのID */
 export const AMBUSH_BOSS_ID = "rift_reaver";
 /** 乱入の発生確率（通常ダンジョンのクリア時） */
-export const AMBUSH_CHANCE = 1;
+export const AMBUSH_CHANCE = 0.1;
 /** ワールド係数で強化した乱入ボスのコピーを返す */
 export function ambushBoss(world?: number): EnemyDef {
   const base = ENEMY_MAP[AMBUSH_BOSS_ID];
