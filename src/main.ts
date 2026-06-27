@@ -1327,6 +1327,15 @@ function zoneCard(s: StageDef, i: number): HTMLElement {
     `<span class="zone-status">${statusTxt}</span></span>`;
   card.appendChild(top);
 
+  // 攻略度スター（通常ステージのみ。未獲得は☆で潜在を示す）
+  if (!s.endless) {
+    const earned = game.save.stageStars[i] ?? 0;
+    const sr = document.createElement("div");
+    sr.className = "zone-stars" + (earned >= 3 ? " full" : earned > 0 ? " some" : "");
+    sr.innerHTML = "★".repeat(earned) + "☆".repeat(3 - earned);
+    card.appendChild(sr);
+  }
+
   const name = document.createElement("div");
   name.className = "zone-name";
   name.textContent = s.name;
@@ -2212,6 +2221,18 @@ function buildResultPanel(): void {
 
   const panel = document.createElement("div");
   panel.className = "result-panel " + (good ? "result-win" : "result-lose");
+
+  // 戦闘評価ランク＋スター（通常ステージ勝利時のみ。攻略度として記録される）
+  if (won && !endless && game.lastRank) {
+    const rk = document.createElement("div");
+    rk.className = "result-rank rank-" + game.lastRank;
+    const stars = "★".repeat(game.lastStars) + "☆".repeat(3 - game.lastStars);
+    rk.innerHTML =
+      `<span class="rank-label">RANK</span>` +
+      `<span class="rank-letter">${game.lastRank}</span>` +
+      `<span class="rank-stars">${stars}</span>`;
+    panel.appendChild(rk);
+  }
 
   // 見出し詳細
   const sub = document.createElement("div");

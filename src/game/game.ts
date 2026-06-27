@@ -34,6 +34,10 @@ export class Game {
   lastMaxHit = 0;
   lastPerfects = 0;
   lastFlawless = true;
+  /** 直近クリアの戦闘評価ランク（S/A/B/C。未クリア時は空） */
+  lastRank = "";
+  /** 直近クリアで獲得したスター数（1..3） */
+  lastStars = 0;
   /** この冒険で得た経験値合計（result表示用） */
   lastExp = 0;
   /** この冒険で上がったレベル数（result表示用） */
@@ -215,6 +219,8 @@ export class Game {
     this.lastMaxHit = 0;
     this.lastPerfects = 0;
     this.lastFlawless = true;
+    this.lastRank = "";
+    this.lastStars = 0;
     this.lastExp = 0;
     this.lastLevelUps = 0;
     this.inAmbush = false;
@@ -452,6 +458,10 @@ export class Game {
     this.lastWon = true;
     const stageNum = this.stageIndex + 1;
     if (stageNum > this.save.bestStage) this.save.bestStage = stageNum;
+    // 戦闘評価ランク＆スター（無傷・パーフェクトの多さで決まる攻略度）
+    this.computeStageRank();
+    const prevStars = this.save.stageStars[this.stageIndex] ?? 0;
+    if (this.lastStars > prevStars) this.save.stageStars[this.stageIndex] = this.lastStars;
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
     this.lastLevelUps += this.addPlayerExp(this.lastExp); // 蓄積した経験値をまとめて反映
@@ -461,6 +471,23 @@ export class Game {
     // 乱入イベント：低確率でレアボスが乱入。宝は確保済みなので、ここから割り込む
     if (Math.random() < AMBUSH_CHANCE) { this.startAmbush(); return; }
     this.screen = "result";
+  }
+
+  /**
+   * ステージクリアの戦闘評価を算出する。
+   * S＝無傷かつパーフェクト多数 / A＝無傷 or パーフェクト多数 / B＝パーフェクトあり / C＝クリア。
+   * スターは攻略度（S=3 / A=2 / B・C=1）。lastRank・lastStars に格納。
+   */
+  private computeStageRank(): void {
+    const flawless = this.lastFlawless;
+    const perfects = this.lastPerfects;
+    let rank: string;
+    if (flawless && perfects >= 3) rank = "S";
+    else if (flawless || perfects >= 3) rank = "A";
+    else if (perfects >= 1) rank = "B";
+    else rank = "C";
+    this.lastRank = rank;
+    this.lastStars = rank === "S" ? 3 : rank === "A" ? 2 : 1;
   }
 
   /** 乱入ボス戦を開始（STAGE CLEAR の後に WARNING 演出で割り込む） */

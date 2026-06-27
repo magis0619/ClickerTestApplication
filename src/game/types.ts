@@ -231,4 +231,6 @@ export interface SaveData {
   playerLevel: number;
   /** 現在レベル内で蓄積した経験値 */
   playerExp: number;
+  /** ステージごとの最高スター獲得数（stageIndex → 1..3）。攻略度に使う */
+  stageStars: Record<number, number>;
 }

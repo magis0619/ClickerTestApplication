@@ -2624,6 +2624,30 @@ body.theme-nb {
 .result-ambush.won { color: #8a4f00; background: #fff0bd; }
 .result-ambush b { color: #df0b81; }
 
+/* 戦闘評価ランク＋スター */
+.result-rank {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  margin: 2px 0 14px;
+}
+.rank-label { font-family: "Space Mono", monospace; font-size: 10px; font-weight: 800; letter-spacing: 3px; color: #8a7f90; }
+.rank-letter {
+  font-family: "Space Mono", monospace; font-size: 56px; font-weight: 900; line-height: 0.9;
+  -webkit-text-stroke: 2px #1c1b1b; text-stroke: 2px #1c1b1b;
+}
+.rank-stars { font-size: 20px; letter-spacing: 3px; color: #ffb800; text-shadow: 0 1px 0 #1c1b1b; }
+.rank-S .rank-letter { color: #ffd34d; }
+.rank-A .rank-letter { color: #ff7de9; }
+.rank-B .rank-letter { color: #1fb6ff; }
+.rank-C .rank-letter { color: #9aa0aa; }
+
+/* ステージ選択カードの攻略度スター */
+.zone-stars {
+  font-size: 15px; letter-spacing: 2px; color: #c8bfce; margin: 2px 0 2px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+.zone-stars.some, .zone-stars.full { color: #ffb800; }
+.zone-stars.full { text-shadow: 0 0 6px rgba(255,184,0,0.55); }
+
 .result-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 12px; }
 .result-stat {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
