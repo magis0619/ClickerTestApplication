@@ -1498,12 +1498,12 @@ body.in-battle {
 /* ----- HP / AP セグメントバー ----- */
 .bt-stats { margin: 12px 0; }
 .bt-stat-row {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-top: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0; min-height: 18px;
 }
 .bt-stat-label {
   font-family: "Press Start 2P", "Space Mono", "Hiragino Kaku Gothic ProN", ui-monospace, monospace;
-  font-size: 15px; letter-spacing: 0; color: #ffffff;
+  font-size: 15px; line-height: 1; letter-spacing: 0; color: #ffffff;
   /* 白文字＋太い黒フチ（ピクセルフォントのレトロ表記） */
   text-shadow:
     -2px 0 #1c1b1b, 2px 0 #1c1b1b, 0 -2px #1c1b1b, 0 2px #1c1b1b,
@@ -1528,9 +1528,13 @@ body.in-battle {
 /* バトルのHP/AP：太い黒枠＋ハードシャドウのチャンキーなセグメントバー（送付デザイン準拠）。
    連続フィルで「ぬるっと」増減しつつ、黒い仕切り＋上面グロスで艶のあるブロックに見せる */
 .bt-seg-fluid {
-  position: relative; overflow: hidden; gap: 0; height: 28px; margin: 6px 0 7px;
+  position: relative; overflow: hidden; gap: 0; height: 28px;
+  /* ラベル→ゲージの距離はHP/APで共通（margin-top）。グループ間はHPバーの下余白で空ける */
+  margin: 5px 0 0;
   background: #2f2632; border: 3px solid #1c1b1b; border-radius: 6px; box-shadow: 4px 4px 0 #1c1b1b;
 }
+/* HPゲージとAPラベルの間（=HP群とAP群の間）だけ少し広げる */
+.bt-seg-fluid.bt-seg-hp { margin-bottom: 14px; }
 .bt-seg-fluid .bt-seg-fill {
   position: absolute; left: 0; top: 0; bottom: 0; width: 0; z-index: 0;
   transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
