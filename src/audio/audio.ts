@@ -1,6 +1,8 @@
 // ===== オリジナルのチップチューンBGM / 効果音（Web Audioで生成） =====
 // 外部音源は一切使用せず、波形をコードで合成している。
 
+import { settings } from "../game/settings.ts";
+
 type Wave = OscillatorType;
 
 // --- メロディ定義（16分音符 × 32 = 2小節, 120BPM）。null は休符 ---
@@ -18,15 +20,22 @@ const BASS: (number | null)[] = [
   G2, _, _, _, G2, _, _, _, E2, _, _, _, E2, _, _, _,
 ];
 
+// BGM/SFX の基準音量（設定値 0..1 を掛ける）
+const BGM_BASE = 0.16;
+const SFX_BASE = 0.16;
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** BGM専用ゲイン（設定のBGM音量で制御） */
+  private bgmGain: GainNode | null = null;
+  /** 効果音専用ゲイン（設定のSFX音量で制御） */
+  private sfxGain: GainNode | null = null;
   muted = false;
   private timer: number | null = null;
   private nextNoteTime = 0;
   private step = 0;
   private readonly bpm = 120;
-  private readonly volume = 0.16;
 
   /** ユーザー操作後に呼ぶ（AudioContextは操作起点でないと鳴らせない） */
   init(): void {
@@ -37,9 +46,21 @@ export class AudioEngine {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : this.volume;
+    this.master.gain.value = this.muted ? 0 : 1;
     this.master.connect(this.ctx.destination);
+    this.bgmGain = this.ctx.createGain();
+    this.bgmGain.gain.value = BGM_BASE * settings.bgm;
+    this.bgmGain.connect(this.master);
+    this.sfxGain = this.ctx.createGain();
+    this.sfxGain.gain.value = SFX_BASE * settings.sfx;
+    this.sfxGain.connect(this.master);
     this.startBgm();
+  }
+
+  /** 設定変更を即時反映（音量スライダー用） */
+  applyVolumes(): void {
+    if (this.bgmGain) this.bgmGain.gain.value = BGM_BASE * settings.bgm;
+    if (this.sfxGain) this.sfxGain.gain.value = SFX_BASE * settings.sfx;
   }
 
   private startBgm(): void {
@@ -51,7 +72,7 @@ export class AudioEngine {
 
   toggleMute(): boolean {
     this.muted = !this.muted;
-    if (this.master) this.master.gain.value = this.muted ? 0 : this.volume;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 1;
     return this.muted;
   }
 
@@ -69,7 +90,7 @@ export class AudioEngine {
   }
 
   private tone(freq: number, time: number, dur: number, type: Wave, vol: number): void {
-    if (!this.ctx || !this.master) return;
+    if (!this.ctx || !this.bgmGain) return;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = type;
@@ -78,14 +99,14 @@ export class AudioEngine {
     g.gain.linearRampToValueAtTime(vol, time + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
     osc.connect(g);
-    g.connect(this.master);
+    g.connect(this.bgmGain);
     osc.start(time);
     osc.stop(time + dur + 0.02);
   }
 
   /** 即時の単発音（効果音用） */
   private blip(freq: number, type: Wave, dur: number, vol = 0.5, slideTo?: number, delay = 0): void {
-    if (!this.ctx || !this.master) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime + delay;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
@@ -95,14 +116,14 @@ export class AudioEngine {
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.connect(g);
-    g.connect(this.master);
+    g.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + dur + 0.02);
   }
 
   /** ノイズバースト（金属音・打撃の芯に使う） */
   private noise(dur: number, vol: number, hp = 1500, delay = 0): void {
-    if (!this.ctx || !this.master) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime + delay;
     const frames = Math.floor(this.ctx.sampleRate * dur);
     const buf = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
@@ -118,7 +139,7 @@ export class AudioEngine {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     src.connect(filter);
     filter.connect(g);
-    g.connect(this.master);
+    g.connect(this.sfxGain);
     src.start(t);
     src.stop(t + dur + 0.02);
   }

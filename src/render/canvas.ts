@@ -9,6 +9,7 @@ import {
   CARAPACE_TEL, AERIAL_TEL, PHANTOM_TEL, BOSS_TEL, RARE, RARE_TEL, ENEMY_BY_ID, type Sprite,
 } from "./sprites.ts";
 import type { EnemyKind } from "../game/types.ts";
+import { settings } from "../game/settings.ts";
 import stageClearUrl from "../assets/stage_clear.png";
 import defeatedUrl from "../assets/defeated.png";
 import perfectUrl from "../assets/perfect.png";
@@ -266,6 +267,8 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 
 /** 弱点色＝攻撃ボタン(SLASH/PIERCE/STRIKE)と同じ系統色。敵カード背景の色味に使う */
 const WEAK_COLOR: Record<string, string> = { slash: "#ff2d8f", pierce: "#1fb6ff", crush: "#ff9e2e" };
+/** 弱点を表す記号（色に依存しない識別用）：斬/突/打 */
+const WEAK_MARK: Record<string, string> = { slash: "斬", pierce: "突", crush: "打" };
 /** "#rrggbb" を rgba(...) 文字列へ（alpha 付き） */
 function hexA(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
@@ -386,8 +389,8 @@ export function render(
 
   // 画面シェイク（ヒットストップ中はフリーズフレームにして揺らさない）
   ctx.save();
-  if (b.shakeT > 0 && b.hitstopT <= 0) {
-    const mag = Math.min(b.shakeMag, b.shakeMag * (b.shakeT / 120));
+  if (b.shakeT > 0 && b.hitstopT <= 0 && settings.shake > 0) {
+    const mag = Math.min(b.shakeMag, b.shakeMag * (b.shakeT / 120)) * settings.shake;
     ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
   }
   drawPlayer(ctx, b);
@@ -777,7 +780,20 @@ function drawEnemyCard(
   }
   ctx.restore();
 
-  // 弱点バッジは廃止し、上のカード背景の色味で弱点を示す
+  // === 弱点チップ（色＋記号で二重表示：色覚に依存せず弱点が分かる） ===
+  {
+    const mark = WEAK_MARK[weak];
+    const cw = 22, ch = 18, cxp = L.left + 7, cyp = L.top + 7;
+    ctx.fillStyle = WEAK_COLOR[weak];
+    roundRect(ctx, cxp, cyp, cw, ch, 5); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#1c1b1b";
+    roundRect(ctx, cxp, cyp, cw, ch, 5); ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "900 12px 'Hiragino Kaku Gothic ProN', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(mark, cxp + cw / 2, cyp + ch / 2 + 0.5);
+    ctx.textBaseline = "alphabetic";
+  }
 
   // === 名前（大きく・読みやすく：濃い縁取り付き） ===
   ctx.textAlign = "center";

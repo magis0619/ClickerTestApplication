@@ -2147,6 +2147,12 @@ body.theme-nb {
   border: 2px solid #1c1b1b;
 }
 .ars-card.sel .ars-card-check { background: #df0b81; color: #fff; }
+.ars-card-new {
+  position: absolute; top: -7px; left: -7px; z-index: 3;
+  padding: 2px 7px; font-family: "Space Mono", monospace; font-size: 10px; font-weight: 900;
+  color: #1c1b1b; background: #ffd34d; border: 2px solid #1c1b1b; border-radius: 999px;
+  transform: rotate(-8deg); box-shadow: 1px 1px 0 #1c1b1b;
+}
 
 .ars-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ars-card {
@@ -2209,9 +2215,13 @@ body.theme-nb {
 }
 .wpn-sheet-img .wpn-sprite { height: 120px; width: auto; }
 .wpn-sheet-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #1c1b1b; }
+.wpn-stat { text-align: center; padding: 8px 4px; background: #fff; border: 2px solid #1c1b1b; border-radius: 8px; }
 .wpn-stat-val { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 20px; font-weight: 900; color: #df0b81; }
 .wpn-stat-lbl { font-family: "Space Mono", "Hiragino Kaku Gothic ProN", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; letter-spacing: 1px; }
+.wpn-stat-diff { font-family: "Space Mono", monospace; font-size: 11px; font-weight: 900; margin-top: 2px; }
+.wpn-stat-diff.up { color: #1f9d4d; }
+.wpn-stat-diff.down { color: #d23030; }
+.wpn-sheet-cmp { text-align: center; font-size: 11px; font-weight: 700; color: #8a7f90; margin: -6px 0 12px; }
 .wpn-sheet-desc { font-size: 13px; line-height: 1.5; color: #4a4453; margin-bottom: 12px; padding: 8px 10px; background: #fff; border: 2px solid #1c1b1b; }
 .wpn-sheet-stats:has(.wpn-stat:only-child) { grid-template-columns: 1fr; }
 .wpn-sheet-log { margin-bottom: 12px; }
@@ -2376,6 +2386,39 @@ body.theme-nb {
 /* =====================================================================
    確認ダイアログ
    ===================================================================== */
+/* ===== 設定モーダル ===== */
+.settings-modal {
+  position: fixed; inset: 0; z-index: 150;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(10, 6, 14, 0.7); animation: fadeIn 0.18s ease;
+}
+.settings-sheet {
+  width: 100%; max-width: 360px;
+  background: #ffffff; border: 3px solid #1c1b1b; box-shadow: 7px 7px 0 #1c1b1b; border-radius: 16px;
+  padding: 16px;
+}
+.settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.settings-title {
+  font-family: "Anybody", "Hiragino Kaku Gothic ProN", sans-serif; font-size: 22px; font-weight: 900;
+  letter-spacing: 1px; color: #1c1b1b;
+}
+.settings-x {
+  width: 34px; height: 34px; border: 2px solid #1c1b1b; background: #fff; color: #1c1b1b;
+  font-size: 20px; font-weight: 900; cursor: pointer; border-radius: 10px;
+}
+.settings-row { margin-bottom: 14px; }
+.settings-row-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.settings-row-name { font-size: 14px; font-weight: 800; color: #1c1b1b; }
+.settings-row-val {
+  font-family: "Space Mono", monospace; font-size: 13px; font-weight: 900; color: #df0b81;
+}
+.settings-slider { width: 100%; accent-color: #df0b81; height: 22px; cursor: pointer; }
+.settings-mute {
+  width: 100%; padding: 11px; border: 2px solid #1c1b1b; border-radius: 10px;
+  background: #a7edc7; color: #1c1b1b; font-size: 13px; font-weight: 800; cursor: pointer;
+}
+.settings-mute.on { background: #e7e1e4; color: #8a7f90; }
+
 .confirm-modal {
   position: fixed; inset: 0; z-index: 140;
   display: flex; align-items: center; justify-content: center; padding: 20px;
@@ -2417,6 +2460,17 @@ body.theme-nb {
   font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
   font-size: 14px; font-weight: 700; color: #1c1b1b; text-align: center; margin-bottom: 12px;
 }
+.result-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 12px; }
+.result-stat {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+  background: #fff; border: 2px solid #1c1b1b; border-radius: 999px;
+}
+.result-stat-l { font-size: 11px; font-weight: 800; color: #8a7f90; }
+.result-stat-v { font-family: "Space Mono", monospace; font-size: 13px; font-weight: 900; color: #1c1b1b; }
+.result-stat-flawless { background: #fff0a8; }
+.result-stat-flawless .result-stat-l { color: #b08900; }
+.result-stat-flawless .result-stat-v { color: #b08900; }
+
 .theme-nb .result-gold {
   display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 4px 0 12px;
 }

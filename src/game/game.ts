@@ -28,6 +28,10 @@ export class Game {
   endlessFloor = 1;
   /** 無限の回廊：今回到達した階（result表示用） */
   lastFloor = 0;
+  /** 戦績（result表示用）：最大ダメージ／パーフェクト回数／ノーダメージ達成 */
+  lastMaxHit = 0;
+  lastPerfects = 0;
+  lastFlawless = true;
   private rotation: Record<WeaponClass, number> = { slash: 0, pierce: 0, crush: 0 };
 
   constructor() {
@@ -163,6 +167,9 @@ export class Game {
     this.lastDrops = [];
     this.lastGold = 0;
     this.lastFloor = 0;
+    this.lastMaxHit = 0;
+    this.lastPerfects = 0;
+    this.lastFlawless = true;
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     if (this.isEndless) {
       this.endlessFloor = 1;
@@ -319,6 +326,7 @@ export class Game {
 
   private onWin(): void {
     if (!this.battle) return;
+    this.accumulateStats();
 
     // 無限の回廊：1階クリアごとに報酬を即確定し、次の階へ（HP/EN引き継ぎ）
     if (this.isEndless) {
@@ -371,6 +379,7 @@ export class Game {
 
   private onLose(): void {
     this.lastWon = false;
+    this.accumulateStats();
     if (this.isEndless) {
       // 回廊では各階の報酬は確定済み。到達階を記録して結果へ
       this.lastFloor = this.endlessFloor;
@@ -378,6 +387,14 @@ export class Game {
       this.lastDrops = [];
     }
     this.screen = "result";
+  }
+
+  /** 現在の戦闘の戦績を冒険全体の集計へ反映する */
+  private accumulateStats(): void {
+    if (!this.battle) return;
+    this.lastMaxHit = Math.max(this.lastMaxHit, this.battle.maxHit);
+    this.lastPerfects += this.battle.perfectCount;
+    if (this.battle.tookDamage) this.lastFlawless = false;
   }
 
   /** result画面用：現在の戦闘の敵数（描画維持用） */

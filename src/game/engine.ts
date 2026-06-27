@@ -45,6 +45,7 @@ import {
   rollEnemyDrop,
   rollEnemyGold,
 } from "./data.ts";
+import { settings } from "./settings.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
@@ -198,6 +199,12 @@ export class Battle {
   lastSkill: LastSkill | null = null;
   /** この戦闘で敵を倒して得たゴールド合計 */
   goldEarned = 0;
+  /** 戦績：この戦闘で与えた最大ダメージ（リザルト統計用） */
+  maxHit = 0;
+  /** 戦績：パーフェクトガード成功回数 */
+  perfectCount = 0;
+  /** 戦績：被弾したか（false のままならノーダメージ達成） */
+  tookDamage = false;
   /** 決着後の経過時間(ms)。リザルト演出の出現アニメに使う */
   resultT = 0;
   /** 全滅後、撃破アニメ完了を待ってからwonにするためのフラグ */
@@ -458,10 +465,11 @@ export class Battle {
     targets.sort((a, b) => a.telegraphT - b.telegraphT);
     const e = targets[0];
     const diff = e.telegraphT; // 着弾までの残り時間
+    const ln = settings.leniency; // 猶予倍率（設定で各窓を広げられる）
     let result: GuardResult;
-    if (diff <= PERFECT_WINDOW_MS) result = "perfect";
-    else if (diff <= JUST_WINDOW_MS) result = "just";
-    else if (diff <= GUARD_WINDOW_MS) result = "guard";
+    if (diff <= PERFECT_WINDOW_MS * ln) result = "perfect";
+    else if (diff <= JUST_WINDOW_MS * ln) result = "just";
+    else if (diff <= GUARD_WINDOW_MS * ln) result = "guard";
     else {
       this.setGuard("none"); // まだ早い
       return "none";
@@ -498,6 +506,7 @@ export class Battle {
     const idx = this.enemies.indexOf(e);
     const big = crit || weak || e.isBroken || this.charge > 1;
     this.pushDamage(dmg, idx, big, crit);
+    if (dmg > this.maxHit) this.maxHit = dmg; // 最大ダメージ更新
     if (crit) this.sfx.push("crit");
     // 当たった瞬間の0.05秒ストップ＋画面シェイク（手応え）
     this.hitstopT = Math.max(this.hitstopT, HIT_HITSTOP_MS);
@@ -563,6 +572,7 @@ export class Battle {
       case "perfect": {
         // === このゲームで一番気持ちいい瞬間 ===
         dmg = 0;
+        this.perfectCount += 1;
         this.playerHp = Math.min(PLAYER_MAX_HP, this.playerHp + PERFECT_HP_RECOVER);
         this.playerEn = PLAYER_MAX_EN; // パーフェクトはENを最大まで全回復
         // 一瞬の静止→ホワイトアウト→スロー＋弾きエフェクト＋軽い揺れ
@@ -592,6 +602,7 @@ export class Battle {
         this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + JUST_EN_RECOVER);
         this.pushFloat(`JUST -${dmg}`, "#88ddff", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
+        this.tookDamage = true;
         this.shake(140, 3);
         this.sfx.push("just");
         break;
@@ -601,6 +612,7 @@ export class Battle {
         this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + GUARD_EN_RECOVER);
         this.pushFloat(`-${dmg}`, "#cccccc", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
+        this.tookDamage = true;
         this.shake(120, 2);
         this.sfx.push("guard");
         break;
@@ -609,6 +621,7 @@ export class Battle {
         dmg = Math.max(1, dmg - this.playerDefense);
         this.pushFloat(`${dmg}`, "#ff5555", "player");
         this.playerHp = Math.max(0, this.playerHp - dmg);
+        this.tookDamage = true;
         this.shake(340, 7);
         this.sfx.push("hurt");
         break;

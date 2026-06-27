@@ -14,6 +14,7 @@ import {
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
+import { settings, saveSettings } from "./game/settings.ts";
 import type {
   Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
   EnemyKind, EnemyDef, StageDef,
@@ -164,6 +165,8 @@ let invLockedOnly = false;
 let invSelectMode = false;
 /** インベントリ：選択中の武器UID（複数削除用） */
 const invSelected = new Set<string>();
+/** 新規入手して未閲覧の武器UID（NEWバッジ表示用。詳細を開くと既読＝解除） */
+const newWeaponUids = new Set<string>();
 /** ダンジョン選択：選択中のゾーン番号 */
 let stageSel = 0;
 /** ワールド選択：開いているワールド番号（ダンジョン一覧の対象） */
@@ -314,7 +317,7 @@ function buildTopHeader(): void {
   const gear = document.createElement("button");
   gear.className = "nb-icon-btn";
   gear.textContent = "⚙";
-  gear.addEventListener("click", () => { audio.init(); gear.classList.toggle("muted", audio.toggleMute()); });
+  gear.addEventListener("click", () => { audio.init(); openSettingsModal(); });
   const help = document.createElement("button");
   help.className = "nb-icon-btn";
   help.textContent = "?";
@@ -335,6 +338,61 @@ function screenHead(title: string, tag?: string, titleClass = ""): HTMLElement {
   html += `<h2 class="nb-title ${titleClass}">${title}</h2>`;
   wrap.innerHTML = html;
   return wrap;
+}
+
+/** 設定モーダル（音量・演出・難易度補助のスライダー） */
+function openSettingsModal(): void {
+  const overlay = document.createElement("div");
+  overlay.className = "settings-modal";
+  const sheet = document.createElement("div");
+  sheet.className = "settings-sheet";
+  sheet.innerHTML = `<div class="settings-head"><div class="settings-title">SETTINGS</div><button class="settings-x">×</button></div>`;
+
+  // パーセント/倍率表示つきスライダー行
+  const row = (
+    label: string, min: number, max: number, step: number, get: () => number,
+    fmt: (v: number) => string, set: (v: number) => void,
+  ): HTMLElement => {
+    const wrap = document.createElement("div");
+    wrap.className = "settings-row";
+    const head = document.createElement("div");
+    head.className = "settings-row-head";
+    const name = document.createElement("span"); name.className = "settings-row-name"; name.textContent = label;
+    const val = document.createElement("span"); val.className = "settings-row-val"; val.textContent = fmt(get());
+    head.appendChild(name); head.appendChild(val);
+    const sl = document.createElement("input");
+    sl.type = "range"; sl.min = `${min}`; sl.max = `${max}`; sl.step = `${step}`; sl.value = `${get()}`;
+    sl.className = "settings-slider";
+    sl.addEventListener("input", () => {
+      const v = parseFloat(sl.value);
+      set(v); val.textContent = fmt(v); saveSettings();
+    });
+    wrap.appendChild(head); wrap.appendChild(sl);
+    return wrap;
+  };
+
+  const pct = (v: number): string => `${Math.round(v * 100)}%`;
+  sheet.appendChild(row("BGM音量", 0, 1, 0.05, () => settings.bgm, pct, (v) => { settings.bgm = v; audio.applyVolumes(); }));
+  sheet.appendChild(row("効果音 音量", 0, 1, 0.05, () => settings.sfx, pct, (v) => { settings.sfx = v; audio.applyVolumes(); audio.sfxClick(); }));
+  sheet.appendChild(row("画面のゆれ", 0, 1.5, 0.1, () => settings.shake, (v) => `${v.toFixed(1)}x`, (v) => { settings.shake = v; }));
+  sheet.appendChild(row("ガード猶予", 1, 1.6, 0.05, () => settings.leniency, (v) => `${v.toFixed(2)}x`, (v) => { settings.leniency = v; }));
+
+  // ミュート切替
+  const muteWrap = document.createElement("div");
+  muteWrap.className = "settings-row";
+  const muteBtn = document.createElement("button");
+  muteBtn.className = "settings-mute";
+  const syncMute = (): void => { muteBtn.textContent = audio.muted ? "🔇 ミュート中（タップで解除）" : "🔊 サウンドON（タップでミュート）"; muteBtn.classList.toggle("on", audio.muted); };
+  syncMute();
+  muteBtn.addEventListener("click", () => { audio.init(); audio.toggleMute(); syncMute(); });
+  muteWrap.appendChild(muteBtn);
+  sheet.appendChild(muteWrap);
+
+  overlay.appendChild(sheet);
+  const close = (): void => overlay.remove();
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  sheet.querySelector(".settings-x")?.addEventListener("click", close);
+  document.body.appendChild(overlay);
 }
 
 /** 確認ダイアログ（はい／いいえ）。はいで onYes を実行 */
@@ -741,6 +799,7 @@ function dealCard(chest: ShopChest): HTMLElement {
 
 /** 宝箱購入時の開封モーダル（中央に宝箱→開封演出→中身を表示） */
 function openChestModal(inst: WeaponInstance): void {
+  newWeaponUids.add(inst.uid); // 購入した宝箱の中身もNEW扱い
   const rarity = instRarity(inst);
   const color = isRainbowRarity(rarity) ? "#ff7de9" : RARITY_COLOR[rarity];
   const overlay = document.createElement("div");
@@ -1268,8 +1327,9 @@ function arsenalCard(inst: WeaponInstance): HTMLElement {
   const check = invSelectMode
     ? `<span class="ars-card-check">${checked ? "✓" : ""}</span>`
     : "";
+  const newBadge = newWeaponUids.has(inst.uid) ? `<span class="ars-card-new">NEW</span>` : "";
   card.innerHTML =
-    check +
+    check + newBadge +
     `<div class="ars-card-top"><span ${rarityAttr(r, "ars-card-rar")}>${RARITY_LABEL[r]}</span>` +
     `<span class="ars-card-fav">${locked ? "★" : ""}</span></div>` +
     `<div class="ars-card-img"></div>` +
@@ -1295,6 +1355,7 @@ function arsenalCard(inst: WeaponInstance): HTMLElement {
 function openWeaponModal(uid: string): void {
   const inst = game.save.inventory.find((it) => it.uid === uid);
   if (!inst) return;
+  newWeaponUids.delete(uid); // 詳細を開いたら既読扱い（NEWバッジ解除）
   const w = getWeapon(inst.baseId)!;
   const eff = effectiveWeapon(inst) ?? w;
   const r = instRarity(inst);
@@ -1326,11 +1387,22 @@ function openWeaponModal(uid: string): void {
   img.appendChild(weaponSpriteEl(inst.baseId, w.weapon, 6));
   sheet.appendChild(img);
 
+  // 装備中の同系統武器との差分（この武器が装備中でなければ ▲/▼ を表示）
+  const eqInst = game.equippedInstance(w.weapon);
+  const eqEff = (eqInst && eqInst.uid !== inst.uid) ? effectiveWeapon(eqInst) : null;
   const stats = document.createElement("div");
   stats.className = "wpn-sheet-stats";
   stats.innerHTML =
-    statBox("ATK", `${eff.attack}`) + statBox("CRIT", `${eff.critChance}%`) + statBox("BREAK", `${eff.breakPower}`);
+    statBox("ATK", `${eff.attack}`, eqEff ? eff.attack - eqEff.attack : undefined) +
+    statBox("CRIT", `${eff.critChance}%`, eqEff ? eff.critChance - eqEff.critChance : undefined) +
+    statBox("BREAK", `${eff.breakPower}`, eqEff ? eff.breakPower - eqEff.breakPower : undefined);
   sheet.appendChild(stats);
+  if (eqEff) {
+    const cmp = document.createElement("div");
+    cmp.className = "wpn-sheet-cmp";
+    cmp.textContent = `装備中（${instName(eqInst!)}）との比較`;
+    sheet.appendChild(cmp);
+  }
 
   // Modification Log = スキル
   const log = document.createElement("div");
@@ -1395,9 +1467,14 @@ function openWeaponModal(uid: string): void {
   document.body.appendChild(overlay);
 }
 
-/** モーダルのステータスボックス */
-function statBox(label: string, val: string): string {
-  return `<div class="wpn-stat"><div class="wpn-stat-val">${val}</div><div class="wpn-stat-lbl">${label}</div></div>`;
+/** モーダルのステータスボックス（diff指定時は装備中との差分を ▲/▼ で表示） */
+function statBox(label: string, val: string, diff?: number): string {
+  let d = "";
+  if (diff !== undefined && diff !== 0) {
+    const up = diff > 0;
+    d = `<div class="wpn-stat-diff ${up ? "up" : "down"}">${up ? "▲+" : "▼"}${diff}</div>`;
+  }
+  return `<div class="wpn-stat"><div class="wpn-stat-val">${val}</div><div class="wpn-stat-lbl">${label}</div>${d}</div>`;
 }
 
 function rarityDesc(a: WeaponInstance, b: WeaponInstance): number {
@@ -1809,6 +1886,19 @@ function buildResultPanel(): void {
   else sub.textContent = "倒れてしまった…… 装備を見直して再挑戦しよう";
   panel.appendChild(sub);
 
+  // 入手した武器を「NEW」として記録（インベントリで未閲覧バッジ表示）
+  if (good) for (const d of game.lastDrops) newWeaponUids.add(d.uid);
+
+  // 戦績（最大ダメージ・パーフェクト・ノーダメージ）
+  const stats = document.createElement("div");
+  stats.className = "result-stats";
+  const chip = (label: string, val: string, cls = ""): string =>
+    `<span class="result-stat ${cls}"><span class="result-stat-l">${label}</span><span class="result-stat-v">${val}</span></span>`;
+  let chips = chip("最大ダメージ", game.lastMaxHit.toLocaleString()) + chip("パーフェクト", `${game.lastPerfects}回`);
+  if (good && game.lastFlawless) chips += chip("NO DAMAGE", "達成", "result-stat-flawless");
+  stats.innerHTML = chips;
+  panel.appendChild(stats);
+
   // ゴールド・ドロップ（勝利／回廊時）：まずゴールドを0からカウントアップ→その後に宝箱開封
   if (good) {
     const goldLine = document.createElement("div");
@@ -1841,7 +1931,7 @@ function buildResultPanel(): void {
     game.goStageSelect();
     buildControls();
   }));
-  actions.appendChild(secondaryButton("インベントリ", () => { game.goInventory(); buildControls(); }));
+  actions.appendChild(secondaryButton("インベントリ", () => { invSortKey = "acquired"; invClass = "all"; game.goInventory(); buildControls(); }));
   panel.appendChild(actions);
   controls.appendChild(panel);
 }
