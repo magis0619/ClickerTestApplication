@@ -17,7 +17,10 @@ import {
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
-import { progress, saveProgress, ACHIEVEMENTS, dailyAvailable, claimDaily } from "./game/progress.ts";
+import {
+  progress, saveProgress, ACHIEVEMENTS, dailyAvailable, claimDaily,
+  DAILY_MISSIONS, missionProgress, missionClaimable, claimMission, missionsAvailable,
+} from "./game/progress.ts";
 import type {
   Rarity, SfxEvent, SkillKind, WeaponClass, WeaponInstance, Weapon, ShopItem, ShopChest,
   EnemyKind, EnemyDef, StageDef,
@@ -388,8 +391,9 @@ function buildTitle(): void {
   const subRow = document.createElement("div");
   subRow.className = "home-sub";
   const daily = document.createElement("button");
-  daily.className = "home-sub-btn" + (dailyAvailable() ? " ready" : "");
-  daily.innerHTML = `🎁 デイリー${dailyAvailable() ? `<span class="home-sub-dot">!</span>` : ""}`;
+  const dailyReady = dailyAvailable() || missionsAvailable();
+  daily.className = "home-sub-btn" + (dailyReady ? " ready" : "");
+  daily.innerHTML = `🎁 デイリー${dailyReady ? `<span class="home-sub-dot">!</span>` : ""}`;
   daily.addEventListener("click", () => { audio.init(); openDailyModal(); });
   const ach = document.createElement("button");
   ach.className = "home-sub-btn";
@@ -591,6 +595,44 @@ function openDailyModal(): void {
     }
   });
   sheet.appendChild(btn);
+
+  // デイリーミッション一覧（毎日リセット・達成で報酬ゴールド）
+  const missTitle = document.createElement("div");
+  missTitle.className = "dm-title";
+  missTitle.textContent = "デイリーミッション";
+  sheet.appendChild(missTitle);
+  const missList = document.createElement("div");
+  missList.className = "dm-list";
+  const renderMissions = (): void => {
+    missList.innerHTML = "";
+    for (const m of DAILY_MISSIONS) {
+      const cur = missionProgress(m.id);
+      const done = cur >= m.goal;
+      const claimed = progress.missionClaimed.includes(m.id);
+      const pct = Math.round((cur / m.goal) * 100);
+      const row = document.createElement("div");
+      row.className = "dm-row" + (done ? " done" : "");
+      row.innerHTML =
+        `<div class="dm-main">` +
+        `<div class="dm-name">${claimed ? "✅" : done ? "🎯" : "•"} ${m.name}</div>` +
+        `<div class="dm-bar"><span style="width:${pct}%"></span></div>` +
+        `<div class="dm-prog">${cur} / ${m.goal}　報酬 ${m.reward}G</div>` +
+        `</div>`;
+      const cb = document.createElement("button");
+      cb.className = "dm-claim";
+      cb.textContent = claimed ? "受取済" : done ? "受け取る" : "未達成";
+      cb.disabled = !missionClaimable(m.id);
+      cb.addEventListener("click", () => {
+        const g = claimMission(m.id);
+        if (g > 0) { game.addGold(g); audio.sfxWin(); buildTopHeader(); renderMissions(); }
+      });
+      row.appendChild(cb);
+      missList.appendChild(row);
+    }
+  };
+  renderMissions();
+  sheet.appendChild(missList);
+
   overlay.appendChild(sheet);
   const close = (): void => { overlay.remove(); if (game.screen === "title") buildControls(); };
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
@@ -607,10 +649,13 @@ function buildAchievements(): void {
   back.addEventListener("click", () => { game.goTitle(); buildControls(); });
   controls.appendChild(back);
 
+  const totalStars = Object.values(game.save.stageStars).reduce((a, b) => a + b, 0);
   const ctx = {
     bestStage: game.save.bestStage, bestFloor: game.save.bestFloor,
     invCount: game.save.inventory.length, perfects: progress.perfectsTotal,
     kills: progress.killsTotal, flawless: progress.flawlessClears,
+    rankS: progress.rankSClears, ambushWins: progress.ambushWins,
+    totalStars, streak: progress.dailyStreak,
   };
   const list = document.createElement("div");
   list.className = "ach-list";

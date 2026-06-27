@@ -6,7 +6,7 @@ import {
   playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
-import { progress, saveProgress } from "./progress.ts";
+import { progress, saveProgress, addMissionProgress } from "./progress.ts";
 import type {
   Screen, SaveData, Skill, Weapon, WeaponClass, WeaponInstance, StageDef, ShopChest, Shield,
 } from "./types.ts";
@@ -403,6 +403,7 @@ export class Game {
       this.inAmbush = false;
       this.lastAmbushWon = true;
       this.lastAmbushDrop = drops.length > 0;
+      progress.ambushWins += 1; saveProgress(); // 実績：乱入ボス討伐
       this.lastWon = true;
       this.screen = "result";
       return;
@@ -462,6 +463,10 @@ export class Game {
     this.computeStageRank();
     const prevStars = this.save.stageStars[this.stageIndex] ?? 0;
     if (this.lastStars > prevStars) this.save.stageStars[this.stageIndex] = this.lastStars;
+    // デイリーミッション／実績：クリア回数・ランク達成
+    addMissionProgress("dm_clear", 1);
+    if (this.lastRank === "S" || this.lastRank === "A") addMissionProgress("dm_rank", 1);
+    if (this.lastRank === "S") { progress.rankSClears += 1; saveProgress(); }
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
     this.lastLevelUps += this.addPlayerExp(this.lastExp); // 蓄積した経験値をまとめて反映
@@ -534,6 +539,9 @@ export class Game {
     progress.perfectsTotal += this.battle.perfectCount;
     progress.killsTotal += this.battle.killCount;
     saveProgress();
+    // デイリーミッション：当日のパーフェクト／撃破数を加算
+    addMissionProgress("dm_perfect", this.battle.perfectCount);
+    addMissionProgress("dm_kill", this.battle.killCount);
   }
 
   /** result画面用：現在の戦闘の敵数（描画維持用） */

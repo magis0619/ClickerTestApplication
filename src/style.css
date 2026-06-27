@@ -2506,6 +2506,29 @@ body.theme-nb {
 .daily-streak { font-size: 12px; font-weight: 700; color: #8a7f90; margin-bottom: 14px; }
 .daily-claim { width: 100%; }
 
+/* ===== デイリーミッション（デイリーモーダル内） ===== */
+.dm-title {
+  text-align: left; font-size: 13px; font-weight: 900; color: #1c1b1b;
+  letter-spacing: 1px; margin: 18px 0 8px; padding-top: 14px; border-top: 2px dashed #d8cdd5;
+}
+.dm-list { display: flex; flex-direction: column; gap: 8px; }
+.dm-row {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; text-align: left;
+  background: #fff; border: 2px solid #1c1b1b; border-radius: 12px; box-shadow: 3px 3px 0 #1c1b1b;
+}
+.dm-row.done { background: #fffbe9; }
+.dm-main { flex: 1; min-width: 0; }
+.dm-name { font-size: 13px; font-weight: 800; color: #1c1b1b; }
+.dm-bar { height: 6px; background: #e6dfe6; border: 1px solid #1c1b1b; border-radius: 999px; overflow: hidden; margin: 4px 0 3px; }
+.dm-bar span { display: block; height: 100%; background: #0a7f97; }
+.dm-prog { font-family: "Space Mono", monospace; font-size: 10px; font-weight: 800; color: #8a7f90; }
+.dm-claim {
+  flex-shrink: 0; min-width: 66px; padding: 7px 8px;
+  border: 2px solid #1c1b1b; border-radius: 9px; background: #0a7f97; color: #fff;
+  font-size: 11px; font-weight: 900; cursor: pointer;
+}
+.dm-claim:disabled { background: #d7d0d7; color: #8a7f90; cursor: default; }
+
 /* ===== 実績画面 ===== */
 .ach-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .ach-row {
