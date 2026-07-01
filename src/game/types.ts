@@ -92,6 +92,8 @@ export interface EnemyDef {
   rare?: boolean;
   /** 特大ボス（通常ボスより大きなドット絵で描く＝ワールド最終ボスなど） */
   bigBoss?: boolean;
+  /** 弱点が戦闘中に変化する（予告あり）。一部ボス専用の駆け引き要素 */
+  shiftsWeakness?: boolean;
   /** 図鑑用の説明文 */
   desc?: string;
 }
@@ -213,7 +215,7 @@ export interface StageDef {
 export type GuardResult = "none" | "guard" | "just" | "perfect";
 
 /** 戦闘から発火する効果音イベント（mainがフレームごとに回収して再生する） */
-export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" | "die" | "crit" | "boss";
+export type SfxEvent = "warn" | "perfect" | "just" | "guard" | "hurt" | "break" | "die" | "crit" | "boss" | "imminent";
 
 /** 戦闘のフェーズ */
 export type BattlePhase = "fighting" | "won" | "lost";

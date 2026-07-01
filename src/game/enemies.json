@@ -356,7 +356,8 @@
     "dropRate": 100,
     "boss": true,
     "bigBoss": true,
-    "desc": "深淵の王。全てを呑み込む最強の存在。"
+    "shiftsWeakness": true,
+    "desc": "深淵の王。全てを呑み込む最強の存在。弱点が絶えず移ろう。"
   },
   {
     "id": "rift_reaver",
@@ -372,6 +373,7 @@
     "boss": true,
     "bigBoss": true,
     "rare": true,
-    "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。"
+    "shiftsWeakness": true,
+    "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。弱点が絶えず移ろう。"
   }
 ]

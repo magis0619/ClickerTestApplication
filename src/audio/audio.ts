@@ -314,6 +314,11 @@ export class AudioEngine {
   sfxWarn(): void {
     this.blip(180, "square", 0.12, 0.3, 120);
   }
+  /** ガード猶予帯（JUST/PERFECT）に入った合図：澄んだ高音の「ピコッ」で“今！”を伝える */
+  sfxImminent(): void {
+    this.blip(1320, "triangle", 0.06, 0.34, 1760);
+    this.blip(1980, "square", 0.05, 0.2, undefined, 0.03);
+  }
   /** 被弾：鈍い痛打 */
   sfxHurt(): void {
     this.blip(150, "sawtooth", 0.18, 0.4, 70);

@@ -45,6 +45,9 @@ import {
   BREAK_CRIT_MULT,
   BREAK_RATE_MULT,
   BREAK_WEAK_MULT,
+  OFF_WEAK_DMG_MULT,
+  OFF_WEAK_BREAK_MULT,
+  WEAK_SHIFT_INTERVAL,
   POISON_PCT,
   VULNERABLE_MULT,
   RAGE_MULT,
@@ -149,8 +152,16 @@ export class EnemyState {
   poisonTurns = 0;
   frozenTurns = 0;
   vulnerableTurns = 0;
+  /** 弱点変化ボス：現在の弱点（nullなら種別デフォルト）。 */
+  weakOverride: WeaponClass | null = null;
+  /** 弱点変化ボス：次のシフトまでの行動カウント */
+  shiftCounter = 0;
+  /** ガード猶予帯（予兆中に毎フレーム更新）。UIのフラッシュ／ガイドに使う */
+  guardWindow: GuardResult = "none";
   /** 凍結中（行動が進まない）か */
   get frozen(): boolean { return this.frozenTurns > 0; }
+  /** 現在の弱点系統（弱点変化ボスは override を優先） */
+  get currentWeakness(): WeaponClass { return this.weakOverride ?? WEAKNESS[this.def.kind]; }
 
   constructor(def: EnemyDef) {
     this.def = def;
@@ -322,6 +333,15 @@ export class Battle {
     if (this.enemies[i]?.alive) this.targetIndex = i;
   }
 
+  /** 予兆中の敵のうち最も「熱い」ガード猶予帯（perfect>just>guard>none）。UIのフラッシュ/ガイド用 */
+  get bestGuardWindow(): GuardResult {
+    let best: GuardResult = "none";
+    const rank = { none: 0, guard: 1, just: 2, perfect: 3 } as const;
+    for (const e of this.enemies) {
+      if (e.inTelegraph && rank[e.guardWindow] > rank[best]) best = e.guardWindow;
+    }
+    return best;
+  }
   /** いずれかの敵が予兆中（!表示）か。この間プレイヤーはガードしかできない */
   get anyTelegraph(): boolean {
     return this.enemies.some((e) => e.inTelegraph);
@@ -357,7 +377,9 @@ export class Battle {
       this.pushFloat(this.anyTelegraph ? "ガードで受けろ！" : "敵が来るぞ…構えろ！", "#ffcc55", "player");
       return false;
     }
-    const free = this.freeNextEn; // 「集中」発動中はEN消費なし
+    // 「集中」発動中、またはブレイク中の敵を狙う攻撃はEN消費なし（崩したら一気に叩き込む駆け引き）
+    const breakBurst = skill.kind === "attack" && (this.target?.isBroken ?? false);
+    const free = this.freeNextEn || breakBurst;
     const cost = free ? 0 : skill.enCost;
     if (this.playerEn < cost) {
       this.pushFloat("ENが足りない", "#ffcc55", "player");
@@ -503,6 +525,17 @@ export class Battle {
     }
   }
 
+  /** 弱点変化ボスの弱点を、現在と異なる系統へシフトする（予告のあとに呼ぶ） */
+  private shiftWeakness(e: EnemyState): void {
+    const all: WeaponClass[] = ["slash", "pierce", "crush"];
+    const cur = e.currentWeakness;
+    const pool = all.filter((c) => c !== cur);
+    e.weakOverride = pool[Math.floor(Math.random() * pool.length)];
+    const mark = { slash: "斬", pierce: "突", crush: "打" }[e.weakOverride];
+    this.pushFloat(`弱点変化！ → ${mark}`, "#ff5df0", this.enemies.indexOf(e));
+    this.sfx.push("boss");
+  }
+
   /** 攻撃対象を選ぶ：現在のターゲット＋（足りなければ）他の生存敵を左から補う */
   private pickTargets(n: number): EnemyState[] {
     const out: EnemyState[] = [];
@@ -547,6 +580,17 @@ export class Battle {
       if (e.flinchT > 0 || e.telegraphT > 0 || e.count <= 0 || e.frozen) continue; // 凍結中は行動が進まない
       e.count -= 1;
       if (e.count < 0) e.count = 0;
+    }
+    // 弱点変化ボス：行動数ごとに弱点をシフト（1つ前で予告）
+    for (const e of this.enemies) {
+      if (!e.alive || !e.def.shiftsWeakness) continue;
+      e.shiftCounter += 1;
+      if (e.shiftCounter === WEAK_SHIFT_INTERVAL - 1) {
+        this.pushFloat("弱点がゆらぐ…", "#c9a0ff", this.enemies.indexOf(e));
+      } else if (e.shiftCounter >= WEAK_SHIFT_INTERVAL) {
+        e.shiftCounter = 0;
+        this.shiftWeakness(e);
+      }
     }
     // 盾パッシブ「自己再生」：行動するたびに少量HP回復
     if (this.shieldPassive?.kind === "regen" && this.playerHp > 0) {
@@ -601,14 +645,8 @@ export class Battle {
     }
     targets.sort((a, b) => a.telegraphT - b.telegraphT);
     const e = targets[0];
-    const diff = e.telegraphT; // 着弾までの残り時間
-    // 猶予倍率（設定＋盾パッシブ「達人の構え」で各窓を広げられる）
-    const ln = settings.leniency + (this.shieldPassive?.kind === "guardWindow" ? this.shieldPassive.value : 0);
-    let result: GuardResult;
-    if (diff <= PERFECT_WINDOW_MS * ln) result = "perfect";
-    else if (diff <= JUST_WINDOW_MS * ln) result = "just";
-    else if (diff <= GUARD_WINDOW_MS * ln) result = "guard";
-    else {
+    const result = this.guardTierFor(e.telegraphT); // 着弾までの残り時間で判定
+    if (result === "none") {
       this.setGuard("none"); // まだ早い
       return "none";
     }
@@ -621,6 +659,19 @@ export class Battle {
 
   // ===== 内部処理 =====
 
+  /** ガード猶予倍率（設定＋盾パッシブ「達人の構え」で各窓を広げられる） */
+  private guardLeniency(): number {
+    return settings.leniency + (this.shieldPassive?.kind === "guardWindow" ? this.shieldPassive.value : 0);
+  }
+  /** 着弾までの残り時間から現在のガード判定帯を返す（none/guard/just/perfect） */
+  private guardTierFor(diff: number): GuardResult {
+    const ln = this.guardLeniency();
+    if (diff <= PERFECT_WINDOW_MS * ln) return "perfect";
+    if (diff <= JUST_WINDOW_MS * ln) return "just";
+    if (diff <= GUARD_WINDOW_MS * ln) return "guard";
+    return "none";
+  }
+
   private consumeCharge(): void {
     this.charge = 1;
   }
@@ -629,8 +680,10 @@ export class Battle {
   private hitOne(e: EnemyState, skill: Skill, mods?: WeaponMods): void {
     const atk = mods?.attack ?? 1;
     let dmg = atk;
-    const weak = mods ? WEAKNESS[e.def.kind] === mods.weapon : false;
+    // 弱点は現在の弱点（変化ボスは移ろう）で判定。弱点＝大ダメージ、非弱点＝減衰
+    const weak = mods ? e.currentWeakness === mods.weapon : false;
     if (weak) dmg *= WEAKNESS_MULTIPLIER;
+    else if (mods) dmg *= OFF_WEAK_DMG_MULT; // 非弱点は威力ダウン（弱点を突く価値を明確に）
     if (e.isBroken) {
       dmg *= BREAK_CRIT_MULT;
       if (this.shieldPassive?.kind === "breakBonus") dmg *= 1 + this.shieldPassive.value; // 盾「破壊衝動」
@@ -656,9 +709,9 @@ export class Battle {
 
     let causedBreak = false;
     if (!e.isBroken) {
-      // ブレイク蓄積：全体倍率で上がりやすく、弱点属性ならさらに大きく溜まる
+      // ブレイク蓄積：弱点で大きく溜まり、非弱点ではほとんど溜まらない（実質「弱点必須」）
       let breakGain = (mods?.breakPower ?? 0) * skill.breakMult * BREAK_RATE_MULT;
-      if (weak) breakGain *= BREAK_WEAK_MULT;
+      breakGain *= weak ? BREAK_WEAK_MULT : OFF_WEAK_BREAK_MULT;
       e.breakGauge += breakGain;
       if (e.breakGauge >= e.def.breakThreshold) {
         e.breakTurns = BREAK_TURNS;
@@ -936,13 +989,24 @@ export class Battle {
       if (!e.alive || e.isBroken) continue;
       if (e.telegraphT > 0) {
         e.telegraphT -= dtMs;
+        // ガード猶予帯を更新：JUST/PERFECT帯に入った瞬間に「今！」の合図音を鳴らす
+        const prev = e.guardWindow;
+        const w = this.guardTierFor(e.telegraphT);
+        if (w !== prev) {
+          e.guardWindow = w;
+          const enteredHot = (w === "just" || w === "perfect") && prev !== "just" && prev !== "perfect";
+          if (enteredHot) this.sfx.push("imminent");
+        }
         if (e.telegraphT <= 0) {
           e.telegraphT = 0;
+          e.guardWindow = "none";
           e.atkAnimT = 300; // 攻撃の踏み込みモーション
           this.resolveEnemyHit(e, "none");
           this.endTelegraph(e);
           if (this.phase !== "fighting") return;
         }
+      } else if (e.guardWindow !== "none") {
+        e.guardWindow = "none";
       }
     }
 

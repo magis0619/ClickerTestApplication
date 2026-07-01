@@ -640,14 +640,23 @@ export const FLOAT_FADE_MS = 400;
 /** PERFECT/JUST/GUARD バッジの表示時間(ms) */
 export const GUARD_BADGE_MS = 1100;
 
+// ===== 弱点 =====
+/** 非弱点（弱点でない系統）で攻撃したときのダメージ倍率（弱点を突く価値を明確にする） */
+export const OFF_WEAK_DMG_MULT = 0.6;
+/** 非弱点で攻撃したときのブレイク蓄積倍率（ブレイクは実質「弱点必須」にする） */
+export const OFF_WEAK_BREAK_MULT = 0.15;
+/** 弱点変化ボス：この行動数ごとに弱点をシフト（1つ前で予告） */
+export const WEAK_SHIFT_INTERVAL = 4;
+
 // ===== ブレイク =====
 // ブレイクは「ターン制」。この間プレイヤーはENを消費せず行動でき、敵は攻撃しない。
 export const BREAK_TURNS = 3;
-export const BREAK_CRIT_MULT = 1.6;
+/** ブレイク中の敵への与ダメージ倍率（弱点で崩す→総攻撃、の見返りを大きく） */
+export const BREAK_CRIT_MULT = 2.1;
 /** ブレイク蓄積の全体倍率（大きいほどブレイクしやすい） */
 export const BREAK_RATE_MULT = 1.2;
 /** 弱点属性で攻撃したときのブレイク蓄積の追加倍率 */
-export const BREAK_WEAK_MULT = 1.5;
+export const BREAK_WEAK_MULT = 1.6;
 
 /** 初期インベントリ（各系統の先頭武器を1本ずつ。武器リスト変更にも追従） */
 export function starterInventory(): WeaponInstance[] {

@@ -1,6 +1,6 @@
 import { Battle, EnemyState, DEATH_ANIM_MS, type FloatText } from "../game/engine.ts";
 import {
-  KIND_LABEL, WEAKNESS,
+  KIND_LABEL,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
   FLOAT_FADE_MS, GUARD_BADGE_MS, ATTACK_WINDUP_MS,
 } from "../game/data.ts";
@@ -811,7 +811,7 @@ function drawEnemyCard(
   if (sp > 0) ctx.globalAlpha = 1 - sp;
 
   // === カード枠 ===
-  const weak = WEAKNESS[e.def.kind];
+  const weak = e.currentWeakness; // 弱点変化ボスは現在の弱点を反映
   ctx.save();
   roundRect(ctx, L.left, L.top, L.w, L.h, 6);
   ctx.fillStyle = "rgba(255,255,255,0.68)";
@@ -836,6 +836,19 @@ function drawEnemyCard(
     ctx.lineWidth = targeted ? 3 : 1.5;
     ctx.strokeStyle = targeted ? "#df0b81" : "#2a2030";
     ctx.stroke();
+  }
+  // ガード猶予帯に入ったら枠を強く光らせる：JUST=水色 / PERFECT=金の高速点滅（「今！」の直前フラッシュ）
+  if (e.guardWindow === "just" || e.guardWindow === "perfect") {
+    const perfect = e.guardWindow === "perfect";
+    const blink = 0.5 + 0.5 * Math.sin(Date.now() / (perfect ? 45 : 90));
+    ctx.save();
+    roundRect(ctx, L.left, L.top, L.w, L.h, 6);
+    ctx.shadowColor = perfect ? "#ffd34d" : "#5fe0ff";
+    ctx.shadowBlur = (perfect ? 16 : 10) + blink * 12;
+    ctx.lineWidth = perfect ? 4 : 3;
+    ctx.strokeStyle = perfect ? `rgba(255,211,77,${0.75 + blink * 0.25})` : `rgba(95,224,255,${0.6 + blink * 0.3})`;
+    ctx.stroke();
+    ctx.restore();
   }
   ctx.restore();
 

@@ -66,6 +66,12 @@ const fadeEl = document.createElement("div");
 fadeEl.className = "fade-overlay";
 document.body.appendChild(fadeEl);
 
+// ===== 1-1（最初のダンジョン）用パーフェクトガイド：ジャスト帯で「今！」を大きく表示 =====
+const guardGuideEl = document.createElement("div");
+guardGuideEl.className = "guard-guide";
+guardGuideEl.innerHTML = `<span class="gg-star">⭐</span><span class="gg-text">今！ ガード</span>`;
+document.body.appendChild(guardGuideEl);
+
 // ===== 乱入ボスの WARNING 演出オーバーレイ（画面全体・武器ボタンも覆う） =====
 // 暗転 → グリッチ調 WARNING がせり上がる → 暗転＆WARNINGが消えてボスが現れる。
 // canvasではなく画面全体の固定オーバーレイにすることで、戦闘枠だけでなく
@@ -188,6 +194,7 @@ function playSfx(ev: SfxEvent): void {
     case "die": audio.sfxEnemyDie(); break;
     case "crit": audio.sfxCrit(); break;
     case "boss": audio.sfxBossAlarm(); break;
+    case "imminent": audio.sfxImminent(); break;
   }
 }
 
@@ -323,7 +330,7 @@ function buildControls(): void {
   document.body.classList.toggle("theme-nb", menuThemed);
   menuBg.style.display = inBattle ? "none" : "";
   battleTop.style.display = inBattle ? "" : "none";
-  if (!inBattle) battleTop.innerHTML = "";
+  if (!inBattle) { battleTop.innerHTML = ""; guardGuideEl.classList.remove("show"); }
   // BGM：戦闘中はワールド別テーマ曲、それ以外はメニュー曲（同じ曲なら内部でno-op）
   if (inBattle) audio.playWorldBgm(game.currentStage?.world);
   else audio.playMenuBgm();
@@ -2235,9 +2242,19 @@ function updateWeaponButtons(): void {
     }
     link.classList.toggle("on", !!combo);
   }
-  // GUARD：敵の予兆中は強調。休憩は予兆中は無効
-  if (guardCard) guardCard.classList.toggle("guard-now", telegraph);
+  // GUARD：敵の予兆中は強調。JUST/PERFECT帯ではさらに強く光らせる
+  const gw = b.bestGuardWindow;
+  const hot = gw === "just" || gw === "perfect";
+  if (guardCard) {
+    guardCard.classList.toggle("guard-now", telegraph);
+    guardCard.classList.toggle("guard-hot", hot);
+    guardCard.classList.toggle("guard-perfect", gw === "perfect");
+  }
   if (restCard) restCard.classList.toggle("disabled", enemyTurn);
+  // 1-1（最初のダンジョン）だけ、ジャスト帯で「今！」ガイドを表示してタイミングを教える
+  const guideOn = game.stageIndex === 0 && !game.isEndless && hot;
+  guardGuideEl.classList.toggle("show", guideOn);
+  guardGuideEl.classList.toggle("perfect", gw === "perfect");
 }
 
 /** ボタン用のドット絵アイコン要素を作る */
