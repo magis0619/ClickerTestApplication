@@ -21,3 +21,12 @@ export function setSlot(s: Slot): void {
 export function slotSuffix(): string {
   return activeSlot() === "dev" ? "-dev" : "";
 }
+
+/** 開発用スロットのデータ（セーブ・進捗）を消去し、次回ロード時に空データ（0）から始める */
+export function clearDevData(): void {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (key.endsWith("-dev")) localStorage.removeItem(key);
+    }
+  } catch { /* 無視 */ }
+}

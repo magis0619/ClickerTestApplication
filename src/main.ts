@@ -18,7 +18,7 @@ import {
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
-import { activeSlot, setSlot } from "./game/slot.ts";
+import { activeSlot, setSlot, clearDevData } from "./game/slot.ts";
 import {
   progress, saveProgress, ACHIEVEMENTS, dailyAvailable, claimDaily,
   DAILY_MISSIONS, missionProgress, missionClaimable, claimMission, missionsAvailable,
@@ -430,6 +430,7 @@ function buildTitle(): void {
   dev.className = "home-dev-btn" + (onDev ? " on" : "");
   dev.textContent = onDev ? "🛠 通常データに戻す" : "🛠 開発用の空データに切替";
   dev.addEventListener("click", () => {
+    clearDevData(); // 出入りするたびに開発データは0（空）へ戻す
     setSlot(onDev ? "main" : "dev");
     location.reload(); // スロットは読み込み時に確定するためリロードで反映
   });
@@ -437,7 +438,7 @@ function buildTitle(): void {
   if (onDev) {
     const badge = document.createElement("div");
     badge.className = "home-dev-note";
-    badge.textContent = "開発モード：空データで進行中（通常データは保持されています）";
+    badge.textContent = "開発モード：空データで進行中（出入りするたびにリセット・通常データは保持）";
     controls.appendChild(badge);
   }
 
