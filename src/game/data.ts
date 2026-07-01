@@ -523,8 +523,8 @@ export function endlessFloorEnemies(floor: number): EnemyDef[] {
 // ===== プレイヤー =====
 /** プレイヤー基礎最大HP（レベル1）。レベルで上昇する */
 export const PLAYER_MAX_HP = 130;
-/** レベルアップ1段ごとの最大HP上昇量 */
-export const HP_PER_LEVEL = 12;
+/** レベルアップ1段ごとの最大HP上昇量（難易度維持のため控えめに） */
+export const HP_PER_LEVEL = 4;
 /** プレイヤーレベル上限 */
 export const MAX_PLAYER_LEVEL = 50;
 /** レベル level → level+1 に必要な経験値 */

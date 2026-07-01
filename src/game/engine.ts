@@ -20,7 +20,6 @@ import {
   JUST_DAMAGE_MULT,
   PERFECT_HP_RECOVER,
   HITSTOP_MS,
-  HIT_HITSTOP_MS,
   SLOWMO_MS,
   SLOWMO_SCALE,
   WHITE_FLASH_MS,
@@ -57,6 +56,20 @@ import { settings } from "./settings.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
+
+/**
+ * ヒット種別に応じたヒットストップ長(ms)。手応えを段階的に強める。
+ * 通常20〜30 / 弱点35〜45 / 会心45〜60 / BREAK60〜80 / ボスフィニッシュ80〜100。
+ * 複数該当時は最も強い区分を採用（範囲内でわずかに揺らす）。
+ */
+function hitstopFor(crit: boolean, weak: boolean, causedBreak: boolean, bossFinish: boolean): number {
+  const rng = (lo: number, hi: number): number => lo + Math.random() * (hi - lo);
+  if (bossFinish) return rng(80, 100);
+  if (causedBreak) return rng(60, 80);
+  if (crit) return rng(45, 60);
+  if (weak) return rng(35, 45);
+  return rng(20, 30);
+}
 
 /** 撃破時に飛び散るコイン（金貨）粒子 */
 export interface Coin {
@@ -588,10 +601,9 @@ export class Battle {
     this.pushDamage(dmg, idx, big, crit);
     if (dmg > this.maxHit) this.maxHit = dmg; // 最大ダメージ更新
     if (crit) this.sfx.push("crit");
-    // 当たった瞬間の0.05秒ストップ＋画面シェイク（手応え）
-    this.hitstopT = Math.max(this.hitstopT, HIT_HITSTOP_MS);
     this.shake(150, crit ? 5 : 3);
 
+    let causedBreak = false;
     if (!e.isBroken) {
       // ブレイク蓄積：全体倍率で上がりやすく、弱点属性ならさらに大きく溜まる
       let breakGain = (mods?.breakPower ?? 0) * skill.breakMult * BREAK_RATE_MULT;
@@ -604,11 +616,17 @@ export class Battle {
         e.readyWaitT = -1; // 0待ち中ならリセット（ブレイク復帰後に再抽選させる）
         this.pushFloat("BREAK!!", "#ffdd44", idx);
         this.sfx.push("break");
+        causedBreak = true;
       }
     }
 
+    const killed = wasAlive && e.hp <= 0;
+    const bossFinish = killed && (e.def.boss === true || e.def.bigBoss === true);
+    // ヒットストップ：状況ごとに手応えを変える（通常＜弱点＜会心＜BREAK＜ボスフィニッシュ）
+    this.hitstopT = Math.max(this.hitstopT, hitstopFor(crit, weak, causedBreak, bossFinish));
+
     // 撃破：ただ消さず、ノックバック＋フェードの撃破演出を始動
-    if (wasAlive && e.hp <= 0) this.killEnemy(e, idx);
+    if (killed) this.killEnemy(e, idx);
   }
 
   /** 敵を撃破：ノックバック・フェード・ドロップ（宝箱）演出を開始する */
