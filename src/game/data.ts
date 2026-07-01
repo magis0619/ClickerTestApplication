@@ -260,6 +260,14 @@ export function rollChestWeapon(rarity: Rarity): WeaponInstance {
   return makeInstance(w.id);
 }
 
+/** エピック以上（epic/legend/astral）の武器からランダムに1本（初回クリア報酬など） */
+export function rollEpicPlusWeapon(): WeaponInstance {
+  const pool = WEAPONS.filter((w) => w.rarity === "epic" || w.rarity === "legend" || w.rarity === "astral");
+  if (pool.length === 0) return rollChestWeapon("epic");
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  return makeInstance(w.id);
+}
+
 // ===== 武器の強化（鍛冶屋）：レベル・経験値・覚醒 =====
 /** 10レベルごとに「覚醒」の壁。覚醒回数の上限 */
 export const AWAKEN_STEP = 10;

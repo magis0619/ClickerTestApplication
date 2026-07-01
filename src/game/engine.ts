@@ -657,6 +657,28 @@ export class Battle {
     return result;
   }
 
+  /** チュートリアル用：予兆中の敵を強制的にパーフェクトガードで受け止める（タイミング不問） */
+  forcePerfectGuard(): boolean {
+    const targets = this.enemies.filter((e) => e.inTelegraph);
+    if (targets.length === 0) return false;
+    targets.sort((a, b) => a.telegraphT - b.telegraphT);
+    const e = targets[0];
+    this.resolveEnemyHit(e, "perfect");
+    this.endTelegraph(e);
+    this.resetRead();
+    return true;
+  }
+  /** チュートリアル用：先頭の生存敵に予兆（!）を今すぐ出させる */
+  forceTelegraph(): boolean {
+    if (this.enemies.some((e) => e.telegraphT > 0)) return true; // 既に予兆中
+    const e = this.aliveEnemies[0];
+    if (!e) return false;
+    e.breakTurns = 0; e.flinchT = 0; e.readyWaitT = -1; e.count = 0;
+    e.telegraphMax = e.telegraphT = Math.max(TELEGRAPH_MIN_MS, e.def.telegraphMs * TELEGRAPH_SCALE);
+    this.sfx.push("warn");
+    return true;
+  }
+
   // ===== 内部処理 =====
 
   /** ガード猶予倍率（設定＋盾パッシブ「達人の構え」で各窓を広げられる） */

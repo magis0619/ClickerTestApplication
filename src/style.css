@@ -2501,19 +2501,20 @@ body.theme-nb {
 /* 予兆中は休憩を無効表示 */
 .bt-act.disabled { pointer-events: none; opacity: 0.45; }
 
-/* 1-1 パーフェクトガイド：ジャスト帯で「今！」を大きく表示 */
+/* パーフェクトガイド：攻撃3ボタンを跨いで大きく「今！ガード」を表示 */
+.bt-skills { position: relative; }
 .guard-guide {
-  position: fixed; left: 50%; bottom: 128px; transform: translateX(-50%) scale(0.8);
-  z-index: 125; pointer-events: none; display: flex; align-items: center; gap: 8px;
-  padding: 10px 20px; border: 3px solid #1c1b1b; border-radius: 999px;
-  background: #5fe0ff; color: #08313d; box-shadow: 4px 4px 0 #1c1b1b;
-  font-size: 20px; font-weight: 900; letter-spacing: 1px;
-  opacity: 0; transition: opacity 0.08s;
+  position: absolute; inset: 0; z-index: 6;
+  display: none; align-items: center; justify-content: center; gap: 12px;
+  border: 4px solid #1c1b1b; border-radius: 16px;
+  background: #5fe0ff; color: #08313d; box-shadow: 5px 5px 0 #1c1b1b;
+  font-size: 40px; font-weight: 900; letter-spacing: 2px;
+  pointer-events: none;
 }
-.guard-guide.show { opacity: 1; }
-.guard-guide.perfect { background: #ffd34d; color: #4a3200; animation: ggPulse 0.2s steps(2) infinite; }
-.guard-guide .gg-star { font-size: 18px; }
-@keyframes ggPulse { 0% { transform: translateX(-50%) scale(0.82); } 100% { transform: translateX(-50%) scale(0.94); } }
+.guard-guide.show { display: flex; }
+.guard-guide.perfect { background: #ffd34d; color: #4a3200; animation: ggPulse 0.18s steps(2) infinite; }
+.guard-guide .gg-star { font-size: 34px; }
+@keyframes ggPulse { 0% { transform: scale(0.985); filter: brightness(1); } 100% { transform: scale(1.02); filter: brightness(1.25); } }
 
 /* =====================================================================
    Hyper-Pop タイポグラフィ：見出しは Anybody（重め・チャンキー）

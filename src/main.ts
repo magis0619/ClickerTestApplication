@@ -221,6 +221,15 @@ function attackWith(cls: WeaponClass): void {
 
 /** ガード入力。判定結果に応じたSEは戦闘側のイベントで鳴る（空振りのみ軽い音） */
 function doGuard(): void {
+  // ガード練習中：パーフェクト帯で止まっている時だけ受け付け、必ずパーフェクトにする
+  if (guardPracticeActive) {
+    if (guardFrozen) {
+      game.battle?.forcePerfectGuard();
+      audio.sfxPerfect();
+      endGuardPractice();
+    }
+    return; // 早押し（帯に入る前）は無効＝引きつけを促す
+  }
   const res = game.battle?.guard();
   if (res === "none") audio.sfxGuard();
 }
@@ -485,10 +494,34 @@ function screenHead(title: string, tag?: string, titleClass = ""): HTMLElement {
 
 /** チュートリアル進行中はゲームループ（戦闘進行）を止める */
 let tutorialActive = false;
+/** チュートリアルのガード練習中か（コーチ後の実践パート） */
+let guardPracticeActive = false;
+/** ガード練習：パーフェクトの瞬間でゲームを止めて入力待ちしている状態 */
+let guardFrozen = false;
+
+/** ガード練習を開始：敵に予兆を出させ、パーフェクトの瞬間で止めて必ずパーフェクトを取らせる */
+function startGuardPractice(): void {
+  tutorialActive = false; // ゲーム再開（この後パーフェクト帯で自動停止する）
+  guardPracticeActive = true;
+  guardFrozen = false;
+  const gg = guardGuideEl.querySelector(".gg-text");
+  if (gg) gg.textContent = "GUARDを押す！";
+  game.battle?.forceTelegraph(); // 練習用に「!」を今すぐ出す
+}
+/** ガード練習を終了（成功時は強制パーフェクトが決まった後）。チュートリアル完了を記録 */
+function endGuardPractice(): void {
+  guardPracticeActive = false;
+  guardFrozen = false;
+  guardGuideEl.classList.remove("show", "perfect");
+  const gg = guardGuideEl.querySelector(".gg-text");
+  if (gg) gg.textContent = "今！ ガード";
+  progress.tutorialDone = true;
+  saveProgress();
+}
 
 /** 初回バトルのインタラクティブ・チュートリアル（実画面にスポットライト＋吹き出しで誘導） */
 function startTutorial(): void {
-  if (progress.tutorialDone || tutorialActive) return;
+  if (progress.tutorialDone || tutorialActive || guardPracticeActive) return;
   tutorialActive = true;
   const steps: { sel: string | null; text: string }[] = [
     { sel: null, text: "ようこそ、守人！まずは戦いの基本を確認しよう。" },
@@ -496,7 +529,8 @@ function startTutorial(): void {
     { sel: "#screen", text: "敵カード左上の色と記号（斬/突/打）が弱点。弱点で攻撃すると大ダメージ＆ブレイクしやすい！" },
     { sel: ".bt-guard", text: "敵に「!」が出たらGUARD！ 引きつけてジャストで受けると“パーフェクト”＝ノーダメージで反撃。" },
     { sel: ".bt-rest2", text: "APが切れたらREST で回復。攻めと回復を使い分けよう。" },
-    { sel: "#screen", text: "攻撃で敵のブレイクゲージ（HP下の黄バー）を削るとダウン！大ダメージのチャンス。さあ、始めよう！" },
+    { sel: "#screen", text: "攻撃で敵のブレイクゲージ（HP下の黄バー）を削るとダウン！大ダメージのチャンス。" },
+    { sel: ".bt-guard", text: "最後に実践！ 敵の攻撃を引きつけ、画面が金色に光ったらGUARD。今回は必ずパーフェクトになるよ。" },
   ];
   let i = 0;
   const overlay = document.createElement("div");
@@ -505,7 +539,9 @@ function startTutorial(): void {
   const tip = document.createElement("div"); tip.className = "coach-tip";
   overlay.appendChild(hole); overlay.appendChild(tip);
   document.body.appendChild(overlay);
-  const finish = (): void => { tutorialActive = false; progress.tutorialDone = true; saveProgress(); overlay.remove(); };
+  // スキップ：チュートリアル全体を終了。コーチ完走：ガード練習パートへ
+  const skipAll = (): void => { tutorialActive = false; progress.tutorialDone = true; saveProgress(); overlay.remove(); };
+  const finish = (): void => { overlay.remove(); startGuardPractice(); };
   const show = (): void => {
     const s = steps[i];
     const el = s.sel ? document.querySelector(s.sel) as HTMLElement | null : null;
@@ -519,9 +555,9 @@ function startTutorial(): void {
     }
     tip.innerHTML = `<div class="coach-step">${i + 1} / ${steps.length}</div><div class="coach-text">${s.text}</div>`;
     const acts = document.createElement("div"); acts.className = "coach-acts";
-    const skip = document.createElement("button"); skip.className = "coach-skip"; skip.textContent = "スキップ"; skip.onclick = finish;
+    const skip = document.createElement("button"); skip.className = "coach-skip"; skip.textContent = "スキップ"; skip.onclick = skipAll;
     const next = document.createElement("button"); next.className = "coach-next";
-    next.textContent = i === steps.length - 1 ? "はじめる" : "次へ";
+    next.textContent = i === steps.length - 1 ? "実践へ" : "次へ";
     next.onclick = (): void => { i++; if (i >= steps.length) finish(); else show(); };
     acts.appendChild(skip); acts.appendChild(next); tip.appendChild(acts);
     // 吹き出しはハイライト要素の下（無ければ上）に。要素無しは中央
@@ -2143,6 +2179,7 @@ function buildBattle(): void {
     battleCards.push({ card, cls, steps, mark, link, focusIdx: -1 });
   }
 
+  grid.appendChild(guardGuideEl); // 「今！ガード」ガイドは攻撃3ボタンを跨ぐ大きなオーバーレイ
   controls.appendChild(grid);
 
   // ガード／休憩は攻撃行の下に横並び。攻撃カードと同じCSSカード調（ピクセル画像はやめる）
@@ -2741,7 +2778,12 @@ function loop(now: number): void {
   last = now;
 
   const prev = game.screen;
-  if (!tutorialActive) game.update(dt); // チュートリアル中は戦闘を一時停止
+  // チュートリアル中／ガード練習でパーフェクト帯に入ったら戦闘を一時停止
+  if (!tutorialActive && !guardFrozen) game.update(dt);
+  // ガード練習：パーフェクト帯に入った瞬間にゲームを止めて「今！押す」を促す
+  if (guardPracticeActive && game.battle && !guardFrozen && game.battle.bestGuardWindow === "perfect") {
+    guardFrozen = true;
+  }
   // 戦闘から発火した効果音を回収して鳴らす
   if (game.battle && game.battle.sfx.length) {
     for (const ev of game.battle.sfx) playSfx(ev);

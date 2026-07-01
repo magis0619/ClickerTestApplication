@@ -4,7 +4,7 @@ import {
   effectiveWeapon, expForNext, materialExp, levelCap, awakenCost, MAX_AWAKEN, rollChestWeapon,
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
   playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
-  socketBonuses, socketCount, rollGemDrop,
+  socketBonuses, socketCount, rollGemDrop, rollEpicPlusWeapon,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress, addMissionProgress } from "./progress.ts";
@@ -469,7 +469,13 @@ export class Game {
     // 最終戦闘クリア＝ステージクリア
     this.lastWon = true;
     const stageNum = this.stageIndex + 1;
+    // 初めて最初のダンジョン（stageIndex 0）をクリア＝エピック以上確定の特別ドロップ
+    const firstEverClear = this.stageIndex === 0 && !this.isEndless && this.save.bestStage < 1;
     if (stageNum > this.save.bestStage) this.save.bestStage = stageNum;
+    if (firstEverClear) {
+      const bonus = rollEpicPlusWeapon();
+      this.lastDrops.push(bonus); // リザルトの宝箱演出＋インベントリへ
+    }
     // 戦闘評価ランク＆スター（無傷・パーフェクトの多さで決まる攻略度）
     this.computeStageRank();
     const prevStars = this.save.stageStars[this.stageIndex] ?? 0;
