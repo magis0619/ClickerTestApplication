@@ -45,6 +45,8 @@ export class Game {
   lastExp = 0;
   /** この冒険で上がったレベル数（result表示用） */
   lastLevelUps = 0;
+  /** 蓄積した経験値を既にプレイヤーへ反映したか（ダンジョン終了時に一度だけ反映する） */
+  private expBanked = false;
   /** 乱入ボス戦の最中か */
   inAmbush = false;
   /** 乱入が発生したか（result表示用） */
@@ -227,6 +229,7 @@ export class Game {
     this.lastStars = 0;
     this.lastExp = 0;
     this.lastLevelUps = 0;
+    this.expBanked = false;
     this.inAmbush = false;
     this.lastAmbush = false;
     this.lastAmbushWon = false;
@@ -404,8 +407,7 @@ export class Game {
       this.save.gold += this.battle.goldEarned;
       this.lastDrops.push(...drops);
       this.lastGold += this.battle.goldEarned;
-      this.lastLevelUps += this.addPlayerExp(this.battle.expEarned);
-      this.lastExp += this.battle.expEarned;
+      this.lastExp += this.battle.expEarned; // 反映はリザルト遷移時に一括（下のbankPlayerExp）
       writeSave(this.save);
       this.inAmbush = false;
       this.lastAmbushWon = true;
@@ -413,6 +415,7 @@ export class Game {
       progress.ambushWins += 1; saveProgress(); // 実績：乱入ボス討伐
       this.awardGem(rollGemDrop(this.currentStage.world, true)); // 乱入ボスは確定で上位秘石
       this.lastWon = true;
+      this.bankPlayerExp();
       this.screen = "result";
       return;
     }
@@ -479,13 +482,24 @@ export class Game {
     this.awardGem(rollGemDrop(this.currentStage.world, false));
     this.save.inventory.push(...this.lastDrops);
     this.save.gold += this.lastGold; // 獲得ゴールドを確定
-    this.lastLevelUps += this.addPlayerExp(this.lastExp); // 蓄積した経験値をまとめて反映
     writeSave(this.save);
     // 実績：ノーダメージ達成（ステージ全体を無傷でクリア）
     if (this.lastFlawless) { progress.flawlessClears += 1; saveProgress(); }
-    // 乱入イベント：低確率でレアボスが乱入。宝は確保済みなので、ここから割り込む
+    // 乱入イベント：低確率でレアボスが乱入。宝は確保済みなので、ここから割り込む。
+    // 経験値の反映は乱入も含めてダンジョン完全終了（リザルト遷移）時に一括で行う。
     if (Math.random() < AMBUSH_CHANCE) { this.startAmbush(); return; }
+    this.bankPlayerExp();
     this.screen = "result";
+  }
+
+  /**
+   * 蓄積した経験値をプレイヤーへ一括反映する（ダンジョン終了＝リザルト遷移時に一度だけ）。
+   * 戦闘中にレベルアップ＝最大HPが増えるのを防ぐため、途中では反映しない。
+   */
+  private bankPlayerExp(): void {
+    if (this.expBanked) return;
+    this.expBanked = true;
+    this.lastLevelUps += this.addPlayerExp(this.lastExp);
   }
 
   /**
@@ -572,6 +586,7 @@ export class Game {
       this.inAmbush = false;
       this.lastAmbushWon = false;
       this.lastWon = true; // ステージはクリア済み
+      this.bankPlayerExp(); // ステージ分の経験値はここで一括反映
       this.screen = "result";
       return;
     }
