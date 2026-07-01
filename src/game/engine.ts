@@ -342,6 +342,22 @@ export class Battle {
     }
     return best;
   }
+  /**
+   * ガードボタンの収縮リング用。予兆中の最も着弾が近い敵について、
+   * リングの倍率（予兆開始で大きく、パーフェクト帯でちょうど1.0＝ボタンと重なる）と
+   * 現在のガード帯を返す。予兆が無ければ null。
+   */
+  get guardRing(): { scale: number; window: GuardResult } | null {
+    const list = this.enemies.filter((e) => e.inTelegraph);
+    if (list.length === 0) return null;
+    list.sort((a, b) => a.telegraphT - b.telegraphT);
+    const e = list[0];
+    const perfectEdge = PERFECT_WINDOW_MS * this.guardLeniency(); // ここでスケール1（ボタンと重なる）
+    const span = Math.max(1, (e.telegraphMax || e.def.telegraphMs) - perfectEdge);
+    const t = Math.max(0, e.telegraphT - perfectEdge);
+    const scale = 1 + 1.6 * (t / span); // 予兆開始で約2.6倍 → パーフェクトで1.0
+    return { scale, window: e.guardWindow };
+  }
   /** いずれかの敵が予兆中（!表示）か。この間プレイヤーはガードしかできない */
   get anyTelegraph(): boolean {
     return this.enemies.some((e) => e.inTelegraph);

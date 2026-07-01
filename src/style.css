@@ -21,6 +21,7 @@ body {
   font-family: "Hanken Grotesk", "Hiragino Kaku Gothic ProN", sans-serif;
   display: flex;
   justify-content: center;
+  overflow-x: hidden; /* 横スライド遷移中の横スクロール抑制 */
   /* 連打時の文字選択・タップハイライトを抑制 */
   -webkit-user-select: none;
   user-select: none;
@@ -41,13 +42,19 @@ button {
   background: #000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.34s ease;
+  transition: opacity 0.68s ease;
   z-index: 100;
 }
 .fade-overlay.show {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* 横スライド画面遷移（ダンジョンへ入るとき） */
+.slide-out-left { animation: slideOutLeft 0.3s cubic-bezier(0.5, 0, 0.75, 0) both; }
+.slide-in-right { animation: slideInRight 0.36s cubic-bezier(0.25, 1, 0.5, 1) both; }
+@keyframes slideOutLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 /* ===== 乱入ボス WARNING 演出（画面全体・武器ボタンも覆う） ===== */
 .warn-overlay {
@@ -2501,20 +2508,17 @@ body.theme-nb {
 /* 予兆中は休憩を無効表示 */
 .bt-act.disabled { pointer-events: none; opacity: 0.45; }
 
-/* パーフェクトガイド：攻撃3ボタンを跨いで大きく「今！ガード」を表示 */
-.bt-skills { position: relative; }
-.guard-guide {
-  position: absolute; inset: 0; z-index: 6;
-  display: none; align-items: center; justify-content: center; gap: 12px;
-  border: 4px solid #1c1b1b; border-radius: 16px;
-  background: #5fe0ff; color: #08313d; box-shadow: 5px 5px 0 #1c1b1b;
-  font-size: 40px; font-weight: 900; letter-spacing: 2px;
-  pointer-events: none;
+/* ガードボタンの収縮リング：攻撃タイミングで大きな円→パーフェクトでボタンに重なる */
+.bt-act { position: relative; overflow: visible; }
+.guard-ring {
+  position: absolute; left: 50%; top: 50%; z-index: 5;
+  border: 5px solid rgba(95, 224, 255, 0.9); border-radius: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 0; pointer-events: none;
+  box-shadow: 0 0 10px rgba(95, 224, 255, 0.55);
 }
-.guard-guide.show { display: flex; }
-.guard-guide.perfect { background: #ffd34d; color: #4a3200; animation: ggPulse 0.18s steps(2) infinite; }
-.guard-guide .gg-star { font-size: 34px; }
-@keyframes ggPulse { 0% { transform: scale(0.985); filter: brightness(1); } 100% { transform: scale(1.02); filter: brightness(1.25); } }
+.guard-ring.on { opacity: 0.95; }
+.guard-ring.perfect { border-color: #ffd34d; box-shadow: 0 0 16px rgba(255, 211, 77, 0.9); }
 
 /* =====================================================================
    Hyper-Pop タイポグラフィ：見出しは Anybody（重め・チャンキー）

@@ -50,6 +50,8 @@ let battleCards: {
 }[] = [];
 /** 戦闘中のガードカード（敵の予兆中に強調する） */
 let guardCard: HTMLButtonElement | null = null;
+/** ガードボタン上の収縮リング（攻撃タイミングを可視化） */
+let guardRing: HTMLElement | null = null;
 /** 戦闘中の休憩ボタン（敵の予兆中は無効化する） */
 let restCard: HTMLButtonElement | null = null;
 /** 戦闘中のHP/AP（セグメント）バー。毎フレーム更新する */
@@ -65,12 +67,6 @@ let lastBattleObj: typeof game.battle = null;
 const fadeEl = document.createElement("div");
 fadeEl.className = "fade-overlay";
 document.body.appendChild(fadeEl);
-
-// ===== 1-1（最初のダンジョン）用パーフェクトガイド：ジャスト帯で「今！」を大きく表示 =====
-const guardGuideEl = document.createElement("div");
-guardGuideEl.className = "guard-guide";
-guardGuideEl.innerHTML = `<span class="gg-star">⭐</span><span class="gg-text">今！ ガード</span>`;
-document.body.appendChild(guardGuideEl);
 
 // ===== 乱入ボスの WARNING 演出オーバーレイ（画面全体・武器ボタンも覆う） =====
 // 暗転 → グリッチ調 WARNING がせり上がる → 暗転＆WARNINGが消えてボスが現れる。
@@ -150,14 +146,27 @@ menuBg.className = "menu-bg";
 }
 document.body.appendChild(menuBg);
 
-/** 暗転 → action実行 → 明転、の順で画面遷移する */
+/** 暗転 → action実行 → 明転、の順で画面遷移する（フェード時間は従来の2倍） */
 function withFade(action: () => void): void {
   fadeEl.classList.add("show");
   window.setTimeout(() => {
     action();
     buildControls();
-    window.setTimeout(() => fadeEl.classList.remove("show"), 60);
-  }, 340);
+    window.setTimeout(() => fadeEl.classList.remove("show"), 120);
+  }, 680);
+}
+
+/** 横スライドで画面を切り替える（現在の画面を左へ送り、新しい画面を右から出す） */
+function withSlide(action: () => void): void {
+  app.classList.add("slide-out-left");
+  window.setTimeout(() => {
+    action();
+    buildControls();
+    app.classList.remove("slide-out-left");
+    app.classList.add("slide-in-right");
+    void app.offsetWidth; // リフローでアニメーションを再生し直す
+    window.setTimeout(() => app.classList.remove("slide-in-right"), 360);
+  }, 300);
 }
 
 /** 戦闘→リザルトなど、黒からぬるっと明転させる（フェードイン） */
@@ -165,7 +174,7 @@ function fadeInBattle(): void {
   fadeEl.style.transition = "none";
   fadeEl.classList.add("show"); // いったん即座に真っ黒へ
   requestAnimationFrame(() => {
-    fadeEl.style.transition = ""; // CSS既定の0.34sへ戻す
+    fadeEl.style.transition = ""; // CSS既定（0.68s）へ戻す
     requestAnimationFrame(() => fadeEl.classList.remove("show"));
   });
 }
@@ -221,15 +230,6 @@ function attackWith(cls: WeaponClass): void {
 
 /** ガード入力。判定結果に応じたSEは戦闘側のイベントで鳴る（空振りのみ軽い音） */
 function doGuard(): void {
-  // ガード練習中：パーフェクト帯で止まっている時だけ受け付け、必ずパーフェクトにする
-  if (guardPracticeActive) {
-    if (guardFrozen) {
-      game.battle?.forcePerfectGuard();
-      audio.sfxPerfect();
-      endGuardPractice();
-    }
-    return; // 早押し（帯に入る前）は無効＝引きつけを促す
-  }
   const res = game.battle?.guard();
   if (res === "none") audio.sfxGuard();
 }
@@ -327,6 +327,7 @@ function buildControls(): void {
   battleCards = [];
   battleHud = null;
   guardCard = null;
+  guardRing = null;
   restCard = null;
   const screenChanged = renderedScreen !== game.screen;
   renderedScreen = game.screen;
@@ -339,7 +340,7 @@ function buildControls(): void {
   document.body.classList.toggle("theme-nb", menuThemed);
   menuBg.style.display = inBattle ? "none" : "";
   battleTop.style.display = inBattle ? "" : "none";
-  if (!inBattle) { battleTop.innerHTML = ""; guardGuideEl.classList.remove("show"); }
+  if (!inBattle) battleTop.innerHTML = "";
   // BGM：戦闘中はワールド別テーマ曲、それ以外はメニュー曲（同じ曲なら内部でno-op）
   if (inBattle) audio.playWorldBgm(game.currentStage?.world);
   else audio.playMenuBgm();
@@ -361,9 +362,9 @@ function buildControls(): void {
   // 画面が切り替わったら縦スクロールを先頭へ戻す（前画面のスクロール残りを防ぐ）
   if (screenChanged) {
     window.scrollTo(0, 0);
-    // 各画面移動はフェードイン(0.1秒)。ただしバトルへの遷移は演出を挟まず即表示
+    // 各画面移動はフェードイン(0.2秒＝従来の2倍)。ただしバトルへの遷移は演出を挟まず即表示
     if (game.screen !== "battle") {
-      controls.style.setProperty("--screen-tdur", "100ms");
+      controls.style.setProperty("--screen-tdur", "200ms");
       controls.classList.remove("screen-enter");
       void controls.offsetWidth; // リフローでアニメーションを再生し直す
       controls.classList.add("screen-enter");
@@ -495,43 +496,18 @@ function screenHead(title: string, tag?: string, titleClass = ""): HTMLElement {
 
 /** チュートリアル進行中はゲームループ（戦闘進行）を止める */
 let tutorialActive = false;
-/** チュートリアルのガード練習中か（コーチ後の実践パート） */
-let guardPracticeActive = false;
-/** ガード練習：パーフェクトの瞬間でゲームを止めて入力待ちしている状態 */
-let guardFrozen = false;
-
-/** ガード練習を開始：敵に予兆を出させ、パーフェクトの瞬間で止めて必ずパーフェクトを取らせる */
-function startGuardPractice(): void {
-  tutorialActive = false; // ゲーム再開（この後パーフェクト帯で自動停止する）
-  guardPracticeActive = true;
-  guardFrozen = false;
-  const gg = guardGuideEl.querySelector(".gg-text");
-  if (gg) gg.textContent = "GUARDを押す！";
-  game.battle?.forceTelegraph(); // 練習用に「!」を今すぐ出す
-}
-/** ガード練習を終了（成功時は強制パーフェクトが決まった後）。チュートリアル完了を記録 */
-function endGuardPractice(): void {
-  guardPracticeActive = false;
-  guardFrozen = false;
-  guardGuideEl.classList.remove("show", "perfect");
-  const gg = guardGuideEl.querySelector(".gg-text");
-  if (gg) gg.textContent = "今！ ガード";
-  progress.tutorialDone = true;
-  saveProgress();
-}
 
 /** 初回バトルのインタラクティブ・チュートリアル（実画面にスポットライト＋吹き出しで誘導） */
 function startTutorial(): void {
-  if (progress.tutorialDone || tutorialActive || guardPracticeActive) return;
+  if (progress.tutorialDone || tutorialActive) return;
   tutorialActive = true;
   const steps: { sel: string | null; text: string }[] = [
     { sel: null, text: "ようこそ、守人！まずは戦いの基本を確認しよう。" },
     { sel: ".bt-skills .sk-card", text: "SLASH / PIERCE / STRIKE で攻撃。青いAPゲージを消費するよ。" },
     { sel: "#screen", text: "敵カード左上の色と記号（斬/突/打）が弱点。弱点で攻撃すると大ダメージ＆ブレイクしやすい！" },
-    { sel: ".bt-guard", text: "敵に「!」が出たらGUARD！ 引きつけてジャストで受けると“パーフェクト”＝ノーダメージで反撃。" },
+    { sel: ".bt-guard", text: "敵に「!」が出たらGUARD！ ガードボタンの収縮する円がボタンに重なる瞬間に押すと“パーフェクト”＝ノーダメージで反撃。" },
     { sel: ".bt-rest2", text: "APが切れたらREST で回復。攻めと回復を使い分けよう。" },
-    { sel: "#screen", text: "攻撃で敵のブレイクゲージ（HP下の黄バー）を削るとダウン！大ダメージのチャンス。" },
-    { sel: ".bt-guard", text: "最後に実践！ 敵の攻撃を引きつけ、画面が金色に光ったらGUARD。今回は必ずパーフェクトになるよ。" },
+    { sel: "#screen", text: "攻撃で敵のブレイクゲージ（HP下の黄バー）を削るとダウン！大ダメージのチャンス。さあ、始めよう！" },
   ];
   let i = 0;
   const overlay = document.createElement("div");
@@ -540,9 +516,8 @@ function startTutorial(): void {
   const tip = document.createElement("div"); tip.className = "coach-tip";
   overlay.appendChild(hole); overlay.appendChild(tip);
   document.body.appendChild(overlay);
-  // スキップ：チュートリアル全体を終了。コーチ完走：ガード練習パートへ
   const skipAll = (): void => { tutorialActive = false; progress.tutorialDone = true; saveProgress(); overlay.remove(); };
-  const finish = (): void => { overlay.remove(); startGuardPractice(); };
+  const finish = (): void => { tutorialActive = false; progress.tutorialDone = true; saveProgress(); overlay.remove(); };
   const show = (): void => {
     const s = steps[i];
     const el = s.sel ? document.querySelector(s.sel) as HTMLElement | null : null;
@@ -558,7 +533,7 @@ function startTutorial(): void {
     const acts = document.createElement("div"); acts.className = "coach-acts";
     const skip = document.createElement("button"); skip.className = "coach-skip"; skip.textContent = "スキップ"; skip.onclick = skipAll;
     const next = document.createElement("button"); next.className = "coach-next";
-    next.textContent = i === steps.length - 1 ? "実践へ" : "次へ";
+    next.textContent = i === steps.length - 1 ? "はじめる" : "次へ";
     next.onclick = (): void => { i++; if (i >= steps.length) finish(); else show(); };
     acts.appendChild(skip); acts.appendChild(next); tip.appendChild(acts);
     // 吹き出しはハイライト要素の下（無ければ上）に。要素無しは中央
@@ -1593,7 +1568,7 @@ function zoneCard(s: StageDef, i: number): HTMLElement {
   const enter = enterButton((e?: Event) => {
     e?.stopPropagation();
     stageSel = i;
-    withFade(() => game.startStage(i));
+    withSlide(() => game.startStage(i)); // ダンジョンへは横スライドで切り替え
   });
   card.appendChild(enter);
 
@@ -2180,7 +2155,6 @@ function buildBattle(): void {
     battleCards.push({ card, cls, steps, mark, link, focusIdx: -1 });
   }
 
-  grid.appendChild(guardGuideEl); // 「今！ガード」ガイドは攻撃3ボタンを跨ぐ大きなオーバーレイ
   controls.appendChild(grid);
 
   // ガード／休憩は攻撃行の下に横並び。攻撃カードと同じCSSカード調（ピクセル画像はやめる）
@@ -2195,6 +2169,11 @@ function buildBattle(): void {
   gbtn.addEventListener("click", doGuard);
   pressFx(gbtn);
   guardCard = gbtn;
+  // 収縮リング：敵の攻撃タイミングで大きな円が出て、パーフェクトの瞬間にボタンと重なる
+  const ring = document.createElement("div");
+  ring.className = "guard-ring";
+  gbtn.appendChild(ring);
+  guardRing = ring;
   const rbtn = document.createElement("button");
   rbtn.className = "bt-act bt-rest2";
   rbtn.innerHTML = `<span class="bt-act-ico"></span><span class="bt-act-lbl">REST</span>`;
@@ -2289,10 +2268,19 @@ function updateWeaponButtons(): void {
     guardCard.classList.toggle("guard-perfect", gw === "perfect");
   }
   if (restCard) restCard.classList.toggle("disabled", enemyTurn);
-  // 1-1（最初のダンジョン）だけ、ジャスト帯で「今！」ガイドを表示してタイミングを教える
-  const guideOn = game.stageIndex === 0 && !game.isEndless && hot;
-  guardGuideEl.classList.toggle("show", guideOn);
-  guardGuideEl.classList.toggle("perfect", gw === "perfect");
+  // ガードボタンの収縮リング：予兆中に大きな円→パーフェクトの瞬間にボタンと重なる
+  if (guardRing && guardCard) {
+    const gr = b.guardRing;
+    if (gr) {
+      const base = guardCard.clientHeight || 84; // リング基準サイズ＝ボタンの短辺
+      guardRing.style.width = guardRing.style.height = `${base}px`;
+      guardRing.style.transform = `translate(-50%, -50%) scale(${gr.scale.toFixed(3)})`;
+      guardRing.classList.add("on");
+      guardRing.classList.toggle("perfect", gr.window === "perfect" || gr.window === "just");
+    } else {
+      guardRing.classList.remove("on", "perfect");
+    }
+  }
 }
 
 /** ボタン用のドット絵アイコン要素を作る */
@@ -2779,12 +2767,7 @@ function loop(now: number): void {
   last = now;
 
   const prev = game.screen;
-  // チュートリアル中／ガード練習でパーフェクト帯に入ったら戦闘を一時停止
-  if (!tutorialActive && !guardFrozen) game.update(dt);
-  // ガード練習：パーフェクト帯に入った瞬間にゲームを止めて「今！押す」を促す
-  if (guardPracticeActive && game.battle && !guardFrozen && game.battle.bestGuardWindow === "perfect") {
-    guardFrozen = true;
-  }
+  if (!tutorialActive) game.update(dt); // チュートリアル中は戦闘を一時停止
   // 戦闘から発火した効果音を回収して鳴らす
   if (game.battle && game.battle.sfx.length) {
     for (const ev of game.battle.sfx) playSfx(ev);

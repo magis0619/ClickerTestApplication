@@ -82,11 +82,11 @@ function drawBadgeFx(
 }
 
 const W = 480;
-// プレイヤー足元(y=352)の下の余白を詰めて、HPゲージ/ガードとの間隔を縮める
-// （端末によってガードが見切れる対策）
-const H = 372;
-const PLAYER_POS = { x: 74, y: 352 };
-const GROUND_Y = 300;
+// 上部（モンスター枠より上）の余白を詰めるため、シーン全体を上へ寄せて枠を縮める。
+// H を縮めたぶん、枠下のDOMボタン群が上に来る。
+const H = 340;
+const PLAYER_POS = { x: 74, y: 320 };
+const GROUND_Y = 268;
 
 /** 敵カードの配置情報（カード枠・スプライト足元位置） */
 interface EnemyLayout {
@@ -95,7 +95,7 @@ interface EnemyLayout {
 
 /** 敵カードを横一列に並べる配置を計算 */
 function enemyLayout(n: number): EnemyLayout[] {
-  const margin = 12, gap = 10, top = 86, h = 160;
+  const margin = 12, gap = 10, top = 54, h = 160;
   const maxCard = 190;
   const cardW = Math.min(maxCard, (W - 2 * margin - (n - 1) * gap) / Math.max(1, n));
   const totalW = cardW * n + gap * (n - 1);
