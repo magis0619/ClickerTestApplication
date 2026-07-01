@@ -82,7 +82,9 @@ function drawBadgeFx(
 }
 
 const W = 480;
-const H = 400;
+// プレイヤー足元(y=352)の下の余白を詰めて、HPゲージ/ガードとの間隔を縮める
+// （端末によってガードが見切れる対策）
+const H = 372;
 const PLAYER_POS = { x: 74, y: 352 };
 const GROUND_Y = 300;
 

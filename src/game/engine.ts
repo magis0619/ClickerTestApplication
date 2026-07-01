@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus, ShieldPassive } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus, ShieldPassive, WeaponClass } from "./types.ts";
 import {
   matchCombo,
   FLOAT_TTL,
@@ -56,6 +56,17 @@ import { settings } from "./settings.ts";
 
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
+
+/** 見切り：この回数までは同系統連打でもペナルティなし（3回目から逓減） */
+const READ_FREE_HITS = 2;
+/**
+ * 見切りのダメージ倍率。同系統の連続攻撃 streak 回目に適用。
+ * 1〜2回目=等倍 / 3回目=0.83 / 4回目=0.66 / 5回目以降=0.5（下限）。
+ */
+function readMultFor(streak: number): number {
+  if (streak <= READ_FREE_HITS) return 1;
+  return Math.max(0.5, 1 - (streak - READ_FREE_HITS) * 0.17);
+}
 
 /**
  * ヒット種別に応じたヒットストップ長(ms)。手応えを段階的に強める。
@@ -226,6 +237,10 @@ export class Battle {
   sfx: SfxEvent[] = [];
   /** 「集中」発動中：次の行動のEN消費をなくす */
   freeNextEn = false;
+  /** 見切り：直近に連打している攻撃系統（同系統を続けると敵に読まれ弱体化） */
+  readClass: WeaponClass | null = null;
+  /** 見切り：同系統の連続攻撃回数 */
+  readStreak = 0;
   /** 直近に発動したスキル（連携＝コンボ判定に使う） */
   lastSkill: LastSkill | null = null;
   /** この戦闘で敵を倒して得たゴールド合計 */
@@ -362,10 +377,12 @@ export class Battle {
     switch (skill.kind) {
       case "charge":
         this.charge = CHARGE_MULT;
+        this.resetRead(); // ためる＝仕切り直しで見切りリセット
         this.pushFloat("ためる！", "#ffd35f", "player");
         break;
       case "focus":
         this.freeNextEn = true;
+        this.resetRead();
         this.pushFloat("集中！ 次の行動EN0", "#9fd9ff", "player");
         break;
       case "attack":
@@ -394,11 +411,29 @@ export class Battle {
   private performAttack(skill: Skill, mods?: WeaponMods, combo?: ComboDef): void {
     // 自己バフ（激昂など）はスキル使用時に付与（攻撃の前にかけてこの攻撃から乗せる）
     if (skill.status?.target === "self") this.applySelfStatus(skill.status);
+
+    // 見切り：同系統を連打すると敵に読まれてダメージ・ブレイクが逓減する。
+    // 連携（コンボ）は「読まれない攻め」としてリセット＋ペナルティ無しにする。
+    const cls = mods?.weapon ?? null;
+    let readMult = 1;
+    if (combo) {
+      this.readClass = cls;
+      this.readStreak = 0;
+    } else if (cls) {
+      if (cls === this.readClass) this.readStreak += 1;
+      else { this.readClass = cls; this.readStreak = 1; }
+      readMult = readMultFor(this.readStreak);
+    }
+    // ペナルティ時は攻撃力・ブレイク蓄積を落とした mods でヒットさせる
+    const effMods: WeaponMods | undefined =
+      mods && readMult < 1 ? { ...mods, attack: Math.round(mods.attack * readMult), breakPower: mods.breakPower * readMult } : mods;
+    if (readMult < 1) this.pushFloat("見切られた！", "#ff9e6b", "player");
+
     const targets = this.pickTargets(skill.targets);
     for (const e of targets) {
       for (let h = 0; h < skill.hits; h++) {
         if (!e.alive) break;
-        this.hitOne(e, skill, mods);
+        this.hitOne(e, skill, effMods);
       }
       // 敵への状態異常は対象ごとに付与（生存している敵のみ）
       if (e.alive && skill.status?.target === "enemy") this.applyEnemyStatus(e, skill.status);
@@ -420,6 +455,20 @@ export class Battle {
     }
     this.consumeCharge();
     this.lungeT = Math.max(this.lungeT, 200);
+  }
+
+  /** 見切りをリセット（構え直し＝ガード・休憩・ためる・集中で敵の読みが外れる） */
+  private resetRead(): void {
+    this.readClass = null;
+    this.readStreak = 0;
+  }
+
+  /**
+   * 次に「その系統で攻撃すると見切られる」系統を返す（UI警告用）。
+   * まだペナルティが乗っていなくても、あと1回で乗るなら警告する。
+   */
+  get readWarnClass(): WeaponClass | null {
+    return this.readStreak >= READ_FREE_HITS ? this.readClass : null;
   }
 
   /** 敵へ状態異常を付与（同種は長い方を採用） */
@@ -476,6 +525,7 @@ export class Battle {
     this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
     this.lastSkill = null; // 休憩で連携チェーンは途切れる
+    this.resetRead();      // 構え直しで見切りがリセット
     this.advanceCounts(); // 休憩も「行動」なので敵カウントを進める
     return true;
   }
@@ -565,6 +615,7 @@ export class Battle {
     if (result !== "perfect") e.atkAnimT = 300; // 弾かれない攻撃は踏み込みモーション
     this.resolveEnemyHit(e, result);
     this.endTelegraph(e); // 受け止めたのでカウントを戻す
+    this.resetRead();     // ガードで構え直し＝敵の読みが外れる
     return result;
   }
 

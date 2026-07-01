@@ -18,6 +18,7 @@ import {
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
+import { activeSlot, setSlot } from "./game/slot.ts";
 import {
   progress, saveProgress, ACHIEVEMENTS, dailyAvailable, claimDaily,
   DAILY_MISSIONS, missionProgress, missionClaimable, claimMission, missionsAvailable,
@@ -406,6 +407,23 @@ function buildTitle(): void {
   codex.addEventListener("click", () => { game.goCodex(); buildControls(); });
   subRow.appendChild(daily); subRow.appendChild(ach); subRow.appendChild(codex);
   controls.appendChild(subRow);
+
+  // 開発用：本番データ ⇄ 空データ（レベル0）を行き来する切り替え
+  const dev = document.createElement("button");
+  const onDev = activeSlot() === "dev";
+  dev.className = "home-dev-btn" + (onDev ? " on" : "");
+  dev.textContent = onDev ? "🛠 通常データに戻す" : "🛠 開発用の空データに切替";
+  dev.addEventListener("click", () => {
+    setSlot(onDev ? "main" : "dev");
+    location.reload(); // スロットは読み込み時に確定するためリロードで反映
+  });
+  controls.appendChild(dev);
+  if (onDev) {
+    const badge = document.createElement("div");
+    badge.className = "home-dev-note";
+    badge.textContent = "開発モード：空データで進行中（通常データは保持されています）";
+    controls.appendChild(badge);
+  }
 
   controls.appendChild(bottomNav());
 }
@@ -2201,6 +2219,8 @@ function updateWeaponButtons(): void {
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
     const combo = cur && !broke && !enemyTurn ? matchCombo(last, cur, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
+    // 見切り警告：この系統を続けて出すと読まれて弱体化する（連携中は例外）
+    card.classList.toggle("read-warn", b.readWarnClass === cls && !combo && !enemyTurn);
     // 武器マークを現在の段の上部へ「ぬるぬる」スライド（位置が変わった時だけ更新）
     const target = steps[active];
     if (target) {

@@ -1,4 +1,5 @@
 // ===== 進捗データ（実績・デイリー・チュートリアル）。セーブとは別枠で永続化 =====
+import { slotSuffix } from "./slot.ts";
 
 export interface Progress {
   /** 受け取り済みの実績ID */
@@ -27,7 +28,7 @@ export interface Progress {
   tutorialDone: boolean;
 }
 
-const KEY = "astral-warden-progress-v1";
+const KEY = "astral-warden-progress-v1" + slotSuffix();
 const DEFAULTS: Progress = {
   claimed: [], perfectsTotal: 0, killsTotal: 0, flawlessClears: 0,
   rankSClears: 0, ambushWins: 0,

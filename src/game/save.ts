@@ -1,8 +1,10 @@
 import type { SaveData, WeaponInstance, WeaponClass } from "./types.ts";
 import { starterInventory, getWeapon, getShield, DEFAULT_SHIELD_ID } from "./data.ts";
+import { slotSuffix } from "./slot.ts";
 
-// 盾・防御力の追加に伴い保存データを初期化するためバージョンを更新
-const KEY = "astral-warden-save-v8";
+// 盾・防御力の追加に伴い保存データを初期化するためバージョンを更新。
+// スロット（本番/開発）でキーを分離する。
+const KEY = "astral-warden-save-v8" + slotSuffix();
 
 /** 初期セーブ：標準武器を1本ずつ所持・装備＋初期の盾を装備 */
 export function defaultSave(): SaveData {
