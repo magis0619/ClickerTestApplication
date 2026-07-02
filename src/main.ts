@@ -999,6 +999,9 @@ function buildForgePanel(target: WeaponInstance): void {
   // 秘石ソケット（レベル/覚醒の状態に関わらず常に装着可能）
   buildSocketSection(target);
 
+  // スキル調整（リロール・厳選）：連携を自分で組めるようにするビルド要素
+  buildSkillTuneSection(target);
+
   // 別の武器を選ぶ
   const back = document.createElement("button");
   back.className = "forge-back";
@@ -1048,6 +1051,82 @@ function buildSocketSection(target: WeaponInstance): void {
   });
   sect.appendChild(row);
   controls.appendChild(sect);
+}
+
+/** スキル調整セクション：各スキル枠のリロール（ランダム/厳選）＋連携候補の表示 */
+function buildSkillTuneSection(target: WeaponInstance): void {
+  const sect = document.createElement("div");
+  sect.className = "forge-section skill-tune";
+  const cost = game.rerollCostOf(target);
+  sect.innerHTML = `<div class="forge-sect-head">スキル調整 <span class="tune-cost">リロール ${cost}G ／ 厳選（3候補から選ぶ）${cost * 3}G</span></div>`;
+  target.skillIds.forEach((sid, i) => {
+    const s = getSkill(sid);
+    const row = document.createElement("div");
+    row.className = "tune-row";
+    row.innerHTML =
+      `<span class="tune-info"><b>${s?.name ?? "???"}</b><span class="tune-desc">${s ? skillDescription(s) : ""}</span></span>`;
+    const re = document.createElement("button");
+    re.className = "tune-btn";
+    re.textContent = "リロール";
+    re.disabled = game.gold < cost;
+    re.addEventListener("click", () => {
+      const got = game.rerollSkill(target.uid, i);
+      if (got) { audio.sfxPerfect(); buildTopHeader(); buildControls(); }
+    });
+    const pick = document.createElement("button");
+    pick.className = "tune-btn tune-btn-pick";
+    pick.textContent = "厳選";
+    pick.disabled = game.gold < cost * 3;
+    pick.addEventListener("click", () => {
+      const cands = game.startChoiceReroll(target.uid, i);
+      if (cands) { audio.sfxUiClick(); buildTopHeader(); openSkillChoiceModal(target, i, cands); }
+    });
+    row.appendChild(re);
+    row.appendChild(pick);
+    sect.appendChild(row);
+  });
+  // この武器が絡む連携候補（特定スキル連携＋汎用連携）
+  const hints = COMBOS.filter((c) =>
+    (c.firstId && target.skillIds.includes(c.firstId)) ||
+    (c.secondId && target.skillIds.includes(c.secondId)) ||
+    (!c.firstId && !c.secondId));
+  if (hints.length) {
+    const h = document.createElement("div");
+    h.className = "tune-combos";
+    h.innerHTML = `<span class="tune-combos-lbl">狙える連携：</span>` +
+      hints.map((c) => `<span class="tune-combo">${c.name}<i>${c.desc}</i></span>`).join("");
+    sect.appendChild(h);
+  }
+  controls.appendChild(sect);
+}
+
+/** 厳選リロールの候補選択モーダル（支払い済み。選ぶまで閉じられない） */
+function openSkillChoiceModal(target: WeaponInstance, slot: number, cands: string[]): void {
+  const overlay = document.createElement("div");
+  overlay.className = "settings-modal";
+  const sheet = document.createElement("div");
+  sheet.className = "settings-sheet gem-sheet";
+  sheet.innerHTML = `<div class="settings-head"><div class="settings-title">スキルを選ぶ（1つ確定）</div></div>`;
+  const list = document.createElement("div");
+  list.className = "gem-pick-list";
+  for (const sid of cands) {
+    const s = getSkill(sid);
+    if (!s) continue;
+    const row = document.createElement("button");
+    row.className = "gem-pick-row";
+    row.innerHTML = `<span class="gem-pick-info"><b>${s.name}</b><span class="gem-pick-desc">${skillDescription(s)}</span></span>` +
+      `<span class="gem-pick-cnt">${RARITY_LABEL[s.rarity]}</span>`;
+    row.addEventListener("click", () => {
+      game.applyRerollChoice(target.uid, slot, sid);
+      audio.sfxPerfect();
+      overlay.remove();
+      buildControls();
+    });
+    list.appendChild(row);
+  }
+  sheet.appendChild(list);
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay); // 支払い済みのため×やオーバーレイタップでは閉じない
 }
 
 /** 秘石ピッカー：所持秘石から1つ選んでスロットに装着（既存は外す） */

@@ -5,6 +5,7 @@ import {
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
   playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
   socketBonuses, socketCount, rollGemDrop, rollEpicPlusWeapon,
+  REROLL_COST, rollSkillCandidates,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress, addMissionProgress } from "./progress.ts";
@@ -523,6 +524,51 @@ export class Game {
     else rank = "C";
     this.lastRank = rank;
     this.lastStars = rank === "S" ? 3 : rank === "A" ? 2 : 1;
+  }
+
+  // ===== スキルリロール（鍛冶屋の「スキル調整」） =====
+  /** リロールの基本コスト（厳選は3倍） */
+  rerollCostOf(inst: WeaponInstance): number {
+    const w = getWeapon(inst.baseId);
+    return w ? REROLL_COST[w.rarity] : 0;
+  }
+  /** スキル1枠をランダムに引き直す（ゴールド消費）。成功で新スキルID */
+  rerollSkill(uid: string, slot: number): string | null {
+    const inst = this.save.inventory.find((i) => i.uid === uid);
+    const w = inst ? getWeapon(inst.baseId) : undefined;
+    if (!inst || !w || slot < 0 || slot >= inst.skillIds.length) return null;
+    const cost = REROLL_COST[w.rarity];
+    if (this.save.gold < cost) return null;
+    const cand = rollSkillCandidates(w.rarity, inst.skillIds, 1);
+    if (cand.length === 0) return null;
+    this.save.gold -= cost;
+    inst.skillIds[slot] = cand[0];
+    writeSave(this.save);
+    return cand[0];
+  }
+  /**
+   * 厳選リロール：コスト3倍を先払いして3候補を得る（釣り直し防止のため先払い）。
+   * 候補から applyRerollChoice で1つを選んで確定する。
+   */
+  startChoiceReroll(uid: string, slot: number): string[] | null {
+    const inst = this.save.inventory.find((i) => i.uid === uid);
+    const w = inst ? getWeapon(inst.baseId) : undefined;
+    if (!inst || !w || slot < 0 || slot >= inst.skillIds.length) return null;
+    const cost = REROLL_COST[w.rarity] * 3;
+    if (this.save.gold < cost) return null;
+    const cand = rollSkillCandidates(w.rarity, inst.skillIds, 3);
+    if (cand.length === 0) return null;
+    this.save.gold -= cost;
+    writeSave(this.save);
+    return cand;
+  }
+  /** 厳選リロールの候補から1つを確定（支払いは開始時に済んでいる） */
+  applyRerollChoice(uid: string, slot: number, skillId: string): boolean {
+    const inst = this.save.inventory.find((i) => i.uid === uid);
+    if (!inst || slot < 0 || slot >= inst.skillIds.length) return false;
+    inst.skillIds[slot] = skillId;
+    writeSave(this.save);
+    return true;
   }
 
   // ===== 秘石（ジェム） =====

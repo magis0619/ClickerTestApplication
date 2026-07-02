@@ -93,6 +93,10 @@ export const COMBOS: ComboDef[] = [
   { id: "rush",   name: "連携・連撃", firstId: "single_hit", secondId: "double_hit", bonusHits: 1, desc: "1回攻撃 → 2回攻撃 で追撃1" },
   { id: "storm",  name: "連携・乱舞", firstId: "double_hit", secondId: "triple_hit", bonusHits: 2, desc: "2回攻撃 → 3回攻撃 で追撃2" },
   { id: "pierce", name: "連携・連環", firstId: "crit_up",    secondId: "crit_double", bonusHits: 1, desc: "会心40% → 会心2倍 で追撃1" },
+  // 汎用連携（kindベース：スキル構成に依らず誰でも狙える）。特定スキル連携が優先
+  { id: "g_shift",  name: "連携・転技", first: "attack", second: "attack", diffClass: true, bonusHits: 1, desc: "別系統の攻撃を続けて追撃1" },
+  { id: "g_charge", name: "連携・怒涛", first: "charge", second: "attack", bonusHits: 1, desc: "ためる → 攻撃 で追撃1" },
+  { id: "g_focus",  name: "連携・静心", first: "focus",  second: "attack", bonusHits: 1, desc: "集中 → 攻撃 で追撃1" },
 ];
 
 /** 直近スキル(last)と今出すスキル(skill/cls)で成立する連携を返す（なければ undefined） */
@@ -171,6 +175,27 @@ export function rollSkills(weaponRarity: Rarity, count: number): string[] {
   const pool = SKILLS.filter((s) => rarityIndex(s.rarity) <= max);
   const out: Skill[] = [];
   for (let i = 0; i < count; i++) {
+    const avail = pool.filter((s) => !out.includes(s));
+    if (avail.length === 0) break;
+    const total = avail.reduce((a, s) => a + SKILL_DRAW_WEIGHT[s.rarity], 0);
+    let r = Math.random() * total;
+    let pick = avail[0];
+    for (const s of avail) { r -= SKILL_DRAW_WEIGHT[s.rarity]; if (r < 0) { pick = s; break; } }
+    out.push(pick);
+  }
+  return out.map((s) => s.id);
+}
+
+/** スキルリロール（鍛冶屋）のゴールドコスト（武器レアリティ依存）。厳選は3倍 */
+export const REROLL_COST: Record<Rarity, number> = {
+  common: 150, uncommon: 200, rare: 300, epic: 800, legend: 1500, astral: 2500,
+};
+/** リロール候補を n 個抽選（現在のスキルと重複しない・武器レアリティ以下から） */
+export function rollSkillCandidates(weaponRarity: Rarity, exclude: string[], n: number): string[] {
+  const max = rarityIndex(weaponRarity);
+  const pool = SKILLS.filter((s) => rarityIndex(s.rarity) <= max && !exclude.includes(s.id));
+  const out: Skill[] = [];
+  for (let i = 0; i < n; i++) {
     const avail = pool.filter((s) => !out.includes(s));
     if (avail.length === 0) break;
     const total = avail.reduce((a, s) => a + SKILL_DRAW_WEIGHT[s.rarity], 0);
