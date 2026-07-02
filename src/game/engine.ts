@@ -228,6 +228,10 @@ export class Battle {
   playerDefense = 0;
   /** 装備盾のパッシブ効果（なければ null） */
   shieldPassive: ShieldPassive | null = null;
+  /** レベルマイルストーン：REST回復への加算 */
+  restBonus = 0;
+  /** レベルマイルストーン：パーフェクト時HP回復への加算 */
+  perfectHpBonus = 0;
   /** 激昂（攻撃up）の残りターン。>0 の間は与ダメージ上昇 */
   rageTurns = 0;
   /** プレイヤーの毒残りターン（毒撃の被弾で付与。行動ごとに最大HPの4%ダメージ） */
@@ -606,7 +610,7 @@ export class Battle {
     if (this.windupT > 0) return false; // 攻撃の溜め中は休憩できない
     if (this.inEnemyAttackPhase) return false; // 攻撃前待機／予兆中はガードのみ
     const before = this.playerEn;
-    this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER);
+    this.playerEn = Math.min(PLAYER_MAX_EN, this.playerEn + REST_EN_RECOVER + this.restBonus);
     this.pushFloat(`休憩 +${Math.round(this.playerEn - before)}EN`, "#88ddff", "player");
     this.lastSkill = null; // 休憩で連携チェーンは途切れる
     this.resetRead();      // 構え直しで見切りがリセット
@@ -911,7 +915,7 @@ export class Battle {
         // 回復は控えめ。盾パッシブ「癒しの光」でHP特化、「嵐の心臓」でEN全回復に伸ばせる
         dmg = 0;
         this.perfectCount += 1;
-        const hpGain = PERFECT_HP_RECOVER + (this.shieldPassive?.kind === "perfectHp" ? this.shieldPassive.value : 0);
+        const hpGain = PERFECT_HP_RECOVER + this.perfectHpBonus + (this.shieldPassive?.kind === "perfectHp" ? this.shieldPassive.value : 0);
         this.playerHp = Math.min(this.maxHp, this.playerHp + hpGain);
         this.playerEn = this.shieldPassive?.kind === "perfectEn"
           ? PLAYER_MAX_EN

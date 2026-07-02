@@ -14,7 +14,7 @@ import {
   WEAPONS, ENEMIES, SKILLS, SKILL_KIND_LABEL,
   PLAYER_MAX_EN, REST_EN_RECOVER, PERFECT_HP_RECOVER, JUST_EN_RECOVER, SHOP_ITEMS, SHOP_CHESTS, MAX_PLAYER_LEVEL,
   effectiveWeapon, expForNext, levelCap, materialExp, awakenCost, MAX_AWAKEN, shieldPassiveDesc,
-  GEMS, getGem, socketBonuses,
+  GEMS, getGem, socketBonuses, nextMilestone, LEVEL_MILESTONES,
 } from "./game/data.ts";
 import { audio } from "./audio/audio.ts";
 import { settings, saveSettings } from "./game/settings.ts";
@@ -396,11 +396,13 @@ function buildTitle(): void {
   const ratio = maxed ? 1 : Math.max(0, Math.min(1, cur / need));
   const lvPanel = document.createElement("div");
   lvPanel.className = "lv-panel";
+  const nextMs = nextMilestone(lv);
   lvPanel.innerHTML =
     `<div class="lv-row"><span class="lv-badge">LV ${lv}</span>` +
     `<span class="lv-hp">最大HP ${game.playerMaxHp}</span>` +
     `<span class="lv-exp">${maxed ? "MAX" : `EXP ${cur} / ${need}`}</span></div>` +
-    `<div class="lv-bar"><span style="width:${ratio * 100}%"></span></div>`;
+    `<div class="lv-bar"><span style="width:${ratio * 100}%"></span></div>` +
+    (nextMs ? `<div class="lv-next">🎖 次の報酬：LV${nextMs.level} で <b>${nextMs.label}</b></div>` : "");
   controls.appendChild(lvPanel);
 
   controls.appendChild(ctaButton("冒険に出る", "adventure", () => withFade(() => game.goWorldSelect())));
@@ -2586,6 +2588,15 @@ function buildResultPanel(): void {
     lvup.className = "result-lvup";
     lvup.innerHTML = `⬆ LEVEL UP! <b>LV ${game.save.playerLevel}</b>（最大HP ${game.playerMaxHp}）`;
     panel.appendChild(lvup);
+    // 今回のレベルアップで到達したマイルストーン報酬を表示
+    const from = game.save.playerLevel - game.lastLevelUps;
+    const reached = LEVEL_MILESTONES.filter((m) => m.level > from && m.level <= game.save.playerLevel);
+    for (const m of reached) {
+      const ms = document.createElement("div");
+      ms.className = "result-lvup result-ms";
+      ms.innerHTML = `🎖 マイルストーン達成！ LV${m.level}：<b>${m.label}</b>`;
+      panel.appendChild(ms);
+    }
   }
 
   // ゴールド・ドロップ（勝利／回廊時）：まずゴールドを0からカウントアップ→その後に宝箱開封

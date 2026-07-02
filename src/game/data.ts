@@ -355,10 +355,10 @@ export function effectiveWeapon(inst: WeaponInstance): Weapon | undefined {
 export const SOCKETS_BY_RARITY: Record<Rarity, number> = {
   common: 1, uncommon: 1, rare: 2, epic: 2, legend: 3, astral: 4,
 };
-/** その武器インスタンスのソケット数（レアリティ依存） */
-export function socketCount(inst: WeaponInstance): number {
+/** その武器インスタンスのソケット数（レアリティ依存＋マイルストーン等の追加枠） */
+export function socketCount(inst: WeaponInstance, extra = 0): number {
   const w = getWeapon(inst.baseId);
-  return w ? SOCKETS_BY_RARITY[w.rarity] : 1;
+  return Math.min(6, (w ? SOCKETS_BY_RARITY[w.rarity] : 1) + extra);
 }
 
 /** 効果種別ごとの表示情報 */
@@ -578,6 +578,55 @@ export function playerExpForNext(level: number): number {
 export function playerMaxHpAt(level: number): number {
   return PLAYER_MAX_HP + (Math.max(1, level) - 1) * HP_PER_LEVEL;
 }
+// ===== レベルマイルストーン（5レベルごとの固定報酬。APは常に最大10で固定） =====
+export interface Milestone {
+  level: number;
+  /** 表示用の内容 */
+  label: string;
+  rest?: number;      // REST回復+n
+  defense?: number;   // 防御力+n
+  perfectHp?: number; // パーフェクト時HP回復+n
+  critAdd?: number;   // 会心率+n%（全武器）
+  breakPct?: number;  // ブレイク蓄積+n（割合）
+  goldPct?: number;   // 獲得ゴールド+n（割合）
+  socketPlus?: number;// 全武器の秘石ソケット+n
+}
+export const LEVEL_MILESTONES: Milestone[] = [
+  { level: 5,  label: "REST回復 +1",            rest: 1 },
+  { level: 10, label: "防御力 +2",              defense: 2 },
+  { level: 15, label: "パーフェクトHP回復 +10", perfectHp: 10 },
+  { level: 20, label: "会心率 +2%（全武器）",   critAdd: 2 },
+  { level: 25, label: "REST回復 +1",            rest: 1 },
+  { level: 30, label: "防御力 +3",              defense: 3 },
+  { level: 35, label: "ブレイク蓄積 +10%",      breakPct: 0.10 },
+  { level: 40, label: "会心率 +3%（全武器）",   critAdd: 3 },
+  { level: 45, label: "獲得ゴールド +10%",      goldPct: 0.10 },
+  { level: 50, label: "全武器の秘石ソケット +1", socketPlus: 1 },
+];
+/** 到達済みマイルストーンの合計ボーナス */
+export interface MilestoneBonus {
+  rest: number; defense: number; perfectHp: number; critAdd: number;
+  breakPct: number; goldPct: number; socketPlus: number;
+}
+export function milestoneBonuses(level: number): MilestoneBonus {
+  const b: MilestoneBonus = { rest: 0, defense: 0, perfectHp: 0, critAdd: 0, breakPct: 0, goldPct: 0, socketPlus: 0 };
+  for (const m of LEVEL_MILESTONES) {
+    if (level < m.level) continue;
+    b.rest += m.rest ?? 0;
+    b.defense += m.defense ?? 0;
+    b.perfectHp += m.perfectHp ?? 0;
+    b.critAdd += m.critAdd ?? 0;
+    b.breakPct += m.breakPct ?? 0;
+    b.goldPct += m.goldPct ?? 0;
+    b.socketPlus += m.socketPlus ?? 0;
+  }
+  return b;
+}
+/** 次に到達するマイルストーン（すべて達成済みなら undefined） */
+export function nextMilestone(level: number): Milestone | undefined {
+  return LEVEL_MILESTONES.find((m) => level < m.level);
+}
+
 /** 敵を撃破して得られる経験値（強い敵・ボスほど多い） */
 export function enemyExp(def: EnemyDef): number {
   const base = def.maxHp * 0.22 + def.attack * 1.6;

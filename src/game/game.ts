@@ -5,7 +5,7 @@ import {
   withRareSpawn, getShield, SHIELDS, DEFAULT_SHIELD_ID, scaleWaveForWorld,
   playerMaxHpAt, playerExpForNext, MAX_PLAYER_LEVEL, ambushBoss, AMBUSH_CHANCE,
   socketBonuses, socketCount, rollGemDrop, rollEpicPlusWeapon,
-  REROLL_COST, rollSkillCandidates,
+  REROLL_COST, rollSkillCandidates, milestoneBonuses, type MilestoneBonus,
 } from "./data.ts";
 import { loadSave, writeSave } from "./save.ts";
 import { progress, saveProgress, addMissionProgress } from "./progress.ts";
@@ -100,6 +100,24 @@ export class Game {
     if (this.save.playerLevel >= MAX_PLAYER_LEVEL) this.save.playerExp = 0;
     writeSave(this.save);
     return ups;
+  }
+
+  /** 到達済みレベルマイルストーンの合計ボーナス */
+  get milestones(): MilestoneBonus { return milestoneBonuses(this.save.playerLevel); }
+
+  /** 戦闘インスタンスへプレイヤー由来の補正を反映（防御・盾パッシブ・マイルストーン） */
+  private initBattleMods(bt: Battle): void {
+    bt.playerDefense = this.defense;
+    bt.shieldPassive = this.equippedShield()?.passive ?? null;
+    const ms = this.milestones;
+    bt.restBonus = ms.rest;
+    bt.perfectHpBonus = ms.perfectHp;
+  }
+
+  /** 現在の戦闘の獲得ゴールド（マイルストーンの獲得ゴールド増を反映） */
+  private battleGold(): number {
+    if (!this.battle) return 0;
+    return Math.round(this.battle.goldEarned * (1 + this.milestones.goldPct));
   }
 
   /** 所持ゴールド */
@@ -239,13 +257,11 @@ export class Game {
     if (this.isEndless) {
       this.endlessFloor = 1;
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(1), false), undefined, undefined, this.playerMaxHp);
-      this.battle.playerDefense = this.defense;
-      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+      this.initBattleMods(this.battle);
       this.battle.announce("FLOOR 1", "#9fd9ff");
     } else {
       this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[0], this.isBossWave), this.currentStage.world), undefined, undefined, this.playerMaxHp);
-      this.battle.playerDefense = this.defense;
-      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+      this.initBattleMods(this.battle);
       // 最終ウェーブ（＝このステージ＝ダンジョンの完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
@@ -306,10 +322,18 @@ export class Game {
     const skill = this.currentSkill(cls);
     const w = this.equippedWeapon(cls);
     if (!skill || !w) return null;
-    // 秘石の会心威力は Weapon に乗らないため、装着分を mods.critMult として渡す
+    // 秘石の会心威力は Weapon に乗らないため、装着分を mods.critMult として渡す。
+    // レベルマイルストーンの会心率・ブレイク蓄積ボーナスもここで反映
     const inst = this.equippedInstance(cls);
     const critMult = inst ? socketBonuses(inst).critMult : 0;
-    const mods = { weapon: w.weapon, attack: w.attack, critChance: w.critChance, breakPower: w.breakPower, critMult };
+    const ms = this.milestones;
+    const mods = {
+      weapon: w.weapon,
+      attack: w.attack,
+      critChance: w.critChance + ms.critAdd,
+      breakPower: w.breakPower * (1 + ms.breakPct),
+      critMult,
+    };
     if (this.battle.useSkill(skill, mods)) {
       this.rotation[cls] += 1;
       return skill;
@@ -346,13 +370,12 @@ export class Game {
     writeSave(this.save);
     // 戦闘中なら即座に防御力・パッシブへ反映
     if (this.battle) {
-      this.battle.playerDefense = this.defense;
-      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+      this.initBattleMods(this.battle);
     }
     return true;
   }
   /** 現在の防御力（装備盾の defense） */
-  get defense(): number { return this.equippedShield()?.defense ?? 0; }
+  get defense(): number { return (this.equippedShield()?.defense ?? 0) + this.milestones.defense; }
 
   /** 削除ロック中か */
   isLocked(uid: string): boolean {
@@ -405,9 +428,9 @@ export class Game {
     if (this.inAmbush) {
       const drops = this.battle.collectedDrops();
       this.save.inventory.push(...drops);
-      this.save.gold += this.battle.goldEarned;
+      this.save.gold += this.battleGold();
       this.lastDrops.push(...drops);
-      this.lastGold += this.battle.goldEarned;
+      this.lastGold += this.battleGold();
       this.lastExp += this.battle.expEarned; // 反映はリザルト遷移時に一括（下のbankPlayerExp）
       writeSave(this.save);
       this.inAmbush = false;
@@ -425,9 +448,9 @@ export class Game {
     if (this.isEndless) {
       const drops = this.battle.collectedDrops();
       this.save.inventory.push(...drops);
-      this.save.gold += this.battle.goldEarned;
+      this.save.gold += this.battleGold();
       this.lastDrops.push(...drops);
-      this.lastGold += this.battle.goldEarned;
+      this.lastGold += this.battleGold();
       if (this.endlessFloor > this.save.bestFloor) this.save.bestFloor = this.endlessFloor;
       // 経験値は階ごとに即確定（回廊は各階で報酬確定のため）。レベルアップで全回復
       const ups = this.addPlayerExp(this.battle.expEarned);
@@ -439,15 +462,14 @@ export class Game {
       this.endlessFloor += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(withRareSpawn(endlessFloorEnemies(this.endlessFloor), this.endlessFloor % 5 === 0), hp, en, this.playerMaxHp);
-      this.battle.playerDefense = this.defense;
-      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+      this.initBattleMods(this.battle);
       this.battle.announce(`FLOOR ${this.endlessFloor}`, this.endlessFloor % 5 === 0 ? "#ff6b6b" : "#9fd9ff");
       return;
     }
 
     // この戦闘のドロップ・ゴールド・経験値を蓄積（経験値はステージクリア時にまとめて反映）
     this.lastDrops.push(...this.battle.collectedDrops());
-    this.lastGold += this.battle.goldEarned;
+    this.lastGold += this.battleGold();
     this.lastExp += this.battle.expEarned;
 
     if (this.waveIndex < this.waveCount - 1) {
@@ -457,8 +479,7 @@ export class Game {
       this.waveIndex += 1;
       this.rotation = { slash: 0, pierce: 0, crush: 0 };
       this.battle = new Battle(scaleWaveForWorld(withRareSpawn(this.currentStage.waves[this.waveIndex], this.isBossWave), this.currentStage.world), hp, en, this.playerMaxHp);
-      this.battle.playerDefense = this.defense;
-      this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+      this.initBattleMods(this.battle);
       // 最終ウェーブ（＝ダンジョン完了）でだけ STAGE CLEAR バナーを出す
       this.battle.isFinalWave = this.isBossWave;
       // ボス戦は暗転＋BOSS BATTLE の警告演出。通常は「ステージN」のポップを出す
@@ -581,7 +602,7 @@ export class Game {
   }
   /** 武器のソケット配列をレアリティ依存の長さに整える */
   private ensureSockets(inst: WeaponInstance): (string | null)[] {
-    const n = socketCount(inst);
+    const n = socketCount(inst, this.milestones.socketPlus); // LV50マイルストーンで全武器+1
     if (!inst.sockets) inst.sockets = [];
     while (inst.sockets.length < n) inst.sockets.push(null);
     if (inst.sockets.length > n) inst.sockets.length = n;
@@ -624,8 +645,7 @@ export class Game {
     this.rotation = { slash: 0, pierce: 0, crush: 0 };
     // 乱入ボスはフルHP/ENの特別戦（負けてもダンジョンの宝は確保済み）
     this.battle = new Battle([ambushBoss(this.currentStage.world)], this.playerMaxHp, undefined, this.playerMaxHp);
-    this.battle.playerDefense = this.defense;
-    this.battle.shieldPassive = this.equippedShield()?.passive ?? null;
+    this.initBattleMods(this.battle);
     this.battle.enemies.forEach((e) => { e.spawnT = 0; }); // 登場は WARNING 演出に任せる
     this.battle.beginAmbushWarning();
     // 画面は battle のまま（UIは流用）
