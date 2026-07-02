@@ -601,7 +601,15 @@ export class Game {
       // 回廊では各階の報酬は確定済み。到達階を記録して結果へ
       this.lastFloor = this.endlessFloor;
     } else {
+      // 敗北救済：武器ドロップは失うが、EXPは全額・ゴールドは一部を持ち帰る。
+      // 「負けてもレベルは上がる→再挑戦」の復帰ループを作る（詰み防止）
       this.lastDrops = [];
+      const keepPct = Math.min(0.8, 0.5 + 0.1 * this.waveIndex); // 50%+突破ウェーブごとに+10%（上限80%）
+      const kept = Math.floor(this.lastGold * keepPct);
+      this.save.gold += kept;
+      this.lastGold = kept;
+      this.bankPlayerExp();
+      writeSave(this.save);
     }
     this.screen = "result";
   }

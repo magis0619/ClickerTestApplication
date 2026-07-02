@@ -73,6 +73,14 @@ export interface ComboDef {
 }
 
 /** 敵データ */
+/**
+ * 敵の行動タイプ。予兆（！）の時点で何が来るか見えるようにして、
+ * ガードの読み合いを「いつ押すか」＋「どう対処するか」にする。
+ * attack=通常 / heavy=強撃（遅く重い） / double=連撃（2発目あり） /
+ * venom=毒撃（被弾で毒） / howl=咆哮（味方の攻撃UP・ガード不可） / heal=回復（味方を回復・ガード不可）
+ */
+export type EnemyMove = "attack" | "heavy" | "double" | "venom" | "howl" | "heal";
+
 export interface EnemyDef {
   id: string;
   name: string;
@@ -83,6 +91,10 @@ export interface EnemyDef {
   /** 攻撃カウントの開始値（5なら 5→4→…→1→攻撃）。敵ごとにリズムを変える */
   countStart: number;
   breakThreshold: number;
+  /** 行動ローテーション（省略時は種別デフォルト）。順番に繰り返す */
+  moves?: EnemyMove[];
+  /** 発狂：HP50%以下で一度だけ攻撃+25%・カウント-1 */
+  enrage?: boolean;
   /** 撃破時に落とす武器ID */
   dropWeaponId?: string;
   /** ドロップ率(%) */

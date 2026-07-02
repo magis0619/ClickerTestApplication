@@ -1,6 +1,6 @@
 import { Battle, EnemyState, DEATH_ANIM_MS, type FloatText } from "../game/engine.ts";
 import {
-  KIND_LABEL,
+  KIND_LABEL, MOVE_INFO,
   RARITY_COLOR, isRainbowRarity, WHITE_FLASH_MS, getWeapon,
   FLOAT_FADE_MS, GUARD_BADGE_MS, ATTACK_WINDUP_MS,
 } from "../game/data.ts";
@@ -864,6 +864,21 @@ function drawEnemyCard(
     ctx.font = "900 12px 'Hiragino Kaku Gothic ProN', sans-serif";
     ctx.fillStyle = "#ffffff";
     ctx.fillText(mark, cxp + cw / 2, cyp + ch / 2 + 0.5);
+    // 予兆中：何が来るか（強/連/毒）を弱点チップの隣に点滅表示
+    const mi = e.inTelegraph ? MOVE_INFO[e.currentMove] : null;
+    if (mi) {
+      const mx = cxp + cw + 5;
+      const blink = 0.7 + 0.3 * Math.sin(Date.now() / 110);
+      ctx.save();
+      ctx.globalAlpha = blink;
+      ctx.fillStyle = mi.color;
+      roundRect(ctx, mx, cyp, cw, ch, 5); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#1c1b1b";
+      roundRect(ctx, mx, cyp, cw, ch, 5); ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(mi.mark, mx + cw / 2, cyp + ch / 2 + 0.5);
+      ctx.restore();
+    }
     ctx.textBaseline = "alphabetic";
   }
 
@@ -873,6 +888,8 @@ function drawEnemyCard(
     if (e.poisonTurns > 0) sts.push({ mark: "毒", color: "#3fae54", n: e.poisonTurns });
     if (e.frozenTurns > 0) sts.push({ mark: "凍", color: "#2bb6e0", n: e.frozenTurns });
     if (e.vulnerableTurns > 0) sts.push({ mark: "弱", color: "#9a4fe0", n: e.vulnerableTurns });
+    if (e.atkBuffTurns > 0) sts.push({ mark: "吼", color: "#b96bff", n: e.atkBuffTurns });
+    if (e.enraged) sts.push({ mark: "怒", color: "#ff5d5d", n: 0 });
     const sw = 18, sh = 18, sgap = 3;
     sts.forEach((s, i) => {
       const sx = L.left + L.w - 7 - sw - i * (sw + sgap), sy = L.top + 7;

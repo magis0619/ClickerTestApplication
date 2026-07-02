@@ -101,7 +101,12 @@
     "breakThreshold": 70,
     "dropWeaponId": "w_titan_breaker",
     "dropRate": 25,
-    "desc": "石像の番人。重い一撃を放つ堅牢な守り手。"
+    "desc": "石像の番人。重い一撃を放つ堅牢な守り手。",
+    "moves": [
+      "attack",
+      "howl",
+      "heavy"
+    ]
   },
   {
     "id": "shell_warden",
@@ -115,7 +120,11 @@
     "dropWeaponId": "w_dragoon_blade",
     "dropRate": 100,
     "boss": true,
-    "desc": "甲殻種の長。分厚い殻で攻守に優れるボス。"
+    "desc": "甲殻種の長。分厚い殻で攻守に優れるボス。",
+    "moves": [
+      "attack",
+      "heavy"
+    ]
   },
   {
     "id": "wraith_monarch",
@@ -129,7 +138,13 @@
     "dropWeaponId": "w_void_glaive",
     "dropRate": 100,
     "boss": true,
-    "desc": "霊鳥の王。空を制し鋭い刺突を狙うボス。"
+    "desc": "霊鳥の王。空を制し鋭い刺突を狙うボス。",
+    "moves": [
+      "attack",
+      "double",
+      "attack",
+      "heavy"
+    ]
   },
   {
     "id": "carapace_tyrant",
@@ -143,7 +158,13 @@
     "dropWeaponId": "w_astral_edge",
     "dropRate": 100,
     "boss": true,
-    "desc": "甲殻の暴君。圧倒的な耐久と攻撃力を誇るボス。"
+    "desc": "甲殻の暴君。圧倒的な耐久と攻撃力を誇るボス。",
+    "moves": [
+      "heavy",
+      "attack",
+      "attack"
+    ],
+    "enrage": true
   },
   {
     "id": "frost_imp",
@@ -196,7 +217,13 @@
     "dropWeaponId": "w_void_glaive",
     "dropRate": 100,
     "boss": true,
-    "desc": "永久凍土の氷竜。凍てつくブレスを放つボス。"
+    "desc": "永久凍土の氷竜。凍てつくブレスを放つボス。",
+    "moves": [
+      "attack",
+      "double",
+      "heavy"
+    ],
+    "enrage": true
   },
   {
     "id": "sand_crab",
@@ -300,7 +327,12 @@
     "breakThreshold": 75,
     "dropWeaponId": "w_flame_sword",
     "dropRate": 20,
-    "desc": "邪悪な亡霊。高威力の呪詛を放つ。"
+    "desc": "邪悪な亡霊。高威力の呪詛を放つ。",
+    "moves": [
+      "attack",
+      "heal",
+      "venom"
+    ]
   },
   {
     "id": "storm_wyvern",
@@ -327,7 +359,13 @@
     "dropWeaponId": "w_mjolnir",
     "dropRate": 100,
     "boss": true,
-    "desc": "影の暴君。圧倒的な闇の力を操るボス。"
+    "desc": "影の暴君。圧倒的な闇の力を操るボス。",
+    "moves": [
+      "attack",
+      "venom",
+      "double"
+    ],
+    "enrage": true
   },
   {
     "id": "gem_drake",
@@ -357,7 +395,14 @@
     "boss": true,
     "bigBoss": true,
     "shiftsWeakness": true,
-    "desc": "深淵の王。全てを呑み込む最強の存在。弱点が絶えず移ろう。"
+    "desc": "深淵の王。全てを呑み込む最強の存在。弱点が絶えず移ろう。",
+    "moves": [
+      "attack",
+      "heavy",
+      "double",
+      "venom"
+    ],
+    "enrage": true
   },
   {
     "id": "rift_reaver",
@@ -374,6 +419,12 @@
     "bigBoss": true,
     "rare": true,
     "shiftsWeakness": true,
-    "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。弱点が絶えず移ろう。"
+    "desc": "次元の裂け目から乱入する強敵。アストラル級の武器を宿す。弱点が絶えず移ろう。",
+    "moves": [
+      "double",
+      "attack",
+      "heavy"
+    ],
+    "enrage": true
   }
 ]

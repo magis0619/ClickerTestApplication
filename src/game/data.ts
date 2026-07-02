@@ -1,6 +1,6 @@
 import type {
   Skill, EnemyDef, WeaponClass, EnemyKind, Weapon, Rarity, WeaponInstance, StageDef, SkillKind,
-  LastSkill, ComboDef, ShopItem, ShopChest, Shield, SkillStatus, StatusKind, Gem, GemKind,
+  LastSkill, ComboDef, ShopItem, ShopChest, Shield, SkillStatus, StatusKind, Gem, GemKind, EnemyMove,
 } from "./types.ts";
 import weaponsJson from "./weapons.json";
 import skillsJson from "./skills.json";
@@ -394,6 +394,7 @@ interface RawEnemy {
   id: string; name: string; kind: EnemyKind; maxHp: number; attack: number;
   telegraphMs: number; countStart: number; breakThreshold: number;
   dropWeaponId?: string; dropRate?: number; boss?: boolean; rare?: boolean; desc?: string;
+  moves?: EnemyMove[]; enrage?: boolean;
 }
 /** 全敵データ（図鑑用。定義順） */
 export const ENEMIES: EnemyDef[] = (enemiesJson as RawEnemy[]).map((e) => e as EnemyDef);
@@ -647,6 +648,43 @@ export const DAMAGE_TTL = 1000;
 export const FLOAT_FADE_MS = 400;
 /** PERFECT/JUST/GUARD バッジの表示時間(ms) */
 export const GUARD_BADGE_MS = 1100;
+
+// ===== 敵の行動タイプ =====
+/** 種別デフォルトの行動ローテーション（3回に1回だけ特殊行動＝序盤は穏やかに） */
+export const DEFAULT_MOVES: Record<EnemyKind, EnemyMove[]> = {
+  carapace: ["attack", "attack", "heavy"],
+  aerial: ["attack", "attack", "double"],
+  phantom: ["attack", "attack", "venom"],
+};
+/** その敵の行動ローテーション（個別定義があれば優先） */
+export function movesFor(def: EnemyDef): EnemyMove[] {
+  return def.moves && def.moves.length > 0 ? def.moves : DEFAULT_MOVES[def.kind];
+}
+/** 行動タイプの表示情報（予兆チップ用）。attackはチップなし */
+export const MOVE_INFO: Record<EnemyMove, { mark: string; color: string; label: string } | null> = {
+  attack: null,
+  heavy: { mark: "強", color: "#ff3b30", label: "強撃" },
+  double: { mark: "連", color: "#ff9e2e", label: "連撃" },
+  venom: { mark: "毒", color: "#3fae54", label: "毒撃" },
+  howl: { mark: "咆", color: "#b96bff", label: "咆哮" },
+  heal: { mark: "癒", color: "#2bb69a", label: "回復" },
+};
+/** 強撃：予兆が遅く（読みやすく）、ダメージが重い */
+export const HEAVY_TELEGRAPH_MULT = 1.4;
+export const HEAVY_DMG_MULT = 1.8;
+/** 連撃：1発ごとの威力は軽いが2発来る。2発目の短い予兆時間 */
+export const DOUBLE_DMG_MULT = 0.7;
+export const DOUBLE_SECOND_MS = 420;
+/** 毒撃：被弾（パーフェクト以外）でプレイヤーが毒に */
+export const PLAYER_POISON_TURNS = 2;
+export const PLAYER_POISON_PCT = 0.04;
+/** 咆哮：敵全体の攻撃バフ */
+export const HOWL_ATK_MULT = 1.3;
+export const HOWL_TURNS = 3;
+/** 回復：最もHPが減った味方を最大HPの15%回復 */
+export const HEAL_PCT = 0.15;
+/** 発狂：攻撃+25%（カウント-1は engine 側） */
+export const ENRAGE_ATK_MULT = 1.25;
 
 // ===== 弱点 =====
 /** 非弱点（弱点でない系統）で攻撃したときのダメージ倍率（弱点を突く価値を明確にする） */

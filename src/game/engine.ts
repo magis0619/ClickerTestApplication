@@ -1,4 +1,4 @@
-import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus, ShieldPassive, WeaponClass } from "./types.ts";
+import type { Skill, EnemyDef, GuardResult, BattlePhase, SfxEvent, WeaponInstance, WeaponMods, LastSkill, ComboDef, SkillStatus, ShieldPassive, WeaponClass, EnemyMove } from "./types.ts";
 import {
   matchCombo,
   FLOAT_TTL,
@@ -48,6 +48,17 @@ import {
   OFF_WEAK_DMG_MULT,
   OFF_WEAK_BREAK_MULT,
   WEAK_SHIFT_INTERVAL,
+  movesFor,
+  HEAVY_TELEGRAPH_MULT,
+  HEAVY_DMG_MULT,
+  DOUBLE_DMG_MULT,
+  DOUBLE_SECOND_MS,
+  PLAYER_POISON_TURNS,
+  PLAYER_POISON_PCT,
+  HOWL_ATK_MULT,
+  HOWL_TURNS,
+  HEAL_PCT,
+  ENRAGE_ATK_MULT,
   POISON_PCT,
   VULNERABLE_MULT,
   RAGE_MULT,
@@ -156,6 +167,16 @@ export class EnemyState {
   weakOverride: WeaponClass | null = null;
   /** 弱点変化ボス：次のシフトまでの行動カウント */
   shiftCounter = 0;
+  /** 行動ローテーションの現在位置 */
+  moveIndex = 0;
+  /** 現在予告中／実行中の行動タイプ */
+  currentMove: EnemyMove = "attack";
+  /** 連撃：この予兆の後に残っている追加ヒット数 */
+  extraHits = 0;
+  /** 発狂済みか（HP50%以下で一度だけ攻撃+25%・カウント-1） */
+  enraged = false;
+  /** 咆哮による攻撃バフの残りターン */
+  atkBuffTurns = 0;
   /** ガード猶予帯（予兆中に毎フレーム更新）。UIのフラッシュ／ガイドに使う */
   guardWindow: GuardResult = "none";
   /** 凍結中（行動が進まない）か */
@@ -206,6 +227,8 @@ export class Battle {
   shieldPassive: ShieldPassive | null = null;
   /** 激昂（攻撃up）の残りターン。>0 の間は与ダメージ上昇 */
   rageTurns = 0;
+  /** プレイヤーの毒残りターン（毒撃の被弾で付与。行動ごとに最大HPの4%ダメージ） */
+  playerPoisonTurns = 0;
 
   enemies: EnemyState[];
   targetIndex = 0;
@@ -525,6 +548,15 @@ export class Battle {
   /** プレイヤー行動ごとの状態異常・バフの経過処理（毒ダメージ／凍結・弱体・激昂の減少） */
   private tickStatuses(): void {
     if (this.rageTurns > 0) this.rageTurns -= 1; // 激昂は1行動で1ターン消費
+    // プレイヤーの毒（毒撃の被弾）：行動ごとに最大HPの4%ダメージ
+    if (this.playerPoisonTurns > 0 && this.playerHp > 0) {
+      const dmg = Math.max(1, Math.round(this.maxHp * PLAYER_POISON_PCT));
+      this.playerHp = Math.max(0, this.playerHp - dmg);
+      this.playerPoisonTurns -= 1;
+      this.tookDamage = true;
+      this.pushFloat(`毒 -${dmg}`, "#57d36b", "player");
+      this.checkPlayerDown();
+    }
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (e.poisonTurns > 0) {
@@ -538,6 +570,7 @@ export class Battle {
       }
       if (e.vulnerableTurns > 0) e.vulnerableTurns -= 1;
       if (e.frozenTurns > 0) e.frozenTurns -= 1;
+      if (e.atkBuffTurns > 0) e.atkBuffTurns -= 1;
     }
   }
 
@@ -590,7 +623,7 @@ export class Battle {
       if (!e.alive) continue;
       if (e.breakTurns > 0) {
         e.breakTurns -= 1;
-        if (e.breakTurns <= 0) e.count = e.def.countStart; // 元の待ちターンに戻る
+        if (e.breakTurns <= 0) this.resetCount(e); // 元の待ちターンに戻る
         continue;
       }
       if (e.flinchT > 0 || e.telegraphT > 0 || e.count <= 0 || e.frozen) continue; // 凍結中は行動が進まない
@@ -636,17 +669,62 @@ export class Battle {
     e.readyWaitT -= dtMs;
     if (e.readyWaitT <= 0) {
       e.readyWaitT = -1;
-      // 待ち終わり → 予兆開始（! が出る）。0待ちで溜めたぶん予兆は短く＝すぐ攻撃
-      e.telegraphMax = e.telegraphT = Math.max(TELEGRAPH_MIN_MS, e.def.telegraphMs * TELEGRAPH_SCALE);
+      // 行動タイプをローテーションから決定
+      const rot = movesFor(e.def);
+      const mv = rot[e.moveIndex % rot.length];
+      e.moveIndex += 1;
+      e.currentMove = mv;
+      // 咆哮／回復は攻撃せず即実行（ガード不可＝カウント中に倒す/ブレイクで阻止する）
+      if (mv === "howl" || mv === "heal") {
+        this.performSupportMove(e, mv);
+        return;
+      }
+      // 待ち終わり → 予兆開始（! が出る）。強撃は予兆が遅い＝読みやすいが重い
+      const telMult = mv === "heavy" ? HEAVY_TELEGRAPH_MULT : 1;
+      e.telegraphMax = e.telegraphT = Math.max(TELEGRAPH_MIN_MS, e.def.telegraphMs * TELEGRAPH_SCALE * telMult);
+      e.extraHits = mv === "double" ? 1 : 0;
       this.sfx.push("warn");
     }
   }
 
-  /** 予兆の決着後、カウント・待ち時間を初期状態に戻す */
+  /** 咆哮／回復：攻撃の順番で発動する支援行動（ガード不可）。実行後カウントを戻す */
+  private performSupportMove(e: EnemyState, mv: EnemyMove): void {
+    const idx = this.enemies.indexOf(e);
+    e.atkAnimT = 300;
+    if (mv === "howl") {
+      for (const a of this.aliveEnemies) a.atkBuffTurns = Math.max(a.atkBuffTurns, HOWL_TURNS);
+      this.pushFloat("咆哮！ 敵の攻撃UP", "#b96bff", idx);
+      this.sfx.push("warn");
+    } else {
+      // 最もHP割合が減っている生存味方（自分含む）を回復
+      const targets = this.aliveEnemies.slice().sort((a, b) => a.hp / a.def.maxHp - b.hp / b.def.maxHp);
+      const t = targets[0] ?? e;
+      const heal = Math.max(1, Math.round(t.def.maxHp * HEAL_PCT));
+      t.hp = Math.min(t.def.maxHp, t.hp + heal);
+      this.pushFloat(`+${heal}`, "#57d3b0", this.enemies.indexOf(t));
+      this.sfx.push("guard");
+    }
+    this.resetCount(e);
+  }
+
+  /** 攻撃カウントを初期値へ戻す（発狂中は-1で速くなる） */
+  private resetCount(e: EnemyState): void {
+    e.count = Math.max(1, e.def.countStart - (e.enraged ? 1 : 0));
+  }
+
+  /** 予兆の決着後、カウント・待ち時間を初期状態に戻す。連撃は2発目の短い予兆へつなぐ */
   private endTelegraph(e: EnemyState): void {
+    // 連撃：1発目を捌かれても（パーフェクト怯み以外）2発目が来る
+    if (e.extraHits > 0 && e.alive && !e.isBroken && e.flinchT <= 0) {
+      e.extraHits -= 1;
+      e.telegraphMax = e.telegraphT = DOUBLE_SECOND_MS;
+      this.sfx.push("warn");
+      return;
+    }
+    e.extraHits = 0;
     e.telegraphT = 0;
     e.readyWaitT = -1;
-    e.count = e.def.countStart;
+    this.resetCount(e);
   }
 
   /** ガード：予兆中の最も着弾が近い敵の攻撃を受け止める。判定結果を返す */
@@ -755,11 +833,20 @@ export class Battle {
         e.breakTurns = BREAK_TURNS;
         e.breakGauge = 0;
         e.telegraphT = 0; // 予兆中ならキャンセル
+        e.extraHits = 0;  // 連撃の2発目もキャンセル
         e.readyWaitT = -1; // 0待ち中ならリセット（ブレイク復帰後に再抽選させる）
         this.pushFloat("BREAK!!", "#ffdd44", idx);
         this.sfx.push("break");
         causedBreak = true;
       }
+    }
+
+    // 発狂：HP50%以下で一度だけ攻撃+25%・カウント-1（削りかけの敵を放置できなくする）
+    if (e.def.enrage && !e.enraged && e.alive && e.hp > 0 && e.hp <= e.def.maxHp * 0.5) {
+      e.enraged = true;
+      e.count = Math.max(1, e.count - 1);
+      this.pushFloat("発狂！", "#ff5d5d", idx);
+      this.sfx.push("boss");
     }
 
     const killed = wasAlive && e.hp <= 0;
@@ -808,6 +895,12 @@ export class Battle {
 
   private resolveEnemyHit(e: EnemyState, guard: GuardResult): void {
     let dmg = e.def.attack;
+    // 行動タイプ・発狂・咆哮バフによる補正
+    if (e.currentMove === "heavy") dmg *= HEAVY_DMG_MULT;   // 強撃：重い
+    if (e.currentMove === "double") dmg *= DOUBLE_DMG_MULT; // 連撃：1発は軽い（2発来る）
+    if (e.enraged) dmg *= ENRAGE_ATK_MULT;
+    if (e.atkBuffTurns > 0) dmg *= HOWL_ATK_MULT;
+    dmg = Math.round(dmg);
     const idx = this.enemies.indexOf(e);
     this.setGuard(guard);
     switch (guard) {
@@ -876,8 +969,18 @@ export class Battle {
       this.pushDamage(counter, idx, false, false);
       if (e.hp <= 0) this.killEnemy(e, idx);
     }
+    // 毒撃：被弾（パーフェクト以外）でプレイヤーに毒を付与
+    if (guard !== "perfect" && e.currentMove === "venom" && this.playerHp > 0) {
+      this.playerPoisonTurns = Math.max(this.playerPoisonTurns, PLAYER_POISON_TURNS);
+      this.pushFloat("毒を受けた", "#57d36b", "player");
+    }
     // パーフェクト以外は被弾＝のけぞり演出（生身ガードも軽く反応）
     if (guard !== "perfect") this.playerHitT = guard === "none" ? 320 : 220;
+    this.checkPlayerDown();
+  }
+
+  /** プレイヤーHPが尽きたら敗北演出へ（被弾・毒どちらの経路からも呼ぶ） */
+  private checkPlayerDown(): void {
     if (this.playerHp <= 0 && !this.losePending) {
       // 即リザルトにせず、スロー＋敗北宣言を見せてから lost へ
       this.losePending = true;

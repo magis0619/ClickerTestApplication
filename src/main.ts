@@ -2449,6 +2449,14 @@ function buildResultPanel(): void {
   else sub.textContent = "倒れてしまった…… 装備を見直して再挑戦しよう";
   panel.appendChild(sub);
 
+  // 敗北救済の持ち帰り表示（経験値は全額・ゴールドは一部）
+  if (!won && !endless && (game.lastExp > 0 || game.lastGold > 0)) {
+    const keep = document.createElement("div");
+    keep.className = "result-keep";
+    keep.innerHTML = `💰 それでも持ち帰った：<b>EXP +${game.lastExp}</b> ・ <b>+${game.lastGold} G</b>`;
+    panel.appendChild(keep);
+  }
+
   // 入手した武器を「NEW」として記録（インベントリで未閲覧バッジ表示）
   if (good) for (const d of game.lastDrops) newWeaponUids.add(d.uid);
 
