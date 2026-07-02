@@ -19,6 +19,7 @@ import {
   GUARD_DAMAGE_MULT,
   JUST_DAMAGE_MULT,
   PERFECT_HP_RECOVER,
+  PERFECT_EN_RECOVER,
   HITSTOP_MS,
   SLOWMO_MS,
   SLOWMO_SCALE,
@@ -71,15 +72,17 @@ import { settings } from "./settings.ts";
 /** 敵撃破アニメ（ノックバック→フェードアウト）の長さ */
 export const DEATH_ANIM_MS = 720;
 
-/** 見切り：この回数までは同系統連打でもペナルティなし（3回目から逓減） */
+/** 見切り：この回数までは同一スキル連打でもペナルティなし（3回目から逓減） */
 const READ_FREE_HITS = 2;
 /**
- * 見切りのダメージ倍率。同系統の連続攻撃 streak 回目に適用。
- * 1〜2回目=等倍 / 3回目=0.83 / 4回目=0.66 / 5回目以降=0.5（下限）。
+ * 見切りのダメージ倍率。同一スキルの連続使用 streak 回目に適用。
+ * 1〜2回目=等倍 / 3回目=0.9 / 4回目=0.8 / 5回目以降=0.7（下限）。
+ * 系統（弱点）ではなくスキル単位なので、2スキル武器のA→B交互は咎めない
+ * ＝「弱点必須」と両立し、1スキル連打だけが読まれる。
  */
 function readMultFor(streak: number): number {
   if (streak <= READ_FREE_HITS) return 1;
-  return Math.max(0.5, 1 - (streak - READ_FREE_HITS) * 0.17);
+  return Math.max(0.7, 1 - (streak - READ_FREE_HITS) * 0.1);
 }
 
 /**
@@ -271,9 +274,9 @@ export class Battle {
   sfx: SfxEvent[] = [];
   /** 「集中」発動中：次の行動のEN消費をなくす */
   freeNextEn = false;
-  /** 見切り：直近に連打している攻撃系統（同系統を続けると敵に読まれ弱体化） */
-  readClass: WeaponClass | null = null;
-  /** 見切り：同系統の連続攻撃回数 */
+  /** 見切り：直近に連打している攻撃スキルID（同一スキルを続けると敵に読まれ弱体化） */
+  readSkillId: string | null = null;
+  /** 見切り：同一スキルの連続使用回数 */
   readStreak = 0;
   /** 直近に発動したスキル（連携＝コンボ判定に使う） */
   lastSkill: LastSkill | null = null;
@@ -473,16 +476,15 @@ export class Battle {
     // 自己バフ（激昂など）はスキル使用時に付与（攻撃の前にかけてこの攻撃から乗せる）
     if (skill.status?.target === "self") this.applySelfStatus(skill.status);
 
-    // 見切り：同系統を連打すると敵に読まれてダメージ・ブレイクが逓減する。
+    // 見切り：同一スキルを連打すると敵に読まれてダメージ・ブレイクが逓減する。
     // 連携（コンボ）は「読まれない攻め」としてリセット＋ペナルティ無しにする。
-    const cls = mods?.weapon ?? null;
     let readMult = 1;
     if (combo) {
-      this.readClass = cls;
+      this.readSkillId = null;
       this.readStreak = 0;
-    } else if (cls) {
-      if (cls === this.readClass) this.readStreak += 1;
-      else { this.readClass = cls; this.readStreak = 1; }
+    } else {
+      if (skill.id === this.readSkillId) this.readStreak += 1;
+      else { this.readSkillId = skill.id; this.readStreak = 1; }
       readMult = readMultFor(this.readStreak);
     }
     // ペナルティ時は攻撃力・ブレイク蓄積を落とした mods でヒットさせる
@@ -520,16 +522,16 @@ export class Battle {
 
   /** 見切りをリセット（構え直し＝ガード・休憩・ためる・集中で敵の読みが外れる） */
   private resetRead(): void {
-    this.readClass = null;
+    this.readSkillId = null;
     this.readStreak = 0;
   }
 
   /**
-   * 次に「その系統で攻撃すると見切られる」系統を返す（UI警告用）。
+   * 次に「そのスキルで攻撃すると見切られる」スキルIDを返す（UI警告用）。
    * まだペナルティが乗っていなくても、あと1回で乗るなら警告する。
    */
-  get readWarnClass(): WeaponClass | null {
-    return this.readStreak >= READ_FREE_HITS ? this.readClass : null;
+  get readWarnSkillId(): string | null {
+    return this.readStreak >= READ_FREE_HITS ? this.readSkillId : null;
   }
 
   /** 敵へ状態異常を付与（同種は長い方を採用） */
@@ -906,10 +908,14 @@ export class Battle {
     switch (guard) {
       case "perfect": {
         // === このゲームで一番気持ちいい瞬間 ===
+        // 回復は控えめ。盾パッシブ「癒しの光」でHP特化、「嵐の心臓」でEN全回復に伸ばせる
         dmg = 0;
         this.perfectCount += 1;
-        this.playerHp = Math.min(this.maxHp, this.playerHp + PERFECT_HP_RECOVER);
-        this.playerEn = PLAYER_MAX_EN; // パーフェクトはENを最大まで全回復
+        const hpGain = PERFECT_HP_RECOVER + (this.shieldPassive?.kind === "perfectHp" ? this.shieldPassive.value : 0);
+        this.playerHp = Math.min(this.maxHp, this.playerHp + hpGain);
+        this.playerEn = this.shieldPassive?.kind === "perfectEn"
+          ? PLAYER_MAX_EN
+          : Math.min(PLAYER_MAX_EN, this.playerEn + PERFECT_EN_RECOVER);
         // 一瞬の静止→ホワイトアウト→スロー＋弾きエフェクト＋軽い揺れ
         this.hitstopT = HITSTOP_MS;
         this.whiteFlashT = WHITE_FLASH_MS;
@@ -917,7 +923,9 @@ export class Battle {
         this.perfectFxT = 360;
         this.perfectFxIndex = idx;
         this.shake(180, 4);
-        this.pushFloat(`+${PERFECT_HP_RECOVER}HP ENMAX`, "#66ffaa", "player");
+        this.pushFloat(
+          this.shieldPassive?.kind === "perfectEn" ? `+${hpGain}HP ENMAX` : `+${hpGain}HP +${PERFECT_EN_RECOVER}EN`,
+          "#66ffaa", "player");
         // 敵を怯ませる：カウントを戻し、ブレイクゲージも溜める
         e.flinchT = PERFECT_FLINCH_MS;
         if (!e.isBroken) {

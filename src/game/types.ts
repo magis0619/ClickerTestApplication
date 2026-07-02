@@ -118,7 +118,7 @@ export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legend" | "astra
  * regen=毎行動HP回復 / guardWindow=ガード判定窓拡大 /
  * breakBonus=ブレイク中の敵への与ダメ増 / thorns=被弾時に反撃（敵攻撃力×value）
  */
-export type ShieldPassiveKind = "regen" | "guardWindow" | "breakBonus" | "thorns";
+export type ShieldPassiveKind = "regen" | "guardWindow" | "breakBonus" | "thorns" | "perfectHp" | "perfectEn";
 export interface ShieldPassive {
   kind: ShieldPassiveKind;
   /** 効果量（regen=HP, guardWindow=判定倍率加算, breakBonus/thorns=割合） */

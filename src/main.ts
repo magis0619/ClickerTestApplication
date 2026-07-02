@@ -2243,8 +2243,8 @@ function updateWeaponButtons(): void {
     // 連携候補：直近スキルと次の段で連携が成立し、撃てるなら光らせる
     const combo = cur && !broke && !enemyTurn ? matchCombo(last, cur, cls) : undefined;
     card.classList.toggle("combo-ready", !!combo);
-    // 見切り警告：この系統を続けて出すと読まれて弱体化する（連携中は例外）
-    card.classList.toggle("read-warn", b.readWarnClass === cls && !combo && !enemyTurn);
+    // 見切り警告：この武器の次のスキルを続けて出すと読まれて弱体化する（連携中は例外）
+    card.classList.toggle("read-warn", !!cur && b.readWarnSkillId === cur.id && !combo && !enemyTurn);
     // 武器マークを現在の段の上部へ「ぬるぬる」スライド（位置が変わった時だけ更新）
     const target = steps[active];
     if (target) {
@@ -2636,7 +2636,7 @@ function buildHowTo(): void {
   // 4. ガードのタイミング
   const guard = document.createElement("div");
   guard.appendChild(howText("ガードは<b>タイミング</b>で結果が変わる。引きつけるほど見返りが大きい。"));
-  guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP <b>最大まで全回復</b>し、敵をひるませる。`));
+  guard.appendChild(howStep("✨", "PERFECT（直前）", `被ダメージ0、HP <b>+${PERFECT_HP_RECOVER}</b>・AP回復し、敵をひるませる。盾によって回復がさらに伸びる。`));
   guard.appendChild(howStep("⭐", "JUST（早め）", `被ダメージを大きく軽減しAP <b>+${JUST_EN_RECOVER}</b> 回復。`));
   guard.appendChild(howStep("🛡", "GUARD（通常）", "被ダメージを軽減。タイミングを逃しても守りにはなる。"));
   guard.appendChild(howText(

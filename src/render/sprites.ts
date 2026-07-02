@@ -1323,11 +1323,49 @@ export const SHIELD_ASTRAL: Sprite = {
   ],
 };
 
+/** sh_aegis：ガーディアンハート（白銀の聖盾＋緑の癒し光。中央にハート紋章） */
+export const SHIELD_AEGIS: Sprite = {
+  palette: { o: O, b: "#dfe8f2", c: "#9fb2c8", w: "#ffffff", y: "#57d36b" },
+  rows: [
+    ".oooooooo.",
+    "obwbbbbbco",
+    "obyybbyyco",
+    "obyyyyyyco",
+    "obbyyyybco",
+    "obbbyybbco",
+    "obbbbbbbco",
+    "oobbbbbboo",
+    ".oobbbboo.",
+    "...obbo...",
+    "....oo....",
+  ],
+};
+
+/** sh_tempest：テンペストソウル（蒼嵐の盾＋稲妻紋章） */
+export const SHIELD_TEMPEST: Sprite = {
+  palette: { o: O, b: "#2c5fb8", c: "#1a3a7a", w: "#8fd6ff", y: "#ffe14d" },
+  rows: [
+    ".oooooooo.",
+    "obwbbbbbco",
+    "obbbbyybco",
+    "obbbyybbco",
+    "obbyyyybco",
+    "obbbbyybco",
+    "obbbyybbco",
+    "oobbybbboo",
+    ".oobbbboo.",
+    "...obbo...",
+    "....oo....",
+  ],
+};
+
 /** 盾ID → スプライト。未知IDは木盾で代替 */
 export const SHIELD_BY_ID: Record<string, Sprite> = {
   sh_wood: SHIELD_WOOD,
   sh_iron: SHIELD_IRON,
   sh_knight: SHIELD_KNIGHT,
+  sh_aegis: SHIELD_AEGIS,
+  sh_tempest: SHIELD_TEMPEST,
   sh_obsidian: SHIELD_OBSIDIAN,
   sh_astral: SHIELD_ASTRAL,
 };

@@ -129,6 +129,10 @@ export const SHIELDS: Shield[] = [
     passive: { kind: "guardWindow", value: 0.25, name: "達人の構え" } },
   { id: "sh_obsidian",name: "オブシディアンウォール", rarity: "epic",     defense: 12, desc: "黒曜石の壁。重い一撃も受け止める。",
     passive: { kind: "breakBonus", value: 0.3, name: "破壊衝動" } },
+  { id: "sh_aegis",   name: "ガーディアンハート",   rarity: "rare",     defense: 7,  desc: "祈りを込めた聖盾。弾いた者を癒す。",
+    passive: { kind: "perfectHp", value: 25, name: "癒しの光" } },
+  { id: "sh_tempest", name: "テンペストソウル",     rarity: "epic",     defense: 10, desc: "嵐の魂を封じた盾。弾く度に力が滾る。",
+    passive: { kind: "perfectEn", value: 0, name: "嵐の心臓" } },
   { id: "sh_astral",  name: "アストラルバリア",     rarity: "legend",   defense: 18, desc: "星辰の力を宿す究極の防壁。",
     passive: { kind: "thorns", value: 0.5, name: "星の反撃" } },
 ];
@@ -139,6 +143,8 @@ export function shieldPassiveDesc(p: NonNullable<Shield["passive"]>): string {
     case "guardWindow": return `ガード判定の猶予が広がる（+${Math.round(p.value * 100)}%）`;
     case "breakBonus": return `ブレイク中の敵への与ダメージ+${Math.round(p.value * 100)}%`;
     case "thorns": return `被弾時、敵の攻撃力の${Math.round(p.value * 100)}%を反射ダメージ`;
+    case "perfectHp": return `パーフェクトガード時のHP回復+${p.value}`;
+    case "perfectEn": return "パーフェクトガード時にAPを全回復";
   }
 }
 const SHIELD_MAP: Record<string, Shield> = Object.fromEntries(SHIELDS.map((s) => [s.id, s]));
@@ -484,6 +490,8 @@ export function stageDropPreview(stageIndex: number): string[] {
 // 同じ敵を流用しても、ワールド係数で HP/攻撃/ブレイク閾値を底上げして段階的な難易度に。
 // ワールド1は等倍（既存バランス・セーブ感覚を維持）。
 export const WORLD_DIFFICULTY: Record<number, number> = { 1: 1.0, 2: 1.35, 3: 1.8, 4: 2.4, 5: 3.1 };
+/** 攻撃力だけは係数に上限を設ける（終盤の2発即死ゲー化を防ぐ。HP/ブレイクはフル係数） */
+export const WORLD_ATTACK_CAP = 2.2;
 export function worldScale(world?: number): number {
   return (world != null && WORLD_DIFFICULTY[world]) || 1;
 }
@@ -491,10 +499,11 @@ export function worldScale(world?: number): number {
 export function scaleWaveForWorld(enemies: EnemyDef[], world?: number): EnemyDef[] {
   const m = worldScale(world);
   if (m === 1) return enemies;
+  const atkM = Math.min(m, WORLD_ATTACK_CAP);
   return enemies.map((e) => ({
     ...e,
     maxHp: Math.round(e.maxHp * m),
-    attack: Math.round(e.attack * m),
+    attack: Math.round(e.attack * atkM),
     breakThreshold: Math.round(e.breakThreshold * m),
   }));
 }
@@ -570,10 +579,13 @@ export const JUST_WINDOW_MS = 240;
 export const GUARD_WINDOW_MS = 430;
 
 // ===== ガード効果 =====
-// 通常ガードは「軽減はするが地味」。JUSTは中間。パーフェクトは「完全無効＋HP/EN大回復」。
+// 通常ガードは「軽減はするが地味」。JUSTは中間。パーフェクトは「完全無効＋回復＋怯ませ」。
+// 回復量は控えめにし、盾パッシブ（癒しの光/嵐の心臓）で回復特化・攻め特化を選ばせる。
 export const GUARD_DAMAGE_MULT = 0.55;
 export const JUST_DAMAGE_MULT = 0.25;
-export const PERFECT_HP_RECOVER = 40;
+export const PERFECT_HP_RECOVER = 15;
+/** パーフェクト時のEN回復量（全回復は盾パッシブ「嵐の心臓」の特権に） */
+export const PERFECT_EN_RECOVER = 4;
 
 // ===== パーフェクトガードの演出・怯ませ =====
 /** パーフェクト成功時のヒットストップ（完全静止）時間 */
